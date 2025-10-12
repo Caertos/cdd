@@ -11,7 +11,7 @@ export default function App() {
   useEffect(() => {
     const fetch = async () => setContainers(await getContainers());
     fetch();
-    const timer = setInterval(fetch, 2000);
+    const timer = setInterval(fetch, 3000);
     return () => clearInterval(timer);
   }, []);
 
