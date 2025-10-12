@@ -1,0 +1,30 @@
+{
+  "name": "cdd",
+  "version": "1.0.0",
+  "description": "CLI Docker Dashboard",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+  "build": "babel src --out-dir dist --extensions .js,.jsx && node fix-imports.cjs"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "chalk": "^5.6.2",
+    "dockerode": "^4.0.9",
+    "ink": "^6.3.1",
+    "react": "^19.2.0"
+  },
+  "bin": {
+    "cdd": "./index.js"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.28.3",
+    "@babel/core": "^7.28.4",
+    "@babel/preset-env": "^7.28.3",
+    "@babel/preset-react": "^7.27.1",
+    "babel-plugin-module-resolver": "^5.0.2"
+  }
+}
