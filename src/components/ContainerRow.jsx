@@ -37,13 +37,16 @@ export default function ContainerRow({ container }) {
         {state === "running"
           ? chalk.greenBright("🟢 RUNNING")
           : chalk.redBright(`🔴 ${state.toUpperCase()}`)}
+        {"  "}
+        {chalk.yellow(container.ports)}
+        {"  "}
+        {state === "running" && (
+          <StatsBar
+            cpu={parseFloat(stats.cpuPercent)}
+            mem={parseFloat(stats.memPercent)}
+          />
+        )}
       </Text>
-      {state === "running" && (
-        <StatsBar
-          cpu={parseFloat(stats.cpuPercent)}
-          mem={parseFloat(stats.memPercent)}
-        />
-      )}
     </Box>
   );
 }

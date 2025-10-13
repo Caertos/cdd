@@ -1,24 +1,29 @@
-import Docker from 'dockerode';
-const docker = new Docker({ socketPath: '/var/run/docker.sock'});
+import Docker from "dockerode";
+const docker = new Docker({ socketPath: "/var/run/docker.sock" });
 
 export async function getContainers() {
-    const containers = await
-docker.listContainers({ all: true });
-    return containers.map(container => ({
-        id: container.Id,
-        name: container.Names[0].replace('/', ''),
-        image: container.Image,
-        state: container.State,
-        status: container.Status,
-        ports: container.Ports.map(port => `${port.PublicPort
-            || '' }:${port.PrivatePort}`).join(', ') || '-'
-    }))
+  const containers = await docker.listContainers({ all: true });
+  return containers.map((container) => ({
+    id: container.Id,
+    name: container.Names[0].replace("/", ""),
+    image: container.Image,
+    state: container.State,
+    status: container.Status,
+    ports:
+      [
+        ...new Set(
+          container.Ports.filter((port) => port.PublicPort).map(
+            (port) => `${port.PublicPort}:${port.PrivatePort}`
+          )
+        ),
+      ].join(", ") || "-",
+  }));
 }
 
 export async function getStats(containerId) {
   const container = docker.getContainer(containerId);
   const stream = await container.stats({ stream: false });
-  
+
   const cpuDelta =
     stream.cpu_stats.cpu_usage.total_usage -
     stream.precpu_stats.cpu_usage.total_usage;
@@ -32,12 +37,12 @@ export async function getStats(containerId) {
 
   const rx = stream.networks
     ? Object.values(stream.networks)
-        .map(n => n.rx_bytes)
+        .map((n) => n.rx_bytes)
         .reduce((a, b) => a + b, 0)
     : 0;
   const tx = stream.networks
     ? Object.values(stream.networks)
-        .map(n => n.tx_bytes)
+        .map((n) => n.tx_bytes)
         .reduce((a, b) => a + b, 0)
     : 0;
 
