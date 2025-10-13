@@ -1,6 +1,6 @@
 {
   "name": "cdd-cli",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "description": "CLI Docker Dashboard",
   "main": "index.js",
   "scripts": {
