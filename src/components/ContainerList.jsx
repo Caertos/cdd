@@ -1,3 +1,16 @@
+/**
+ * List component for Docker containers.
+ * Componente de lista para contenedores Docker.
+ *
+ * @component
+ * @param {Object} props - Component props / Props del componente
+ * @param {Array} props.containers - Containers to display / Contenedores a mostrar
+ * @returns {JSX.Element} Rendered list / Lista renderizada
+ * @example
+ * // EN: Render with containers
+ * // ES: Renderizar con contenedores
+ * <ContainerList containers={containers} />
+ */
 import React from "react";
 import { Box, Text } from "ink";
 import ContainerRow from "./ContainerRow";
