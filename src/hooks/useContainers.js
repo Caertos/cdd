@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { getContainers } from "../dockerService";
+import { getContainers } from "../helpers/dockerService";
 
 export function useContainers() {
   const [containers, setContainers] = useState([]);

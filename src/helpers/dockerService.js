@@ -1,5 +1,39 @@
+
 import Docker from "dockerode";
 const docker = new Docker({ socketPath: "/var/run/docker.sock" });
+
+export function getLogsStream(containerId, onData, onEnd, onError) {
+  const container = docker.getContainer(containerId);
+  container.logs({
+    follow: true,
+    stdout: true,
+    stderr: true,
+    tail: 100
+  }, (err, stream) => {
+    if (err) {
+      onError?.(err);
+      return;
+    }
+    stream.on('data', chunk => onData?.(chunk.toString()));
+    stream.on('end', () => onEnd?.());
+    stream.on('error', err => onError?.(err));
+  });
+}
+
+export async function startContainer(containerId) {
+  const container = docker.getContainer(containerId);
+  await container.start();
+}
+
+export async function stopContainer(containerId) {
+  const container = docker.getContainer(containerId);
+  await container.stop();
+}
+
+export async function restartContainer(containerId) {
+  const container = docker.getContainer(containerId);
+  await container.restart();
+}
 
 export async function getContainers() {
   const containers = await docker.listContainers({ all: true });
@@ -16,7 +50,7 @@ export async function getContainers() {
             (port) => `${port.PublicPort}:${port.PrivatePort}`
           )
         ),
-      ].join(", ") || "-",
+      ]
   }));
 }
 

@@ -1,13 +1,19 @@
 import React from "react";
 import { Box, Text, Spacer } from "ink";
 import { useContainers } from "./hooks/useContainers";
-import ContainerRow from "./components/ContainerRow";
+import { useControls } from "./hooks/useControls";
+import ContainerList from "./components/ContainerList";
+import MessageFeedback from "./components/MessageFeedback";
 import Header from "./components/Header";
+import LogViewer from "./components/LogViewer";
 
 export default function App() {
   const { containers } = useContainers();
+  const { selected, message, messageColor, showLogs, logs, exitLogs } =
+    useControls(containers);
 
   return (
+    <>
       <Box
         flexDirection="column"
         borderStyle="round"
@@ -19,15 +25,26 @@ export default function App() {
         {containers.length === 0 ? (
           <Text>No containers found</Text>
         ) : (
-          containers.map((container) => (
-            <ContainerRow key={container.id} container={container} />
-          ))
+          <ContainerList containers={containers} selected={selected} />
         )}
         <Spacer />
-        <Box marginTop={1}>
-          <Text dimColor>Press Ctrl+C to exit</Text>
+        <MessageFeedback message={message} color={messageColor} />
+        <Text>Use ↑/↓ for navigation</Text>
+        <Text>•I to initiate selected container</Text>
+        <Text>•P to stop selected container</Text>
+        <Text>•L to view logs of selected container</Text>
+        <Text>•Q to quit</Text>
+        <Box justifyContent="flex-end" width="100%">
+          <Text dimColor>Crafted by Carlos Cochero • 2025</Text>
         </Box>
-        <Text dimColor>Crafted by Carlos Cochero • 2025</Text>
       </Box>
+      {showLogs && (
+        <LogViewer
+          logs={logs}
+          onExit={exitLogs}
+          container={containers[selected]}
+        />
+      )}
+    </>
   );
 }
