@@ -1,11 +1,11 @@
 {
   "name": "cdd-cli",
-  "version": "2.0.0",
+  "version": "2.0.2",
   "description": "CLI Docker Dashboard",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-  "build": "babel src --out-dir dist --extensions .js,.jsx && node fix-imports.cjs"
+    "build": "babel src --out-dir dist --extensions .js,.jsx && node fix-imports.cjs"
   },
   "keywords": [],
   "author": "",
