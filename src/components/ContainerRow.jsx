@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Box, Text } from "ink";
 import chalk from "chalk";
-import { getStats } from "../dockerService.js";
+import { getStats } from "../helpers/dockerService.js";
 import StatsBar from "./StatsBar";
 
 const colorByState = (state) => {
