@@ -1,3 +1,16 @@
+/**
+ * Run a Docker action by name (start, stop, remove).
+ * Ejecuta una acción Docker por nombre (start, stop, remove).
+ *
+ * @param {string} action - Action to perform / Acción a realizar
+ * @param {string} container - Container name / Nombre del contenedor
+ * @returns {Promise<boolean>} True if successful / True si es exitoso
+ * @throws {Error} If Docker is not running / Si Docker no está corriendo
+ * @example
+ * // EN: Start a container
+ * // ES: Iniciar un contenedor
+ * await runDockerAction('start', 'my_container');
+ */
 import { spawn } from "child_process";
 
 /**

@@ -1,3 +1,15 @@
+/**
+ * Utility to interact with Docker CLI.
+ * Utilidad para interactuar con el CLI de Docker.
+ *
+ * @param {string} cmd - Docker command / Comando Docker
+ * @returns {Promise<string>} Output from Docker / Salida de Docker
+ * @throws {Error} If command fails / Si el comando falla
+ * @example
+ * // EN: Run a Docker command
+ * // ES: Ejecutar un comando Docker
+ * await dockerService('ps -a');
+ */
 
 import Docker from "dockerode";
 const docker = new Docker({ socketPath: "/var/run/docker.sock" });

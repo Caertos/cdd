@@ -149,9 +149,18 @@ CDD-CLI es una herramienta de línea de comandos (CLI) multiplataforma que te pe
    ```
 
 ## Uso
-- Al ejecutar `cdd`, verás una tabla con todos tus contenedores Docker.
+- Al ejecutar `cdd`, verás una tabla interactiva con todos tus contenedores Docker.
 - Los contenedores en ejecución muestran estadísticas de CPU y memoria en tiempo real.
-- Usa `Ctrl+C` para salir.
+- Puedes navegar usando las flechas ↑/↓ y controlar los contenedores con atajos de teclado.
+- Usa `Ctrl+C` o la tecla `Q` para salir.
+
+### ⌨️ Atajos de teclado
+
+- ↑ / ↓ : Navegar entre contenedores
+- I : Iniciar el contenedor seleccionado
+- P : Parar el contenedor seleccionado
+- L : Ver logs en tiempo real del contenedor seleccionado
+- Q : Salir del dashboard o de la vista de logs
 
 ## Funcionalidades principales
 - 🐳 Visualización clara y compacta de todos los contenedores.
@@ -200,8 +209,10 @@ CDD-CLI is a cross-platform command-line tool (CLI) to monitor and visualize you
 
 ## Main features
 - 🐳 Clear, compact visualization of all containers.
-- 🔄 Automatic data refresh.
+- 🔄 Automatic data refresh (every 2 seconds).
+- ⌨️ Keyboard shortcuts for fast actions (navigate, start, stop, logs, quit).
 - 📊 Live resource usage stats for running containers.
+- 🪵 Real-time log streaming for selected containers.
 - 🎨 Visual interface with colors and emojis for states.
 - 👤 Author: Carlos Cochero (2025)
 
