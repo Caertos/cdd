@@ -4,8 +4,9 @@
   "description": "CLI Docker Dashboard",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "babel src --out-dir dist --extensions .js,.jsx && node fix-imports.cjs"
+  "test": "echo \"Error: no test specified\" && exit 1",
+  "build": "babel src --out-dir dist --extensions .js,.jsx && node fix-imports.cjs",
+  "changes": "npm run build && node dist/index.js"
   },
   "keywords": [],
   "author": "",
@@ -23,8 +24,7 @@
   "devDependencies": {
     "@babel/cli": "^7.28.3",
     "@babel/core": "^7.28.4",
-    "@babel/preset-env": "^7.28.3",
-    "@babel/preset-react": "^7.27.1",
-    "babel-plugin-module-resolver": "^5.0.2"
+    "babel-plugin-module-resolver": "^5.0.2",
+    "esbuild": "^0.25.11"
   }
 }

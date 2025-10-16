@@ -1,5 +1,5 @@
 import React, { useRef, useCallback } from "react";
-import { getLogsStream } from "../helpers/dockerService";
+import { getLogsStream } from "../helpers/dockerService/serviceComponents/containerLogs";
 
 export function useLogsStream() {
   const logsStreamRef = useRef(null);

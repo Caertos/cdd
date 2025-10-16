@@ -14,14 +14,31 @@ import { Box, Text, Spacer } from "ink";
 import { useContainers } from "./hooks/useContainers";
 import { useControls } from "./hooks/useControls";
 import ContainerList from "./components/ContainerList";
+import ContainerSection from "./components/ContainerSection";
 import MessageFeedback from "./components/MessageFeedback";
 import Header from "./components/Header";
 import LogViewer from "./components/LogViewer";
+import ContainerCreationPrompt from "./components/ContainerCreationPrompt";
+import UsageMenu from "./components/UsageMenu";
+import Footer from "./components/Footer";
 
 export default function App() {
   const { containers } = useContainers();
-  const { selected, message, messageColor, showLogs, logs, exitLogs } =
-    useControls(containers);
+  const controls = useControls(containers);
+
+  if (controls.creatingContainer) {
+    return (
+      <ContainerCreationPrompt
+        step={controls.creationStep}
+        imageName={controls.imageNameInput}
+        containerName={controls.containerNameInput}
+        portInput={controls.portInput}
+        envInput={controls.envInput}
+        message={controls.message}
+        messageColor={controls.messageColor}
+      />
+    );
+  }
 
   return (
     <>
@@ -33,27 +50,17 @@ export default function App() {
       >
         <Header count={containers.length} />
         <Text> </Text>
-        {containers.length === 0 ? (
-          <Text>No containers found</Text>
-        ) : (
-          <ContainerList containers={containers} selected={selected} />
-        )}
+        <ContainerSection containers={containers} selected={controls.selected} />
         <Spacer />
-        <MessageFeedback message={message} color={messageColor} />
-        <Text>Use ↑/↓ for navigation</Text>
-        <Text>•I to initiate selected container</Text>
-        <Text>•P to stop selected container</Text>
-        <Text>•L to view logs of selected container</Text>
-        <Text>•Q to quit</Text>
-        <Box justifyContent="flex-end" width="100%">
-          <Text dimColor>Crafted by Carlos Cochero • 2025</Text>
-        </Box>
+        <MessageFeedback message={controls.message} color={controls.messageColor} />
+        <UsageMenu />
+        <Footer />
       </Box>
-      {showLogs && (
+      {controls.showLogs && (
         <LogViewer
-          logs={logs}
-          onExit={exitLogs}
-          container={containers[selected]}
+          logs={controls.logs}
+          onExit={controls.exitLogs}
+          container={containers[controls.selected]}
         />
       )}
     </>
