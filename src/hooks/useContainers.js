@@ -9,7 +9,7 @@
  * const [containers, refresh] = useContainers();
  */
 import React, { useState, useEffect } from "react";
-import { getContainers } from "../helpers/dockerService";
+import { getContainers } from "../helpers/dockerService/serviceComponents/containerList";
 
 export function useContainers() {
   const [containers, setContainers] = useState([]);

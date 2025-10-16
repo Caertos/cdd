@@ -1,14 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { Box, Text } from "ink";
-import chalk from "chalk";
-import { getStats } from "../helpers/dockerService.js";
+import { getStats } from "../helpers/dockerService/serviceComponents/containerStats";
 import StatsBar from "./StatsBar";
 
-const colorByState = (state) => {
-  if (state === "running") return chalk.greenBright("🟢 RUNNING");
-  if (state === "exited") return chalk.redBright("🔴 EXITED");
-  if (state === "paused") return chalk.yellowBright("🟠 PAUSED");
-  return chalk.gray(state.toUpperCase());
+const stateText = (state) => {
+  if (state === "running") return { text: "🟢 RUNNING", color: "green" };
+  if (state === "exited") return { text: "🔴 EXITED", color: "red" };
+  if (state === "paused") return { text: "🟠 PAUSED", color: "yellow" };
+  return { text: state.toUpperCase(), color: "gray" };
 };
 
 export default function ContainerRow({ container }) {
@@ -19,34 +18,52 @@ export default function ContainerRow({ container }) {
     netIO: { rx: 0, tx: 0 },
   });
 
+  // Formatear puertos
+  const formatPorts = (ports) => {
+    if (!ports || ports.length === 0) return "";
+    if (Array.isArray(ports)) {
+      return ports.map((p, i) => ` 🔗 ${p}`).join("  ");
+    }
+    return ` 🔗 ${ports}`;
+  };
+
+  const [statsError, setStatsError] = useState("");
   useEffect(() => {
     if (state !== "running") return;
     const fetchStats = async () => {
-      const s = await getStats(id);
-      setStats(s);
+      try {
+        const s = await getStats(id);
+        setStats(s);
+        setStatsError("");
+      } catch (err) {
+        setStats({ cpuPercent: 0, memPercent: 0, netIO: { rx: 0, tx: 0 } });
+        setStatsError("No se pudo obtener stats");
+      }
     };
     fetchStats();
     const timer = setInterval(fetchStats, 1500);
     return () => clearInterval(timer);
   }, [id, state]);
 
+  const stateInfo = stateText(state);
   return (
     <Box flexDirection="column" marginBottom={1}>
-      <Text>
-        {chalk.cyan(name.padEnd(20))} {chalk.gray(image.padEnd(20))}{" "}
-        {state === "running"
-          ? chalk.greenBright("🟢 RUNNING")
-          : chalk.redBright(`🔴 ${state.toUpperCase()}`)}
-        {"  "}
-        {chalk.yellow(container.ports)}
-        {"  "}
+      <Box>
+        <Text color="cyan">{name.padEnd(20)}</Text>
+        <Text color="gray">{image.padEnd(20)}</Text>
+        <Text color={stateInfo.color}>{stateInfo.text}</Text>
+        <Text color="yellow">{formatPorts(container.ports)}</Text>
+        {state === "running" && <Text> </Text>}
         {state === "running" && (
           <StatsBar
             cpu={parseFloat(stats.cpuPercent)}
             mem={parseFloat(stats.memPercent)}
           />
         )}
-      </Text>
+        {state === "running" && statsError && (
+          <Text color="red">{statsError}</Text>
+        )}
+      </Box>
     </Box>
   );
 }
