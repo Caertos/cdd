@@ -53,6 +53,22 @@ The dashboard auto-refreshes container list every few seconds.
 
 ---
 
+## Install globally
+
+To install the CLI globally so you can run `cdd` from any terminal, use:
+
+```bash
+npm install -g cdd-cli
+```
+
+After installing globally, run the CLI with:
+
+```bash
+cdd
+```
+
+---
+
 ## Development
 
 - Node.js >= 18 is recommended.
