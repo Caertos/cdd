@@ -25,3 +25,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 - Incoming fixes and smaller tests / docs updates
+
+## [3.1.1] - 2025-10-16
+
+### Fixed
+
+- Minor docs typo fixes and README global install note added.
+
