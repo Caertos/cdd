@@ -1,6 +1,6 @@
 import React from "react";
 import { Box, Text } from "ink";
-import { PromptField, PromptMessage } from "./PromptField";
+import { PromptField, PromptMessage } from "./PromptField.jsx";
 
 export default function ContainerCreationPrompt(props) {
   const { step, imageName, containerName, portInput, envInput, message, messageColor } = props;

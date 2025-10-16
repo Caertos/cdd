@@ -13,7 +13,7 @@
  */
 import React from "react";
 import { Box, Text } from "ink";
-import ContainerRow from "./ContainerRow";
+import ContainerRow from "./ContainerRow.jsx";
 
 export default function ContainerList({ containers, selected }) {
   return (

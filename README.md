@@ -1,205 +1,106 @@
-## Instrucciones avanzadas
-
-### Desarrollo local
-1. Clona el repositorio:
-   ```bash
-   git clone https://github.com/caertos/cdd.git
-   cd cdd
-   ```
-2. Instala dependencias:
-   ```bash
-   npm install
-   ```
-3. Transpila el código fuente:
-   ```bash
-   npm run build
-   ```
-4. Ejecuta el CLI localmente:
-   ```bash
-   node dist/index.js
-   ```
-5. Prueba el comando global localmente:
-   ```bash
-   npm link
-   cdd
-   ```
-
-### Testing y troubleshooting
-- Si modificas componentes, recuerda siempre ejecutar `npm run build` antes de probar.
-- Si tienes problemas con permisos de Docker, ejecuta la terminal como administrador o usa `sudo`.
-- Para limpiar la instalación global:
-  ```bash
-  npm uninstall -g cdd-cli
-  ```
-
-### Contribución
-1. Haz un fork del repositorio y crea una rama para tu feature o fix.
-2. Asegúrate de que tu código pase el build y funcione correctamente.
-3. Haz un Pull Request con una descripción clara de tus cambios.
-
----
-## Advanced instructions
-
-### Local development
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/caertos/cdd.git
-   cd cdd
-   ```
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Transpile the source code:
-   ```bash
-   npm run build
-   ```
-4. Run the CLI locally:
-   ```bash
-   node dist/index.js
-   ```
-5. Test the global command locally:
-   ```bash
-   npm link
-   cdd
-   ```
-
-### Testing and troubleshooting
-- If you modify components, always run `npm run build` before testing.
-- If you have Docker permission issues, run your terminal as administrator or use `sudo`.
-- To clean up the global install:
-  ```bash
-  npm uninstall -g cdd-cli
-  ```
-
-### Contributing
-1. Fork the repository and create a branch for your feature or fix.
-2. Make sure your code builds and works correctly.
-3. Open a Pull Request with a clear description of your changes.
-
----
-
+## CDD-CLI — Docker Dashboard (Terminal)
 
 <p align="center">
-   <img src="https://img.shields.io/npm/v/cdd-cli?color=blue&label=npm%20package" alt="npm version"/>
-   <img src="https://img.shields.io/npm/dt/cdd-cli?color=green&label=descargas" alt="npm downloads"/>
+  <img src="https://img.shields.io/npm/v/cdd-cli?color=blue&label=npm%20package" alt="npm version"/>
+  <img src="https://img.shields.io/npm/dt/cdd-cli?color=green&label=downloads" alt="npm downloads"/>
+  <a href="https://github.com/caertos/cdd/actions/workflows/ci.yml">
+    <img src="https://github.com/caertos/cdd/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI status" />
+  </a>
 </p>
 
-# 🐳 CDD-CLI — Docker Dashboard en la Terminal
-[English version below]
+Short, bilingual README with quickstart, development and tests.
 
 ---
 
-## Ejemplo visual
+## Quick start (local)
 
-```text
-╭────────────────────────────────────────────────────────────────────────────╮
-│ 🐳 CDD — CLI Docker Dashboard                        2 containers found    │
-│                                                                          │
-│ mysql-dev      mysql:latest     🟢 RUNNING                                │
-│ CPU: ░░░░░░░░░░ 0.1%   MEM: ░░░░░░░░░░ 4.9%                             │
-│                                                                          │
-│ redis-test     redis:alpine     🔴 EXITED                                 │
-│                                                                          │
-│ Press Ctrl+C to exit                                                     │
-│ Crafted by Carlos Cochero • 2025                                         │
-╰────────────────────────────────────────────────────────────────────────────╯
-```
-# 🐳 CDD-CLI — Docker Dashboard in your Terminal
+1. Clone the repo and install dependencies:
 
-## Visual example
-
-```text
-╭────────────────────────────────────────────────────────────────────────────╮
-│ 🐳 CDD — CLI Docker Dashboard                        2 containers found    │
-│                                                                          │
-│ mysql-dev      mysql:latest     🟢 RUNNING                                │
-│ CPU: ░░░░░░░░░░ 0.1%   MEM: ░░░░░░░░░░ 4.9%                             │
-│                                                                          │
-│ redis-test     redis:alpine     🔴 EXITED                                 │
-│                                                                          │
-│ Press Ctrl+C to exit                                                     │
-│ Crafted by Carlos Cochero • 2025                                         │
-╰────────────────────────────────────────────────────────────────────────────╯
+```bash
+git clone https://github.com/caertos/cdd.git
+cd cdd
+npm install
 ```
 
-[English version below]
+2. Build and run locally:
+
+```bash
+npm run build
+node dist/index.js
+```
+
+3. To test the CLI as a globally available command during development:
+
+```bash
+npm link
+cdd
+```
 
 ---
 
-## Descripción
-CDD-CLI es una herramienta de línea de comandos (CLI) multiplataforma que te permite monitorear y visualizar en tiempo real el estado de tus contenedores Docker directamente desde la terminal, usando una interfaz moderna y colorida basada en React e Ink.
+## Usage (interactive)
 
-- Visualiza todos los contenedores activos y detenidos.
-- Muestra nombre, imagen, estado, puertos y estadísticas de CPU/MEM.
-- Actualización automática cada 2 segundos.
-- Interfaz amigable, con colores y emojis.
-- Compatible con Linux, macOS y Windows (bash, cmd, PowerShell).
+- Use ↑/↓ to navigate containers.
+- I: start selected container
+- P: stop selected container
+- R: restart selected container
+- C: create container (interactive prompt)
+- L: view logs for selected container
+- E: erase (remove) selected container (confirmation required)
+- Q: quit
 
-## Instalación global
+The dashboard auto-refreshes container list every few seconds.
 
-1. Asegúrate de tener Node.js (v18+) y Docker instalados y en ejecución.
-2. Instala el CLI globalmente desde npm:
-   ```bash
-   npm install -g cdd-cli
-   ```
-3. Ejecuta el dashboard desde cualquier terminal:
-   ```bash
-   cdd
-   ```
+---
 
-## Uso
-- Al ejecutar `cdd`, verás una tabla interactiva con todos tus contenedores Docker.
-- Los contenedores en ejecución muestran estadísticas de CPU y memoria en tiempo real.
-- Puedes navegar usando las flechas ↑/↓ y controlar los contenedores con atajos de teclado.
-- Usa `Ctrl+C` o la tecla `Q` para salir.
+## Development
 
-### ⌨️ Atajos de teclado
+- Node.js >= 18 is recommended.
+- To run the app from source during development:
 
-- ↑ / ↓ : Navegar entre contenedores
-- I : Iniciar el contenedor seleccionado
-- P : Parar el contenedor seleccionado
-- L : Ver logs en tiempo real del contenedor seleccionado
-- Q : Salir del dashboard o de la vista de logs
+```bash
+npm install
+npm run build
+node dist/index.js
+```
 
-## Funcionalidades principales
-- 🐳 Visualización clara y compacta de todos los contenedores.
-- 🔄 Refresco automático de datos.
-- 📊 Estadísticas de uso de recursos para contenedores activos.
-- 🎨 Interfaz visual con colores y emojis para estados.
-- 👤 Autor: Carlos Cochero (2025)
+If you change source files, re-run `npm run build` before running the CLI.
 
-## Requisitos
-- Node.js >= 18
-- Docker instalado y corriendo (el CLI se conecta al socket local de Docker)
+---
+
+## Tests
+
+We use Jest for unit tests. Run:
+
+```bash
+npm test
+```
+
+Tests are located in `test/` and cover utility helpers.
+
+---
+
+## Contributing
+
+1. Fork the repo and create a feature branch.
+2. Add tests for new behavior.
+3. Ensure `npm test` and `npm run build` pass.
+4. Open a Pull Request with a clear description.
+
+---
 
 ## Troubleshooting
-- Si no ves contenedores, asegúrate de que Docker esté corriendo y tu usuario tenga permisos para acceder al socket Docker.
-- Si tienes problemas con la instalación global, prueba con `sudo` (Linux/macOS) o ejecuta la terminal como administrador (Windows).
+
+- If you don't see containers, ensure Docker is running and that your user has access to the Docker socket.
+- If Docker permissions are required, run the CLI with `sudo` (Linux/macOS) or as Administrator (Windows).
+- The project generates `dist/` — keep it out of version control (it's in .gitignore).
 
 ---
 
-# 🐳 CDD-CLI — Docker Dashboard in your Terminal
+## License
 
-## Description
-CDD-CLI is a cross-platform command-line tool (CLI) to monitor and visualize your Docker containers in real time, right from your terminal, using a modern React+Ink interface.
+This project is MIT/ISC licensed (see `LICENSE`).
 
-- See all running and stopped containers.
-- Shows name, image, state, ports, and CPU/MEM stats.
-- Auto-refresh every 2 seconds.
-- Friendly, colorful, emoji-rich UI.
-- Works on Linux, macOS, and Windows (bash, cmd, PowerShell).
-
-## Global installation
-
-1. Make sure you have Node.js (v18+) and Docker installed and running.
-2. Install the CLI globally from npm:
-   ```bash
-   npm install -g cdd-cli
-   ```
-3. Run the dashboard from any terminal:
-   ```bash
-   cdd
    ```
 
 ## Usage

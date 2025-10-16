@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Box, Text } from "ink";
 import { getStats } from "../helpers/dockerService/serviceComponents/containerStats";
-import StatsBar from "./StatsBar";
+import StatsBar from "./StatsBar.jsx";
 
 const stateText = (state) => {
   if (state === "running") return { text: "🟢 RUNNING", color: "green" };

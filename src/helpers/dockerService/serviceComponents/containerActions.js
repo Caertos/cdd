@@ -7,7 +7,7 @@ export async function removeContainer(containerId) {
   }
 }
 import { docker } from "../dockerService";
-import { imageExists, pullImage } from "./imageUtils";
+import { imageExists, pullImage } from "./imageUtils.js";
 
 export async function createContainer(imageName, options = {}) {
   let exists;

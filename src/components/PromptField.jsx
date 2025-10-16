@@ -2,7 +2,7 @@ import React from "react";
 import { Text } from "ink";
 
 export function PromptField({ label, value, required }) {
-  // Si es requerido y está vacío, mostrar en rojo
+  // If the field is required and empty, show in red
   const isEmpty = required && !value.trim();
   return (
     <>

@@ -11,15 +11,15 @@
  */
 import React from "react";
 import { Box, Text, Spacer } from "ink";
-import { useContainers } from "./hooks/useContainers";
-import { useControls } from "./hooks/useControls";
-import ContainerSection from "./components/ContainerSection";
-import MessageFeedback from "./components/MessageFeedback";
-import Header from "./components/Header";
-import LogViewer from "./components/LogViewer";
-import ContainerCreationPrompt from "./components/ContainerCreationPrompt";
-import UsageMenu from "./components/UsageMenu";
-import Footer from "./components/Footer";
+import { useContainers } from "./hooks/useContainers.js";
+import { useControls } from "./hooks/useControls.js";
+import ContainerSection from "./components/ContainerSection.jsx";
+import MessageFeedback from "./components/MessageFeedback.jsx";
+import Header from "./components/Header.jsx";
+import LogViewer from "./components/LogViewer.jsx";
+import ContainerCreationPrompt from "./components/ContainerCreationPrompt.jsx";
+import UsageMenu from "./components/UsageMenu.jsx";
+import Footer from "./components/Footer.jsx";
 
 export default function App() {
   const { containers } = useContainers();

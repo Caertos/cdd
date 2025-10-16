@@ -1,10 +1,10 @@
 {
   "name": "cdd-cli",
-  "version": "3.0.1",
+  "version": "3.1.0",
   "description": "CLI Docker Dashboard",
   "main": "index.js",
   "scripts": {
-  "test": "echo \"Error: no test specified\" && exit 1",
+  "test": "node --experimental-vm-modules ./node_modules/.bin/jest --runInBand",
   "build": "babel src --out-dir dist --extensions .js,.jsx && node fix-imports.cjs",
   "changes": "npm run build && node dist/index.js"
   },
@@ -25,6 +25,10 @@
     "@babel/cli": "^7.28.3",
     "@babel/core": "^7.28.4",
     "babel-plugin-module-resolver": "^5.0.2",
-    "esbuild": "^0.25.11"
+    "esbuild": "^0.25.11",
+    "jest": "^29.6.1",
+    "@babel/preset-env": "^7.22.20",
+    "@babel/preset-react": "^7.22.5",
+    "babel-jest": "^29.6.1"
   }
 }
