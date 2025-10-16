@@ -13,7 +13,6 @@ import React from "react";
 import { Box, Text, Spacer } from "ink";
 import { useContainers } from "./hooks/useContainers";
 import { useControls } from "./hooks/useControls";
-import ContainerList from "./components/ContainerList";
 import ContainerSection from "./components/ContainerSection";
 import MessageFeedback from "./components/MessageFeedback";
 import Header from "./components/Header";

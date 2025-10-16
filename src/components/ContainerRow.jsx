@@ -37,7 +37,7 @@ export default function ContainerRow({ container }) {
         setStatsError("");
       } catch (err) {
         setStats({ cpuPercent: 0, memPercent: 0, netIO: { rx: 0, tx: 0 } });
-        setStatsError("No se pudo obtener stats");
+        setStatsError("Error fetching stats");
       }
     };
     fetchStats();

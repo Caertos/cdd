@@ -1,3 +1,11 @@
+export async function removeContainer(containerId) {
+  const container = docker.getContainer(containerId);
+  try {
+    await container.remove({ force: true });
+  } catch (err) {
+    throw new Error('Error removing container: ' + err.message);
+  }
+}
 import { docker } from "../dockerService";
 import { imageExists, pullImage } from "./imageUtils";
 
@@ -6,13 +14,13 @@ export async function createContainer(imageName, options = {}) {
   try {
     exists = await imageExists(imageName);
   } catch (err) {
-    throw new Error('Error al listar imágenes locales: ' + err.message);
+    throw new Error('Error listing local images: ' + err.message);
   }
   if (!exists) {
     try {
       await pullImage(imageName);
     } catch (err) {
-      throw new Error('No se pudo descargar la imagen: ' + err.message);
+      throw new Error('Could not pull image: ' + err.message);
     }
   }
   const createOpts = {
@@ -24,7 +32,7 @@ export async function createContainer(imageName, options = {}) {
     const container = await docker.createContainer(createOpts);
     return container.id || container.Id;
   } catch (err) {
-    throw new Error('Error al crear el contenedor: ' + err.message);
+    throw new Error('Error creating container: ' + err.message);
   }
 }
 

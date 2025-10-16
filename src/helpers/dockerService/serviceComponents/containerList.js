@@ -9,12 +9,18 @@ export async function getContainers() {
     state: container.State,
     status: container.Status,
     ports:
-      [
-        ...new Set(
-          container.Ports.filter((port) => port.PublicPort).map(
-            (port) => `${port.PublicPort}:${port.PrivatePort}`
-          )
-        ),
-      ]
+      (() => {
+        const publicPorts = container.Ports.filter((port) => port.PublicPort).map(
+          (port) => `${port.PublicPort}:${port.PrivatePort}`
+        );
+        if (publicPorts.length > 0) {
+          return [...new Set(publicPorts)];
+        }
+        // Si no hay puertos públicos, mostrar los privados expuestos
+        const privatePorts = container.Ports.filter((port) => port.PrivatePort).map(
+          (port) => `:${port.PrivatePort}`
+        );
+        return [...new Set(privatePorts)];
+      })()
   }));
 }

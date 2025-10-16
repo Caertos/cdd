@@ -10,6 +10,7 @@ export default function UsageMenu() {
       <Text>•R to restart selected container</Text>
       <Text>•C to create a container</Text>
       <Text>•L to view logs of selected container</Text>
+      <Text>•E to remove selected container</Text>
       <Text>•Q to quit</Text>
     </Box>
   );

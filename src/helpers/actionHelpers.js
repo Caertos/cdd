@@ -1,4 +1,3 @@
-// Helper para manejar acciones docker con feedback visual y validación
 export async function handleAction({
   containers,
   selected,
