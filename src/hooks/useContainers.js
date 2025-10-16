@@ -1,11 +1,9 @@
 /**
  * React hook to manage Docker containers state.
- * Hook de React para gestionar el estado de contenedores Docker.
  *
  * @returns {[Array, Function]} [containers, refresh] / [contenedores, refrescar]
  * @example
- * // EN: Use in a component
- * // ES: Usar en un componente
+ * // Use in a component
  * const [containers, refresh] = useContainers();
  */
 import React, { useState, useEffect } from "react";

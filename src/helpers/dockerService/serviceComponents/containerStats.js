@@ -1,5 +1,11 @@
 import { docker } from "../dockerService";
 
+/**
+ * Retrieve a snapshot of container resource usage (CPU, memory, network).
+ *
+ * @param {string} containerId - Docker container id
+ * @returns {Promise<Object>} Object with cpuPercent, memPercent and netIO {rx,tx}
+ */
 export async function getStats(containerId) {
   const container = docker.getContainer(containerId);
   const stream = await container.stats({ stream: false });

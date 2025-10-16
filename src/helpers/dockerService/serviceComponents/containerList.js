@@ -1,5 +1,9 @@
 import { docker } from "../dockerService";
 
+/**
+ * Return a list of containers with normalized fields for the UI.
+ * @returns {Promise<Array<Object>>}
+ */
 export async function getContainers() {
   const containers = await docker.listContainers({ all: true });
   return containers.map((container) => ({
@@ -16,7 +20,7 @@ export async function getContainers() {
         if (publicPorts.length > 0) {
           return [...new Set(publicPorts)];
         }
-        // Si no hay puertos públicos, mostrar los privados expuestos
+  // If there are no public ports, show private exposed ports
         const privatePorts = container.Ports.filter((port) => port.PrivatePort).map(
           (port) => `:${port.PrivatePort}`
         );

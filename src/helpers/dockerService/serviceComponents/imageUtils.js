@@ -1,5 +1,10 @@
 import { docker } from "../dockerService";
 
+/**
+ * Check whether an image exists locally.
+ * @param {string} imageName - Image name or tag
+ * @returns {Promise<boolean>}
+ */
 export async function imageExists(imageName) {
   const images = await docker.listImages();
   return images.some(img =>
@@ -8,6 +13,11 @@ export async function imageExists(imageName) {
   );
 }
 
+/**
+ * Pull an image from the registry.
+ * @param {string} imageName - Image name to pull
+ * @returns {Promise<void>}
+ */
 export async function pullImage(imageName) {
   await new Promise((resolve, reject) => {
     docker.pull(imageName, (err, stream) => {

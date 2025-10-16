@@ -18,7 +18,7 @@ export default function ContainerRow({ container }) {
     netIO: { rx: 0, tx: 0 },
   });
 
-  // Formatear puertos
+  // Format ports for display
   const formatPorts = (ports) => {
     if (!ports || ports.length === 0) return "";
     if (Array.isArray(ports)) {

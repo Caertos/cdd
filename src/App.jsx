@@ -1,12 +1,10 @@
 /**
  * Main React component for the CDD CLI UI.
- * Componente principal de React para la UI del CLI CDD.
  *
  * @component
  * @returns {JSX.Element} The rendered app / La app renderizada
  * @example
  * // EN: Render the app
- * // ES: Renderizar la app
  * <App />
  */
 import React from "react";

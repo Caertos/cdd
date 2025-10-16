@@ -1,3 +1,10 @@
+/**
+ * Remove (delete) a container by id. Force removal so running containers are stopped first.
+ *
+ * @param {string} containerId - Docker container id
+ * @returns {Promise<void>} Resolves when removal completes
+ * @throws {Error} If Docker reports an error
+ */
 export async function removeContainer(containerId) {
   const container = docker.getContainer(containerId);
   try {
@@ -9,6 +16,14 @@ export async function removeContainer(containerId) {
 import { docker } from "../dockerService";
 import { imageExists, pullImage } from "./imageUtils.js";
 
+/**
+ * Create a new container from an image. If the image is missing locally, it will be pulled.
+ *
+ * @param {string} imageName - Image name (e.g. 'nginx:alpine')
+ * @param {Object} [options] - Docker create options (Env, ExposedPorts, HostConfig, name, etc.)
+ * @returns {Promise<string>} The created container id
+ * @throws {Error} If image listing/pull or creation fails
+ */
 export async function createContainer(imageName, options = {}) {
   let exists;
   try {
@@ -36,16 +51,31 @@ export async function createContainer(imageName, options = {}) {
   }
 }
 
+/**
+ * Start a container by id.
+ * @param {string} containerId - Docker container id
+ * @returns {Promise<void>}
+ */
 export async function startContainer(containerId) {
   const container = docker.getContainer(containerId);
   await container.start();
 }
 
+/**
+ * Stop a container by id.
+ * @param {string} containerId - Docker container id
+ * @returns {Promise<void>}
+ */
 export async function stopContainer(containerId) {
   const container = docker.getContainer(containerId);
   await container.stop();
 }
 
+/**
+ * Restart a container by id.
+ * @param {string} containerId - Docker container id
+ * @returns {Promise<void>}
+ */
 export async function restartContainer(containerId) {
   const container = docker.getContainer(containerId);
   await container.restart();

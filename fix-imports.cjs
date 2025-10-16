@@ -7,6 +7,9 @@ function addJsExtensionToImports(filePath) {
   // Reemplaza imports relativos sin extensión por .js
   code = code.replace(/(import\s+[^'";]+['"])(\.\/[^'".]+)(['"])/g, '$1$2.js$3');
   code = code.replace(/(from\s+['"])(\.{1,2}\/[^'".]+)(['"])/g, '$1$2.js$3');
+  // También reemplaza importaciones que apunten a archivos .jsx por .js
+  code = code.replace(/(from\s+['"])(\.{1,2}\/[^'"\s]+)\.jsx(['"])/g, '$1$2.js$3');
+  code = code.replace(/(import\s+[^'";]+['"])(\.{1,2}\/[^'"\s]+)\.jsx(['"])/g, '$1$2.js$3');
   fs.writeFileSync(filePath, code, 'utf8');
 }
 

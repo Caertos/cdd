@@ -7,6 +7,29 @@ import { getLogsStream } from "../helpers/dockerService/serviceComponents/contai
 import { createContainer as svcCreateContainer } from "../helpers/dockerService/serviceComponents/containerActions.js";
 
 // Principal hook to manage user inputs and control the app state
+/**
+ * Main hook that wires user input, creation, actions and logs viewing.
+ * It coordinates the modular hooks and exposes a compact API consumed by the App.
+ *
+ * @param {Array<Object>} containers - Current list of Docker containers
+ * @returns {Object} controls - API for the App component
+ * @property {number} selected - Index of the currently selected container
+ * @property {function} setSelected - Setter for selected index
+ * @property {string} message - Current feedback message (creation or actions)
+ * @property {string} messageColor - Color to show for the feedback message
+ * @property {boolean} showLogs - Whether the logs viewer is active
+ * @property {Array<string>} logs - Array of log lines currently collected
+ * @property {function} exitLogs - Helper to close the logs viewer
+ * @property {boolean} creatingContainer - Whether the create-container prompt is open
+ * @property {number} creationStep - Current step in the creation flow
+ * @property {string} imageNameInput - Current value of the image name field
+ * @property {string} containerNameInput - Current value of the container name field
+ * @property {string} portInput - Current value of the port input field
+ * @property {string} envInput - Current value of the env input field
+ * @property {Object} creation - The creation hook API (setters and helpers)
+ * @property {Object} actions - The actions hook API (helpers to start/stop/remove)
+ * @property {Object} logsViewer - The logs viewer hook API
+ */
 export function useControls(containers = []) {
   const [selected, setSelected] = React.useState(0);
   const [creatingContainer, setCreatingContainer] = React.useState(false);
@@ -61,7 +84,7 @@ export function useControls(containers = []) {
   const exitLogs = logsViewer.closeLogs;
 
   useInput((input, key) => {
-    // Confirmación de borrado
+  // Erase confirmation
     if (confirmErase) {
       if (input === "y" || input === "Y") {
         actions.handleAction({
