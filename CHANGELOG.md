@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [3.1.4] - 2025-10-17
+
+### Changed
+
+- Documentation cleanup: translate `FIXES_APPLIED.md` to English, remove Spanish duplicate and references to internal audit doc.
+- No functional code changes.
+
 ## [3.1.3] - 2025-10-17
 
 ### Fixed
