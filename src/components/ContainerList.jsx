@@ -2,14 +2,15 @@
  * List component for Docker containers.
  *
  * @component
- * @param {Object} props - Component props / Props del componente
- * @param {Array} props.containers - Containers to display / Contenedores a mostrar
- * @returns {JSX.Element} Rendered list / Lista renderizada
+ * @param {Object} props - Component props
+ * @param {Array} props.containers - Containers to display
+ * @returns {JSX.Element} Rendered list
  * @example
  * // Render with containers
  * <ContainerList containers={containers} />
  */
 import React from "react";
+import PropTypes from 'prop-types';
 import { Box, Text } from "ink";
 import ContainerRow from "./ContainerRow.jsx";
 
@@ -31,3 +32,8 @@ export default function ContainerList({ containers, selected }) {
     </>
   );
 }
+
+ContainerList.propTypes = {
+  containers: PropTypes.arrayOf(PropTypes.object).isRequired,
+  selected: PropTypes.number,
+};
