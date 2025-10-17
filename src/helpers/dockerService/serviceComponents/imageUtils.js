@@ -1,4 +1,4 @@
-import { docker } from "../dockerService";
+import { docker } from "../dockerService.js";
 
 /**
  * Check whether an image exists locally.

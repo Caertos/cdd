@@ -17,7 +17,7 @@ export default function StatsBar({ cpu, mem }) {
 
   return (
     <Text>
-      CPU: {cpuBar} {colorize(cpu)}%   MEM: {memBar} {colorize(mem)}%
+      CPU:{cpuBar}{colorize(cpu, ` ${formatPercent(cpu)}%`)} MEM:{memBar}{colorize(mem, ` ${formatPercent(mem)}%`)}
     </Text>
   );
 }
@@ -34,10 +34,17 @@ StatsBar.propTypes = {
  * @returns {string} Colored bar string
  */
 function makeBar(value) {
-  const filled = Math.round(value / 10);
-  const empty = 10 - filled;
-  const bar = "".repeat(filled) + "".repeat(empty);
+  const width = 6;
+  const filled = Math.round((value / 100) * width);
+  const empty = Math.max(0, width - filled);
+  const bar = "█".repeat(filled) + "░".repeat(empty);
   return colorize(value, bar);
+}
+
+function formatPercent(value) {
+  if (!Number.isFinite(value)) return 0;
+  if (value >= 10) return Math.round(value);
+  return value.toFixed(1).replace(/\.0$/, "");
 }
 
 /**

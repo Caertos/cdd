@@ -10,7 +10,7 @@
  */
 import React, { useState, useEffect } from "react";
 import { getContainers } from "../helpers/dockerService/serviceComponents/containerList";
-import { REFRESH_INTERVALS } from "../helpers/constants";
+import { REFRESH_INTERVALS } from "../helpers/constants.js";
 
 export function useContainers() {
   const [containers, setContainers] = useState([]);

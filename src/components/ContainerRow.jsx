@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Box, Text } from "ink";
 import { getStats } from "../helpers/dockerService/serviceComponents/containerStats";
-import { REFRESH_INTERVALS } from "../helpers/constants";
+import { REFRESH_INTERVALS } from "../helpers/constants.js";
 import StatsBar from "./StatsBar.jsx";
 import PropTypes from 'prop-types';
 
@@ -27,13 +27,19 @@ export default function ContainerRow({ container }) {
     netIO: { rx: 0, tx: 0 },
   });
 
-  // Format ports for display
+  // Format ports for display (no leading space to avoid layout shifts)
   const formatPorts = (ports) => {
     if (!ports || ports.length === 0) return "";
     if (Array.isArray(ports)) {
-      return ports.map((p, _i) => ` 🔗 ${p}`).join("  ");
+      return ports.map((p, _i) => `🔗 ${p}`).join("  ");
     }
-    return ` 🔗 ${ports}`;
+    return `🔗 ${ports}`;
+  };
+
+  // Helper to truncate long strings to a max length without adding trailing spaces
+  const truncate = (s, max = 20) => {
+    if (!s) return "";
+    return s.length > max ? s.slice(0, max - 1) + "…" : s;
   };
 
   const [statsError, setStatsError] = useState("");
@@ -69,22 +75,26 @@ export default function ContainerRow({ container }) {
   const stateInfo = stateText(state);
   return (
     <Box flexDirection="column" marginBottom={1}>
-      <Box>
-        <Text color="cyan">{name.padEnd(20)}</Text>
-        <Text color="gray">{image.padEnd(20)}</Text>
-        <Text color={stateInfo.color}>{stateInfo.text}</Text>
-        <Text color="yellow">{formatPorts(container.ports)}</Text>
-        {state === "running" && <Text> </Text>}
-        {state === "running" && (
-          <StatsBar
-            cpu={parseFloat(stats.cpuPercent)}
-            mem={parseFloat(stats.memPercent)}
-          />
-        )}
-        {state === "running" && statsError && (
-          <Text color="red">{statsError}</Text>
-        )}
+      <Box flexDirection="row" alignItems="center">
+        <Box width={20} flexShrink={1} paddingRight={1}>
+          <Text color="cyan">{truncate(name, 20)}</Text>
+        </Box>
+        <Box width={20} flexShrink={1} paddingRight={1}>
+          <Text color="gray">{truncate(image, 20)}</Text>
+        </Box>
+        <Box width={16} minWidth={10} paddingRight={1}>
+          <Text color={stateInfo.color}>{stateInfo.text}</Text>
+        </Box>
+        <Box flexGrow={1} flexShrink={1} paddingLeft={0} paddingRight={1}>
+          <Text color="yellow">{formatPorts(container.ports)}</Text>
+        </Box>
+        <Box width={30} flexShrink={0} paddingLeft={1}>
+          {state === "running" ? (
+            <StatsBar cpu={parseFloat(stats.cpuPercent)} mem={parseFloat(stats.memPercent)} />
+          ) : null}
+        </Box>
       </Box>
+      {statsError && <Text color="red">{statsError}</Text>}
     </Box>
   );
 }

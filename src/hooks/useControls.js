@@ -4,7 +4,7 @@ import { useContainerCreation } from "./creation/useContainerCreation";
 import { useLogsViewer } from "./creation/useLogsViewer";
 import { useInput } from "ink";
 import { getLogsStream } from "../helpers/dockerService/serviceComponents/containerLogs.js";
-import { EXIT_DELAY } from "../helpers/constants";
+import { EXIT_DELAY } from "../helpers/constants.js";
 import { createContainer as svcCreateContainer } from "../helpers/dockerService/serviceComponents/containerActions.js";
 
 // Principal hook to manage user inputs and control the app state
@@ -159,9 +159,13 @@ export function useControls(containers = []) {
     if (key.upArrow && total > 0) setSelected((i) => (i === 0 ? total - 1 : i - 1));
     if (key.downArrow && total > 0) setSelected((i) => (i === total - 1 ? 0 : i + 1));
     if (input === "q") {
+      console.clear();
       actions.setMessage("Exiting...");
       actions.setMessageColor("yellow");
-      setTimeout(() => process.exit(0), EXIT_DELAY);
+      setTimeout(() => {
+        console.clear();
+        process.exit(0);
+      }, EXIT_DELAY);
       return;
     }
 

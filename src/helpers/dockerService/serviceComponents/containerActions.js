@@ -1,6 +1,6 @@
-import { docker } from "../dockerService";
+import { docker } from "../dockerService.js";
 import { imageExists, pullImage } from "./imageUtils.js";
-import { TIMEOUTS } from "../../constants";
+import { TIMEOUTS } from "../../constants.js";
 
 /**
  * Helper to add timeout to promises. If the provided promise does not settle
@@ -63,6 +63,80 @@ export async function createContainer(imageName, options = {}) {
     Tty: true,
     ...options,
   };
+
+  const hasUserDefinedPorts = Boolean(createOpts.ExposedPorts && Object.keys(createOpts.ExposedPorts).length);
+
+  if (!hasUserDefinedPorts) {
+    try {
+      const image = docker.getImage(imageName);
+      if (image && typeof image.inspect === "function") {
+        let usedHostPorts = new Set();
+        if (typeof docker.listContainers === "function") {
+          try {
+            const containers = await withTimeout(docker.listContainers({ all: true }), TIMEOUTS.CONTAINER_OP);
+            containers.forEach((container) => {
+              (container.Ports || []).forEach((portInfo) => {
+                if (portInfo && portInfo.PublicPort) {
+                  usedHostPorts.add(String(portInfo.PublicPort));
+                }
+              });
+            });
+          } catch (err) {
+            // Ignore problems fetching containers; fall back to defaults.
+          }
+        }
+        const reservePort = (port) => {
+          const portStr = String(port);
+          usedHostPorts.add(portStr);
+        };
+        const pickNextAvailablePort = (base) => {
+          const numericBase = Number.parseInt(base, 10);
+          if (Number.isNaN(numericBase)) {
+            // If the base port is non-numeric, just return the base.
+            if (!usedHostPorts.has(base)) {
+              usedHostPorts.add(base);
+              return base;
+            }
+            let counter = 1;
+            let candidate = `${base}-${counter}`;
+            while (usedHostPorts.has(candidate)) {
+              counter += 1;
+              candidate = `${base}-${counter}`;
+            }
+            usedHostPorts.add(candidate);
+            return candidate;
+          }
+          let candidate = numericBase;
+          while (usedHostPorts.has(String(candidate))) {
+            candidate += 1;
+          }
+          reservePort(candidate);
+          return String(candidate);
+        };
+
+        const inspectData = await withTimeout(image.inspect(), TIMEOUTS.CONTAINER_OP);
+        const exposed = inspectData?.Config?.ExposedPorts || inspectData?.ContainerConfig?.ExposedPorts || {};
+        const exposedKeys = Object.keys(exposed || {});
+        if (exposedKeys.length) {
+          createOpts.ExposedPorts = createOpts.ExposedPorts || {};
+          createOpts.HostConfig = { ...(createOpts.HostConfig || {}) };
+          createOpts.HostConfig.PortBindings = { ...(createOpts.HostConfig.PortBindings || {}) };
+          exposedKeys.forEach((portKey) => {
+            if (!createOpts.ExposedPorts[portKey]) {
+              createOpts.ExposedPorts[portKey] = exposed[portKey] || {};
+            }
+            if (!createOpts.HostConfig.PortBindings[portKey] || !createOpts.HostConfig.PortBindings[portKey].length) {
+              const containerPort = portKey.split("/")[0];
+              const hostPort = pickNextAvailablePort(containerPort);
+              createOpts.HostConfig.PortBindings[portKey] = [{ HostPort: hostPort }];
+            }
+          });
+        }
+      }
+    } catch (err) {
+      // If inspect fails, continue without auto-mapping ports to avoid blocking container creation.
+    }
+  }
   try {
   const container = await withTimeout(docker.createContainer(createOpts), TIMEOUTS.CONTAINER_OP);
     return container.id || container.Id;

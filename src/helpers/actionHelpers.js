@@ -1,4 +1,4 @@
-import { MESSAGE_TIMEOUTS } from "../helpers/constants";
+import { MESSAGE_TIMEOUTS } from "../helpers/constants.js";
 /**
  * Generic helper to perform a container action with user feedback.
  *

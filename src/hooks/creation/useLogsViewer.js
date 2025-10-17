@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { safeCall } from "../../helpers/safeCall";
+import { safeCall } from "../../helpers/safeCall.js";
 
 /**
  * Custom hook to manage the logs viewer state and stream reference.

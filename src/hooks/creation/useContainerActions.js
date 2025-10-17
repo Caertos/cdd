@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { safeCall } from "../../helpers/safeCall";
+import { safeCall } from "../../helpers/safeCall.js";
 import { startContainer as svcStartContainer, stopContainer as svcStopContainer, restartContainer as svcRestartContainer, removeContainer as svcRemoveContainer } from "../../helpers/dockerService/serviceComponents/containerActions.js";
 
 /**

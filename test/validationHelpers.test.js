@@ -24,8 +24,8 @@ describe('validatePorts', () => {
     expect(validatePorts('eighty:80')).toBe(false);
   });
 
-  test('empty input returns false (must specify at least one port)', () => {
-    expect(validatePorts('')).toBe(false);
+  test('empty input is valid (ports are optional)', () => {
+    expect(validatePorts('')).toBe(true);
   });
 });
 

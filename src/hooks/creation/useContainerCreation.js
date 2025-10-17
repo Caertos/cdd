@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { validatePorts } from "../../helpers/validationHelpers.js";
-import { safeCall } from "../../helpers/safeCall";
+import { safeCall } from "../../helpers/safeCall.js";
 
 /**
  * Custom hook to manage the container creation flow, step by step.

@@ -1,4 +1,4 @@
-import { docker } from "../dockerService";
+import { docker } from "../dockerService.js";
 
 /**
  * Return a list of containers with normalized fields for the UI.
@@ -22,7 +22,7 @@ export async function getContainers() {
         }
   // If there are no public ports, show private exposed ports
         const privatePorts = container.Ports.filter((port) => port.PrivatePort).map(
-          (port) => `:${port.PrivatePort}`
+          (port) => `${port.PrivatePort}`
         );
         return [...new Set(privatePorts)];
       })()

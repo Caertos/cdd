@@ -8,9 +8,10 @@
  * @returns {boolean} True when all mappings are valid, false otherwise
  */
 export function validatePorts(portInput) {
-  if (!portInput || !portInput.trim()) return false;
+  // Empty or whitespace-only input is considered valid (ports are optional)
+  if (!portInput || !portInput.trim()) return true;
   const ports = portInput.split(",").map(p => p.trim()).filter(Boolean);
-  if (ports.length === 0) return false;
+  if (ports.length === 0) return true;
   const invalid = ports.find(pair => {
     const [host, cont] = pair.split(":");
     return !host || !cont || isNaN(Number(host)) || isNaN(Number(cont));
