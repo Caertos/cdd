@@ -1,8 +1,10 @@
 let validatePorts;
+let validateEnvVars;
 
 beforeAll(async () => {
   const mod = await import('../src/helpers/validationHelpers.js');
   validatePorts = mod.validatePorts;
+  validateEnvVars = mod.validateEnvVars;
 });
 
 describe('validatePorts', () => {
@@ -24,5 +26,35 @@ describe('validatePorts', () => {
 
   test('empty input returns false (must specify at least one port)', () => {
     expect(validatePorts('')).toBe(false);
+  });
+});
+
+describe('validateEnvVars', () => {
+  test('empty input is valid', () => {
+    expect(validateEnvVars('')).toBe(true);
+  });
+
+  test('valid single env var', () => {
+    expect(validateEnvVars('NODE_ENV=production')).toBe(true);
+  });
+
+  test('valid multiple env vars', () => {
+    expect(validateEnvVars('NODE_ENV=production,PORT=3000')).toBe(true);
+  });
+
+  test('valid env var with underscores', () => {
+    expect(validateEnvVars('MY_VAR_NAME=value')).toBe(true);
+  });
+
+  test('invalid env var without equals sign', () => {
+    expect(validateEnvVars('NOEQUALS')).toBe(false);
+  });
+
+  test('invalid env var with invalid name', () => {
+    expect(validateEnvVars('123INVALID=value')).toBe(false);
+  });
+
+  test('invalid env var with special characters in name', () => {
+    expect(validateEnvVars('MY-VAR=value')).toBe(false);
   });
 });

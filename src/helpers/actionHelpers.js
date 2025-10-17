@@ -32,7 +32,7 @@ export async function handleAction({
   setMessageColor("green");
   try {
     await actionFn(c.id);
-    setMessage(`${actionLabel} container...`);
+    setMessage(`${actionLabel} container completed successfully`);
     setMessageColor("green");
     setTimeout(() => setMessage(""), 3000);
   } catch (err) {

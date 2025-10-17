@@ -8,7 +8,7 @@ export async function getContainers() {
   const containers = await docker.listContainers({ all: true });
   return containers.map((container) => ({
     id: container.Id,
-    name: container.Names[0].replace("/", ""),
+    name: (container.Names && container.Names[0] || 'Unknown').replace("/", ""),
     image: container.Image,
     state: container.State,
     status: container.Status,

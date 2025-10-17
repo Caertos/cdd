@@ -42,12 +42,8 @@ export function useContainerCreation({ onCreate, onCancel, dbImages = [] }) {
       return;
     }
     if (step === 2) {
-      if (!portInput.trim()) {
-        setMessage("You must specify at least one port to expose (e.g. 8080:80)");
-        setMessageColor("red");
-        return;
-      }
-      if (!validatePorts(portInput)) {
+      // Ports are now optional - only validate if provided
+      if (portInput.trim() && !validatePorts(portInput)) {
         setMessage("Port format must be host:container and both must be numbers (e.g. 8080:80)");
         setMessageColor("red");
         return;

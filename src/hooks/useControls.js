@@ -200,7 +200,11 @@ export function useControls(containers = []) {
       logsViewer.openLogs();
       getLogsStream(
         containers[selected].id,
-        (data) => logsViewer.setLogs((prev) => [...prev, ...data.split("\n").filter(Boolean)]),
+        (data) => logsViewer.setLogs((prev) => {
+          const newLogs = [...prev, ...data.split("\n").filter(Boolean)];
+          // Limit to last 1000 lines to prevent memory leak
+          return newLogs.slice(-1000);
+        }),
         () => {},
         (err) => logsViewer.setLogs((prev) => [...prev, `Error: ${err.message}`])
       );

@@ -15,7 +15,15 @@ export async function getStats(containerId) {
     stream.precpu_stats.cpu_usage.total_usage;
   const systemDelta =
     stream.cpu_stats.system_cpu_usage - stream.precpu_stats.system_cpu_usage;
-  const cpuPercent = systemDelta > 0 ? (cpuDelta / systemDelta) * 100 : 0;
+  
+  // Get number of CPUs for proper normalization
+  const numCpus = stream.cpu_stats.online_cpus || 
+                  stream.cpu_stats.cpu_usage.percpu_usage?.length || 1;
+  
+  // Calculate normalized CPU percentage
+  const cpuPercent = systemDelta > 0 
+    ? ((cpuDelta / systemDelta) * numCpus * 100) 
+    : 0;
 
   const memUsage = stream.memory_stats.usage || 0;
   const memLimit = stream.memory_stats.limit || 1;

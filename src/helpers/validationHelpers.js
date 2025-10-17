@@ -11,6 +11,18 @@ export function validatePorts(portInput) {
 }
 
 export function validateEnvVars(envInput) {
-  // Future specific validations
-  return true;
+  if (!envInput || !envInput.trim()) return true; // Empty is valid
+  
+  const vars = envInput.split(",").map(v => v.trim()).filter(Boolean);
+  const invalid = vars.find(v => {
+    const parts = v.split("=");
+    // Must have at least VAR=value format
+    if (parts.length < 2) return true;
+    const varName = parts[0].trim();
+    // Variable names should be alphanumeric with underscores
+    if (!/^[A-Z_][A-Z0-9_]*$/i.test(varName)) return true;
+    return false;
+  });
+  
+  return !invalid;
 }
