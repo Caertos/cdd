@@ -1,10 +1,11 @@
 import React from "react";
 import { Text, useInput } from "ink";
+import { safeCall } from "../helpers/safeCall";
 
 export default function LogViewer({ logs, onExit, container }) {
   useInput((input, key) => {
     if (key.escape) {
-      onExit();
+      safeCall(onExit);
     }
   });
 
@@ -12,7 +13,7 @@ export default function LogViewer({ logs, onExit, container }) {
 
   return (
     <>
-      <Text color="green">{container?.name || "Container"} logs, press ESC to exit</Text>
+  <Text color="green">{container?.name ?? "Container"} logs, press ESC to exit</Text>
       {visibleLogs.length === 0 ? (
         <Text dimColor>No logs...</Text>
       ) : (

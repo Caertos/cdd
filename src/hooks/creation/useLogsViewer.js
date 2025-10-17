@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { safeCall } from "../../helpers/safeCall";
 
 /**
  * Custom hook to manage the logs viewer state and stream reference.
@@ -33,7 +34,7 @@ export function useLogsViewer() {
     setShowLogs(false);
     setLogs([]);
     if (logsStreamRef.current) {
-      logsStreamRef.current.destroy?.();
+      safeCall(logsStreamRef.current.destroy?.bind(logsStreamRef.current));
       logsStreamRef.current = null;
     }
   }

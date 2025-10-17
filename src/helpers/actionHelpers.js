@@ -1,3 +1,4 @@
+import { MESSAGE_TIMEOUTS } from "../helpers/constants";
 /**
  * Generic helper to perform a container action with user feedback.
  *
@@ -25,7 +26,7 @@ export async function handleAction({
   if (stateCheck && stateCheck(c)) {
     setMessage(stateCheck(c));
     setMessageColor("red");
-    setTimeout(() => setMessage(""), 2000);
+    setTimeout(() => setMessage(""), MESSAGE_TIMEOUTS.SHORT);
     return;
   }
   setMessage(`${actionLabel} container...`);
@@ -34,10 +35,10 @@ export async function handleAction({
     await actionFn(c.id);
     setMessage(`${actionLabel} container completed successfully`);
     setMessageColor("green");
-    setTimeout(() => setMessage(""), 3000);
+    setTimeout(() => setMessage(""), MESSAGE_TIMEOUTS.DEFAULT);
   } catch (err) {
     setMessage(`Failed to ${actionLabel.toLowerCase()} container.`);
     setMessageColor("red");
-    setTimeout(() => setMessage(""), 3000);
+    setTimeout(() => setMessage(""), MESSAGE_TIMEOUTS.DEFAULT);
   }
 }

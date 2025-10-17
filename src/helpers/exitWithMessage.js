@@ -1,4 +1,5 @@
 import { spawn } from "child_process";
+import { EXIT_DELAY } from "./constants";
 
 /**
  * Show an exit message using provided setters, clear the terminal and exit after a delay.
@@ -10,7 +11,7 @@ import { spawn } from "child_process";
  * @param {string} [params.color] - Color for the message
  * @param {number} [params.delay] - Delay in milliseconds before exiting
  */
-export function exitWithMessage({ setMessage, setMessageColor, message = "Exiting...", color = "yellow", delay = 1500 }) {
+export function exitWithMessage({ setMessage, setMessageColor, message = "Exiting...", color = "yellow", delay = EXIT_DELAY }) {
   setMessage(message);
   setMessageColor(color);
   setTimeout(() => {

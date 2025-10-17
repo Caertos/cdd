@@ -4,6 +4,35 @@ All notable changes to this project will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+### Added
+
+- `safeCall` utility to safely invoke optional callbacks and avoid uncaught errors from consumer callbacks.
+
+### Changed
+
+- Replaced direct optional callback invocations and stream destruction calls with `safeCall` in several modules (`containerLogs`, `useLogsStream`, `useLogsViewer`, `useContainerCreation`, `useContainerActions`, `LogViewer`).
+- ESLint config updated to include `jest` env and allow keeping `import React` for build compatibility.
+
+### Fixed
+
+- Added unit tests for `safeCall` and adjusted several components to silence lint warnings (unused variables).
+
+- Minor refactors to improve robustness when handling log streams and consumer callbacks.
+
+### Changed
+
+- Extracted common magic numbers into `src/helpers/constants.js` and replaced hardcoded values across the codebase:
+	- `REFRESH_INTERVALS.CONTAINER_LIST` (3000)
+	- `REFRESH_INTERVALS.CONTAINER_STATS` (1500)
+	- `MESSAGE_TIMEOUTS.SHORT` (2000) and `MESSAGE_TIMEOUTS.DEFAULT` (3000)
+	- `EXIT_DELAY` (500)
+	- `TIMEOUTS.CONTAINER_OP` (30000) and `TIMEOUTS.PULL_IMAGE` (300000)
+
+- Files updated to use constants: `useContainers`, `ContainerRow`, `actionHelpers`, `useControls`, `exitWithMessage`, `containerActions`.
+
+Incoming fixes and smaller tests / docs updates
+
 ## [3.1.4] - 2025-10-17
 
 ### Changed
@@ -50,10 +79,6 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Fixed
 
 - Various runtime & build issues after modularization (import fixes, exposing container action functions, creation flow wiring).
-
-## [Unreleased]
-
-- Incoming fixes and smaller tests / docs updates
 
 ## [3.1.1] - 2025-10-16
 

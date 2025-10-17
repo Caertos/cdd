@@ -1,5 +1,6 @@
 import React, { useRef, useCallback } from "react";
 import { getLogsStream } from "../helpers/dockerService/serviceComponents/containerLogs";
+import { safeCall } from "../helpers/safeCall";
 
 /**
  * Hook that manages opening and closing a logs stream for a container.
@@ -21,7 +22,7 @@ export function useLogsStream() {
 
   const closeLogs = useCallback(() => {
     if (logsStreamRef.current) {
-      logsStreamRef.current.destroy?.();
+      safeCall(logsStreamRef.current.destroy?.bind(logsStreamRef.current));
       logsStreamRef.current = null;
     }
   }, []);

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Box, Text } from "ink";
 import { getStats } from "../helpers/dockerService/serviceComponents/containerStats";
+import { REFRESH_INTERVALS } from "../helpers/constants";
 import StatsBar from "./StatsBar.jsx";
 
 const stateText = (state) => {
@@ -22,7 +23,7 @@ export default function ContainerRow({ container }) {
   const formatPorts = (ports) => {
     if (!ports || ports.length === 0) return "";
     if (Array.isArray(ports)) {
-      return ports.map((p, i) => ` 🔗 ${p}`).join("  ");
+      return ports.map((p, _i) => ` 🔗 ${p}`).join("  ");
     }
     return ` 🔗 ${ports}`;
   };
@@ -49,7 +50,7 @@ export default function ContainerRow({ container }) {
     };
     
     fetchStats();
-    const timer = setInterval(fetchStats, 1500);
+  const timer = setInterval(fetchStats, REFRESH_INTERVALS.CONTAINER_STATS);
     
     return () => {
       isMounted = false;

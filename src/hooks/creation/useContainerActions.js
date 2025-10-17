@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { safeCall } from "../../helpers/safeCall";
 import { startContainer as svcStartContainer, stopContainer as svcStopContainer, restartContainer as svcRestartContainer, removeContainer as svcRemoveContainer } from "../../helpers/dockerService/serviceComponents/containerActions.js";
 
 /**
@@ -36,9 +37,9 @@ export function useContainerActions({ containers, onAction }) {
     setMessageColor("yellow");
     try {
       await actionFn(container.id);
-      setMessage(`${actionLabel} container successful.`);
-      setMessageColor("green");
-      if (onAction) onAction();
+  setMessage(`${actionLabel} container successful.`);
+  setMessageColor("green");
+  safeCall(onAction);
     } catch (err) {
       setMessage(`Failed to ${actionLabel.toLowerCase()} container: ${err.message}`);
       setMessageColor("red");

@@ -1,4 +1,5 @@
 import { docker } from "../dockerService";
+import { safeCall } from "../../../../src/helpers/safeCall.js";
 
 /**
  * Return a stream of logs from a container and call callbacks for events.
@@ -9,6 +10,8 @@ import { docker } from "../dockerService";
  * @param {Function} onError - Called on error
  */
 export function getLogsStream(containerId, onData, onEnd, onError) {
+  // Use shared safeCall util to call optional callbacks safely
+
   try {
     const container = docker.getContainer(containerId);
     container.logs({
@@ -18,14 +21,14 @@ export function getLogsStream(containerId, onData, onEnd, onError) {
       tail: 100
     }, (err, stream) => {
       if (err) {
-        onError?.(err);
+        safeCall(onError, err);
         return;
       }
-      stream.on('data', chunk => onData?.(chunk.toString()));
-      stream.on('end', () => onEnd?.());
-      stream.on('error', err => onError?.(err));
+      stream.on('data', chunk => safeCall(onData, chunk.toString()));
+      stream.on('end', () => safeCall(onEnd));
+      stream.on('error', err => safeCall(onError, err));
     });
   } catch (err) {
-    onError?.(err);
+    safeCall(onError, err);
   }
 }

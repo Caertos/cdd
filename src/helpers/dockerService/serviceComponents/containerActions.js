@@ -1,5 +1,6 @@
 import { docker } from "../dockerService";
 import { imageExists, pullImage } from "./imageUtils.js";
+import { TIMEOUTS } from "../../constants";
 
 /**
  * Helper to add timeout to promises
@@ -7,7 +8,7 @@ import { imageExists, pullImage } from "./imageUtils.js";
  * @param {number} ms - Timeout in milliseconds
  * @returns {Promise}
  */
-function withTimeout(promise, ms = 30000) {
+function withTimeout(promise, ms = TIMEOUTS.CONTAINER_OP) {
   return Promise.race([
     promise,
     new Promise((_, reject) => 
@@ -26,7 +27,7 @@ function withTimeout(promise, ms = 30000) {
 export async function removeContainer(containerId) {
   const container = docker.getContainer(containerId);
   try {
-    await withTimeout(container.remove({ force: true }), 30000);
+  await withTimeout(container.remove({ force: true }), TIMEOUTS.CONTAINER_OP);
   } catch (err) {
     throw new Error('Error removing container: ' + err.message);
   }
@@ -49,7 +50,7 @@ export async function createContainer(imageName, options = {}) {
   }
   if (!exists) {
     try {
-      await withTimeout(pullImage(imageName), 300000); // 5 minutes for pull
+    await withTimeout(pullImage(imageName), TIMEOUTS.PULL_IMAGE); // 5 minutes for pull
     } catch (err) {
       throw new Error('Could not pull image: ' + err.message);
     }
@@ -60,7 +61,7 @@ export async function createContainer(imageName, options = {}) {
     ...options,
   };
   try {
-    const container = await withTimeout(docker.createContainer(createOpts), 30000);
+  const container = await withTimeout(docker.createContainer(createOpts), TIMEOUTS.CONTAINER_OP);
     return container.id || container.Id;
   } catch (err) {
     throw new Error('Error creating container: ' + err.message);
@@ -74,7 +75,7 @@ export async function createContainer(imageName, options = {}) {
  */
 export async function startContainer(containerId) {
   const container = docker.getContainer(containerId);
-  await withTimeout(container.start(), 30000);
+  await withTimeout(container.start(), TIMEOUTS.CONTAINER_OP);
 }
 
 /**
@@ -84,7 +85,7 @@ export async function startContainer(containerId) {
  */
 export async function stopContainer(containerId) {
   const container = docker.getContainer(containerId);
-  await withTimeout(container.stop(), 30000);
+  await withTimeout(container.stop(), TIMEOUTS.CONTAINER_OP);
 }
 
 /**
@@ -94,5 +95,5 @@ export async function stopContainer(containerId) {
  */
 export async function restartContainer(containerId) {
   const container = docker.getContainer(containerId);
-  await withTimeout(container.restart(), 30000);
+  await withTimeout(container.restart(), TIMEOUTS.CONTAINER_OP);
 }

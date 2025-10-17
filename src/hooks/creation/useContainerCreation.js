@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { validatePorts, validateEnvVars } from "../../helpers/validationHelpers.js";
+import { validatePorts } from "../../helpers/validationHelpers.js";
+import { safeCall } from "../../helpers/safeCall";
 
 /**
  * Custom hook to manage the container creation flow, step by step.
@@ -60,8 +61,8 @@ export function useContainerCreation({ onCreate, onCancel, dbImages = [] }) {
       return;
     }
     if (step === 3) {
-      // Final step: call onCreate with all data
-      onCreate({ imageName, containerName, portInput, envInput });
+      // Final step: call onCreate with all data (safely)
+      safeCall(onCreate, { imageName, containerName, portInput, envInput });
     }
   }
 
@@ -76,7 +77,7 @@ export function useContainerCreation({ onCreate, onCancel, dbImages = [] }) {
     setEnvInput("");
     setMessage("");
     setMessageColor("yellow");
-    if (onCancel) onCancel();
+    safeCall(onCancel);
   }
 
   return {

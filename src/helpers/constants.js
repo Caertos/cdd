@@ -1,0 +1,16 @@
+export const REFRESH_INTERVALS = {
+  CONTAINER_LIST: 3000,
+  CONTAINER_STATS: 1500,
+};
+
+export const MESSAGE_TIMEOUTS = {
+  SHORT: 2000,
+  DEFAULT: 3000,
+};
+
+export const EXIT_DELAY = 500;
+
+export const TIMEOUTS = {
+  CONTAINER_OP: 30000,
+  PULL_IMAGE: 300000,
+};

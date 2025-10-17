@@ -17,8 +17,16 @@ export async function getStats(containerId) {
     stream.cpu_stats.system_cpu_usage - stream.precpu_stats.system_cpu_usage;
   
   // Get number of CPUs for proper normalization
-  const numCpus = stream.cpu_stats.online_cpus || 
-                  stream.cpu_stats.cpu_usage.percpu_usage?.length || 1;
+  let numCpus = 1;
+  if (typeof stream.cpu_stats.online_cpus === 'number' && stream.cpu_stats.online_cpus > 0) {
+    numCpus = stream.cpu_stats.online_cpus;
+  } else if (
+    stream.cpu_stats.cpu_usage &&
+    Array.isArray(stream.cpu_stats.cpu_usage.percpu_usage) &&
+    stream.cpu_stats.cpu_usage.percpu_usage.length > 0
+  ) {
+    numCpus = stream.cpu_stats.cpu_usage.percpu_usage.length;
+  }
   
   // Calculate normalized CPU percentage
   const cpuPercent = systemDelta > 0 
