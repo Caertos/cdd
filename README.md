@@ -6,6 +6,10 @@
   <a href="https://github.com/caertos/cdd/actions/workflows/ci.yml">
     <img src="https://github.com/caertos/cdd/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI status" />
   </a>
+  <!-- Documentation published to GitHub Pages -->
+  <a href="https://caertos.github.io/cdd/">
+    <img src="https://img.shields.io/badge/docs-GitHub%20Pages-blue" alt="Docs" />
+  </a>
 </p>
 
 Short, bilingual README with quickstart, development and tests.
