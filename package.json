@@ -4,9 +4,9 @@
   "description": "CLI Docker Dashboard",
   "main": "index.js",
   "scripts": {
-  "test": "node --experimental-vm-modules ./node_modules/.bin/jest --runInBand",
-  "build": "babel src --out-dir dist --extensions .js,.jsx && node fix-imports.cjs",
-  "changes": "npm run build && node dist/index.js"
+    "test": "node --experimental-vm-modules ./node_modules/.bin/jest --runInBand",
+    "build": "babel src --out-dir dist --extensions .js,.jsx && node fix-imports.cjs",
+    "changes": "npm run build && node dist/index.js"
   },
   "keywords": [],
   "author": "",
@@ -19,7 +19,7 @@
     "react": "^19.2.0"
   },
   "bin": {
-    "cdd": "./dist/index.js"
+    "cdd": "dist/index.js"
   },
   "devDependencies": {
     "@babel/cli": "^7.28.3",
