@@ -1,10 +1,12 @@
 /**
  * React hook to manage Docker containers state.
  *
- * @returns {[Array, Function]} [containers, refresh] / [contenedores, refrescar]
+ * @returns {{containers: Array<Object>}} An object containing the current
+ * containers array. The hook starts a periodic refresh and fetches the
+ * container list immediately on mount.
  * @example
  * // Use in a component
- * const [containers, refresh] = useContainers();
+ * const { containers } = useContainers();
  */
 import React, { useState, useEffect } from "react";
 import { getContainers } from "../helpers/dockerService/serviceComponents/containerList";

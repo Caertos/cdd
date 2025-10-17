@@ -3,10 +3,13 @@ import { imageExists, pullImage } from "./imageUtils.js";
 import { TIMEOUTS } from "../../constants";
 
 /**
- * Helper to add timeout to promises
- * @param {Promise} promise - Promise to wrap
- * @param {number} ms - Timeout in milliseconds
- * @returns {Promise}
+ * Helper to add timeout to promises. If the provided promise does not settle
+ * within `ms` milliseconds it will reject with an Error.
+ *
+ * @template T
+ * @param {Promise<T>} promise - Promise to wrap
+ * @param {number} [ms=TIMEOUTS.CONTAINER_OP] - Timeout in milliseconds
+ * @returns {Promise<T>} The original promise result or a rejection on timeout
  */
 function withTimeout(promise, ms = TIMEOUTS.CONTAINER_OP) {
   return Promise.race([

@@ -1,6 +1,14 @@
 // Reusable validations for ports and environment variables
 
+/**
+ * Validate a comma-separated list of port mappings in the form "host:container".
+ * Examples of valid input: "8080:80, 3000:3000"
+ *
+ * @param {string} portInput - Comma-separated port mappings
+ * @returns {boolean} True when all mappings are valid, false otherwise
+ */
 export function validatePorts(portInput) {
+  if (!portInput || !portInput.trim()) return false;
   const ports = portInput.split(",").map(p => p.trim()).filter(Boolean);
   if (ports.length === 0) return false;
   const invalid = ports.find(pair => {
@@ -10,9 +18,18 @@ export function validatePorts(portInput) {
   return !invalid;
 }
 
+/**
+ * Validate environment variable input as comma-separated VAR=value pairs.
+ * Empty or whitespace-only input is considered valid (no env vars).
+ * Variable names must start with a letter or underscore and contain only
+ * alphanumeric characters and underscores.
+ *
+ * @param {string} envInput - Comma-separated environment variable assignments
+ * @returns {boolean} True when all env var assignments are valid, false otherwise
+ */
 export function validateEnvVars(envInput) {
   if (!envInput || !envInput.trim()) return true; // Empty is valid
-  
+
   const vars = envInput.split(",").map(v => v.trim()).filter(Boolean);
   const invalid = vars.find(v => {
     const parts = v.split("=");
@@ -23,6 +40,6 @@ export function validateEnvVars(envInput) {
     if (!/^[A-Z_][A-Z0-9_]*$/i.test(varName)) return true;
     return false;
   });
-  
+
   return !invalid;
 }

@@ -1,7 +1,23 @@
 import React from "react";
 import { Box, Text } from "ink";
 import { PromptField, PromptMessage } from "./PromptField.jsx";
+import PropTypes from 'prop-types';
 
+/**
+ * Prompt UI shown when creating a new container.
+ * Presents a step-by-step form (image, name, ports, env) and displays
+ * a contextual message provided by the creation hook.
+ *
+ * @param {Object} props
+ * @param {number} props.step - Current step index (0..3)
+ * @param {string} props.imageName - Value for the image name field
+ * @param {string} props.containerName - Value for the container name field
+ * @param {string} props.portInput - Value for the ports input field
+ * @param {string} props.envInput - Value for the environment variables field
+ * @param {string} props.message - Contextual message to display (errors/hints)
+ * @param {string} props.messageColor - Color for the contextual message
+ * @returns {JSX.Element}
+ */
 export default function ContainerCreationPrompt(props) {
   const { step, imageName, containerName, portInput, envInput, message, messageColor } = props;
   const prompts = [
@@ -35,3 +51,13 @@ export default function ContainerCreationPrompt(props) {
     </Box>
   );
 }
+
+ContainerCreationPrompt.propTypes = {
+  step: PropTypes.number.isRequired,
+  imageName: PropTypes.string,
+  containerName: PropTypes.string,
+  portInput: PropTypes.string,
+  envInput: PropTypes.string,
+  message: PropTypes.string,
+  messageColor: PropTypes.string,
+};

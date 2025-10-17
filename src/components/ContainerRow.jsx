@@ -3,6 +3,7 @@ import { Box, Text } from "ink";
 import { getStats } from "../helpers/dockerService/serviceComponents/containerStats";
 import { REFRESH_INTERVALS } from "../helpers/constants";
 import StatsBar from "./StatsBar.jsx";
+import PropTypes from 'prop-types';
 
 const stateText = (state) => {
   if (state === "running") return { text: "🟢 RUNNING", color: "green" };
@@ -11,6 +12,13 @@ const stateText = (state) => {
   return { text: state.toUpperCase(), color: "gray" };
 };
 
+/**
+ * Row component that renders information and live stats for a container.
+ *
+ * @param {Object} props
+ * @param {Object} props.container - Container object with id, name, image, state and ports
+ * @returns {JSX.Element}
+ */
 export default function ContainerRow({ container }) {
   const { id, name, image, state } = container;
   const [stats, setStats] = useState({
@@ -80,3 +88,13 @@ export default function ContainerRow({ container }) {
     </Box>
   );
 }
+
+ContainerRow.propTypes = {
+  container: PropTypes.shape({
+    id: PropTypes.string.isRequired,
+    name: PropTypes.string.isRequired,
+    image: PropTypes.string,
+    state: PropTypes.string,
+    ports: PropTypes.oneOfType([PropTypes.array, PropTypes.string])
+  }).isRequired,
+};

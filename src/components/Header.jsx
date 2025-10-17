@@ -1,6 +1,18 @@
 import React from "react";
 import { Box, Text } from "ink";
 import chalk from "chalk";
+import PropTypes from 'prop-types';
+
+/**
+ * Header component displayed at the top of the CLI UI.
+ *
+ * @component
+ * @param {Object} props
+ * @param {number} props.count - Number of containers currently detected
+ * @returns {JSX.Element}
+ * @example
+ * <Header count={3} />
+ */
 
 export default function Header({ count }) {
   return (
@@ -15,3 +27,7 @@ export default function Header({ count }) {
     </Box>
   );
 }
+
+Header.propTypes = {
+  count: PropTypes.number.isRequired,
+};

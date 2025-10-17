@@ -8,6 +8,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 
 - `safeCall` utility to safely invoke optional callbacks and avoid uncaught errors from consumer callbacks.
+ - PropTypes added to core React components for runtime prop validation (ContainerRow, ContainerList, LogViewer, StatsBar, ContainerCreationPrompt, PromptField, MessageFeedback, Header, ContainerSection).
 
 ### Changed
 
@@ -18,10 +19,13 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 - Added unit tests for `safeCall` and adjusted several components to silence lint warnings (unused variables).
 
-- Minor refactors to improve robustness when handling log streams and consumer callbacks.
+### Testing
+
+
+ - Added additional unit tests for Docker service functions and hooks. All tests pass locally (5 suites, 26 tests).
+ - Removed generated `dist/` artifacts and deleted obsolete test files that referenced incompatible test helpers.
 
 ### Changed
-
 - Extracted common magic numbers into `src/helpers/constants.js` and replaced hardcoded values across the codebase:
 	- `REFRESH_INTERVALS.CONTAINER_LIST` (3000)
 	- `REFRESH_INTERVALS.CONTAINER_STATS` (1500)
