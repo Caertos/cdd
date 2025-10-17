@@ -4,6 +4,28 @@ All notable changes to this project will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [3.1.3] - 2025-10-17
+
+### Fixed
+
+- Addressed critical security and stability issues identified in internal audit.
+- Improved Docker service components robustness (`containerActions`, `containerList`, `containerLogs`, `containerStats`).
+- Strengthened validation helpers and extended unit tests.
+
+### Added
+
+- Documentation: `FIXES_APPLIED.md` summarizing analysis and mitigations.
+
+### Changed
+
+- Minor code refactors and clarifications across components and hooks.
+
+## [3.1.2] - 2025-10-16
+
+### Changed
+
+- Docs cleanup: remove Spanish inline comments; add English JSDoc across source files.
+
 ## [3.1.0] - 2025-10-16
 
 ### Added
