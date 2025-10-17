@@ -30,19 +30,31 @@ export default function ContainerRow({ container }) {
   const [statsError, setStatsError] = useState("");
   useEffect(() => {
     if (state !== "running") return;
+    
+    let isMounted = true;
+    
     const fetchStats = async () => {
       try {
         const s = await getStats(id);
-        setStats(s);
-        setStatsError("");
+        if (isMounted) {
+          setStats(s);
+          setStatsError("");
+        }
       } catch (err) {
-        setStats({ cpuPercent: 0, memPercent: 0, netIO: { rx: 0, tx: 0 } });
-        setStatsError("Error fetching stats");
+        if (isMounted) {
+          setStats({ cpuPercent: 0, memPercent: 0, netIO: { rx: 0, tx: 0 } });
+          setStatsError("Error fetching stats");
+        }
       }
     };
+    
     fetchStats();
     const timer = setInterval(fetchStats, 1500);
-    return () => clearInterval(timer);
+    
+    return () => {
+      isMounted = false;
+      clearInterval(timer);
+    };
   }, [id, state]);
 
   const stateInfo = stateText(state);

@@ -1,3 +1,21 @@
+import { docker } from "../dockerService";
+import { imageExists, pullImage } from "./imageUtils.js";
+
+/**
+ * Helper to add timeout to promises
+ * @param {Promise} promise - Promise to wrap
+ * @param {number} ms - Timeout in milliseconds
+ * @returns {Promise}
+ */
+function withTimeout(promise, ms = 30000) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Operation timed out')), ms)
+    )
+  ]);
+}
+
 /**
  * Remove (delete) a container by id. Force removal so running containers are stopped first.
  *
@@ -8,13 +26,11 @@
 export async function removeContainer(containerId) {
   const container = docker.getContainer(containerId);
   try {
-    await container.remove({ force: true });
+    await withTimeout(container.remove({ force: true }), 30000);
   } catch (err) {
     throw new Error('Error removing container: ' + err.message);
   }
 }
-import { docker } from "../dockerService";
-import { imageExists, pullImage } from "./imageUtils.js";
 
 /**
  * Create a new container from an image. If the image is missing locally, it will be pulled.
@@ -27,13 +43,13 @@ import { imageExists, pullImage } from "./imageUtils.js";
 export async function createContainer(imageName, options = {}) {
   let exists;
   try {
-    exists = await imageExists(imageName);
+    exists = await withTimeout(imageExists(imageName), 10000);
   } catch (err) {
     throw new Error('Error listing local images: ' + err.message);
   }
   if (!exists) {
     try {
-      await pullImage(imageName);
+      await withTimeout(pullImage(imageName), 300000); // 5 minutes for pull
     } catch (err) {
       throw new Error('Could not pull image: ' + err.message);
     }
@@ -44,7 +60,7 @@ export async function createContainer(imageName, options = {}) {
     ...options,
   };
   try {
-    const container = await docker.createContainer(createOpts);
+    const container = await withTimeout(docker.createContainer(createOpts), 30000);
     return container.id || container.Id;
   } catch (err) {
     throw new Error('Error creating container: ' + err.message);
@@ -58,7 +74,7 @@ export async function createContainer(imageName, options = {}) {
  */
 export async function startContainer(containerId) {
   const container = docker.getContainer(containerId);
-  await container.start();
+  await withTimeout(container.start(), 30000);
 }
 
 /**
@@ -68,7 +84,7 @@ export async function startContainer(containerId) {
  */
 export async function stopContainer(containerId) {
   const container = docker.getContainer(containerId);
-  await container.stop();
+  await withTimeout(container.stop(), 30000);
 }
 
 /**
@@ -78,5 +94,5 @@ export async function stopContainer(containerId) {
  */
 export async function restartContainer(containerId) {
   const container = docker.getContainer(containerId);
-  await container.restart();
+  await withTimeout(container.restart(), 30000);
 }
