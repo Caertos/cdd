@@ -48,49 +48,49 @@
 
         <h2>Keyboard Controls</h2>
         <p>The CLI is fully controlled via keyboard shortcuts. Here's what each key does:</p>
-        <table style="width:100%; border-collapse:collapse; margin:1rem 0;">
+        <table class="keyboard-table">
             <thead>
-                <tr style="background:rgba(255,255,255,0.05);">
-                    <th style="padding:8px; text-align:left; border-bottom:1px solid rgba(255,255,255,0.1);">Key</th>
-                    <th style="padding:8px; text-align:left; border-bottom:1px solid rgba(255,255,255,0.1);">Action</th>
+                <tr>
+                    <th>Key</th>
+                    <th>Action</th>
                 </tr>
             </thead>
             <tbody>
                 <tr>
-                    <td style="padding:8px; border-bottom:1px solid rgba(255,255,255,0.05);"><code>↑ / ↓</code></td>
-                    <td style="padding:8px; border-bottom:1px solid rgba(255,255,255,0.05);">Navigate up/down through the container list</td>
+                    <td><code>↑ / ↓</code></td>
+                    <td>Navigate up/down through the container list</td>
                 </tr>
                 <tr>
-                    <td style="padding:8px; border-bottom:1px solid rgba(255,255,255,0.05);"><code>I</code></td>
-                    <td style="padding:8px; border-bottom:1px solid rgba(255,255,255,0.05);">Start (initiate) the selected container</td>
+                    <td><code>I</code></td>
+                    <td>Start (initiate) the selected container</td>
                 </tr>
                 <tr>
-                    <td style="padding:8px; border-bottom:1px solid rgba(255,255,255,0.05);"><code>P</code></td>
-                    <td style="padding:8px; border-bottom:1px solid rgba(255,255,255,0.05);">Pause (stop) the selected container</td>
+                    <td><code>P</code></td>
+                    <td>Pause (stop) the selected container</td>
                 </tr>
                 <tr>
-                    <td style="padding:8px; border-bottom:1px solid rgba(255,255,255,0.05);"><code>R</code></td>
-                    <td style="padding:8px; border-bottom:1px solid rgba(255,255,255,0.05);">Restart the selected container</td>
+                    <td><code>R</code></td>
+                    <td>Restart the selected container</td>
                 </tr>
                 <tr>
-                    <td style="padding:8px; border-bottom:1px solid rgba(255,255,255,0.05);"><code>L</code></td>
-                    <td style="padding:8px; border-bottom:1px solid rgba(255,255,255,0.05);">View real-time logs for the selected container (press <code>ESC</code> or <code>Q</code> to exit)</td>
+                    <td><code>L</code></td>
+                    <td>View real-time logs for the selected container (press <code>ESC</code> or <code>Q</code> to exit)</td>
                 </tr>
                 <tr>
-                    <td style="padding:8px; border-bottom:1px solid rgba(255,255,255,0.05);"><code>C</code></td>
-                    <td style="padding:8px; border-bottom:1px solid rgba(255,255,255,0.05);">Create a new container (interactive wizard prompts for image, ports, env vars)</td>
+                    <td><code>C</code></td>
+                    <td>Create a new container (interactive wizard prompts for image, ports, env vars)</td>
                 </tr>
                 <tr>
-                    <td style="padding:8px; border-bottom:1px solid rgba(255,255,255,0.05);"><code>E</code></td>
-                    <td style="padding:8px; border-bottom:1px solid rgba(255,255,255,0.05);">Erase (remove) the selected container (requires confirmation: <code>Y/N</code>)</td>
+                    <td><code>E</code></td>
+                    <td>Erase (remove) the selected container (requires confirmation: <code>Y/N</code>)</td>
                 </tr>
                 <tr>
-                    <td style="padding:8px; border-bottom:1px solid rgba(255,255,255,0.05);"><code>D</code></td>
-                    <td style="padding:8px; border-bottom:1px solid rgba(255,255,255,0.05);">Toggle the on-screen debug log panel (shows internal CLI logs)</td>
+                    <td><code>D</code></td>
+                    <td>Toggle the on-screen debug log panel (shows internal CLI logs)</td>
                 </tr>
                 <tr>
-                    <td style="padding:8px; border-bottom:1px solid rgba(255,255,255,0.05);"><code>Q</code></td>
-                    <td style="padding:8px; border-bottom:1px solid rgba(255,255,255,0.05);">Quit the CLI</td>
+                    <td><code>Q</code></td>
+                    <td>Quit the CLI</td>
                 </tr>
             </tbody>
         </table>
@@ -114,7 +114,7 @@
         <p class="note">If you don't see any containers, ensure Docker is running and your user has permission to access the Docker socket. On Linux, add your user to the <code>docker</code> group or run with <code>sudo</code>.</p>
     </section>
 
-    <footer style="text-align:center; padding:2rem 1rem; color:#98a9c9;">
+    <footer class="landing-footer">
         Documentation generated with <a href="https://github.com/jsdoc/jsdoc">JSDoc</a> — <a href="https://github.com/Caertos/cdd">Repository</a>
     </footer>
 
@@ -132,9 +132,4 @@
 <script> if (typeof prettyPrint === 'function') prettyPrint(); </script>
 <script src="scripts/linenumber.js"></script>
 </body>
-</html>
-</div>
-
-</body>
-
 </html>
