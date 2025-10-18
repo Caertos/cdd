@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: components/StatsBar.jsx</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: components/StatsBar.jsx</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>import React from "react";
+import { Text } from "ink";
+import chalk from "chalk";
+import PropTypes from 'prop-types';
+
+const BAR_WIDTH = 8;
+
+/**
+ * Small visual bar that shows CPU and memory usage percentages.
+ *
+ * @param {Object} props
+ * @param {number} props.cpu - CPU percentage (values outside 0-100 are clamped)
+ * @param {number} props.mem - Memory percentage (values outside 0-100 are clamped)
+ * @returns {JSX.Element}
+ */
+export default function StatsBar({ cpu, mem }) {
+  const cpuBar = makeBar(cpu, BAR_WIDTH);
+  const memBar = makeBar(mem, BAR_WIDTH);
+
+  return (
+    &lt;Text>
+      CPU:{cpuBar}{colorize(cpu, ` ${formatPercent(cpu)}%`)} MEM:{memBar}{colorize(mem, ` ${formatPercent(mem)}%`)}
+    &lt;/Text>
+  );
+}
+
+StatsBar.propTypes = {
+  cpu: PropTypes.number.isRequired,
+  mem: PropTypes.number.isRequired,
+};
+
+/**
+ * Build a fixed-width bar representation from a numeric percentage.
+ *
+ * @param {number} value - Percentage value (values outside 0-100 are clamped)
+ * @param {number} width - Desired bar width in characters
+ * @returns {string} Colored bar string
+ */
+function makeBar(value, width) {
+  const safeWidth = Math.max(1, Math.round(width));
+  const normalized = Number.isFinite(value) ? Math.min(Math.max(value, 0), 100) : 0;
+  const filled = Math.round((normalized / 100) * safeWidth);
+  const empty = Math.max(0, safeWidth - filled);
+  const bar = "█".repeat(filled) + "░".repeat(empty);
+  return colorize(normalized, bar);
+}
+
+function formatPercent(value) {
+  if (!Number.isFinite(value)) return 0;
+  const normalized = Math.min(Math.max(value, 0), 100);
+  if (normalized >= 10) return Math.round(normalized);
+  return normalized.toFixed(1).replace(/\.0$/, "");
+}
+
+/**
+ * Colorize a value or text depending on thresholds.
+ *
+ * @param {number} value - Numeric value used to pick color; receives clamped percentage
+ * @param {string} [text] - Text to colorize, defaults to the numeric string
+ * @returns {string}
+ */
+function colorize(value, text = value.toString()) {
+  if (value &lt; 50) return chalk.greenBright(text);
+  if (value &lt; 80) return chalk.yellowBright(text);
+  return chalk.redBright(text);
+}
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-index.html">index</a></li></ul><h3>Global</h3><ul><li><a href="global.html#EXIT_DELAY">EXIT_DELAY</a></li><li><a href="global.html#LOG_LEVELS">LOG_LEVELS</a></li><li><a href="global.html#MESSAGE_TIMEOUTS">MESSAGE_TIMEOUTS</a></li><li><a href="global.html#PromptField">PromptField</a></li><li><a href="global.html#PromptMessage">PromptMessage</a></li><li><a href="global.html#REFRESH_INTERVALS">REFRESH_INTERVALS</a></li><li><a href="global.html#TIMEOUTS">TIMEOUTS</a></li><li><a href="global.html#VERSION">VERSION</a></li><li><a href="global.html#colorize">colorize</a></li><li><a href="global.html#createContainer">createContainer</a></li><li><a href="global.html#docker">docker</a></li><li><a href="global.html#exitWithMessage">exitWithMessage</a></li><li><a href="global.html#getContainers">getContainers</a></li><li><a href="global.html#getLogsStream">getLogsStream</a></li><li><a href="global.html#getStats">getStats</a></li><li><a href="global.html#handleAction">handleAction</a></li><li><a href="global.html#imageExists">imageExists</a></li><li><a href="global.html#logger">logger</a></li><li><a href="global.html#makeBar">makeBar</a></li><li><a href="global.html#normalizeContainerName">normalizeContainerName</a></li><li><a href="global.html#pullImage">pullImage</a></li><li><a href="global.html#removeContainer">removeContainer</a></li><li><a href="global.html#restartContainer">restartContainer</a></li><li><a href="global.html#safeCall">safeCall</a></li><li><a href="global.html#startContainer">startContainer</a></li><li><a href="global.html#stopContainer">stopContainer</a></li><li><a href="global.html#useContainerActions">useContainerActions</a></li><li><a href="global.html#useContainerCreation">useContainerCreation</a></li><li><a href="global.html#useControls">useControls</a></li><li><a href="global.html#useLogsStream">useLogsStream</a></li><li><a href="global.html#useLogsViewer">useLogsViewer</a></li><li><a href="global.html#validateEnvVars">validateEnvVars</a></li><li><a href="global.html#validatePorts">validatePorts</a></li><li><a href="global.html#withTimeout">withTimeout</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Sat Oct 18 2025 20:20:28 GMT+0000 (Coordinated Universal Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

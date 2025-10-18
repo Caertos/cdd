@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: hooks/creation/useContainerCreation.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: hooks/creation/useContainerCreation.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>import { useState } from "react";
+import { validatePorts } from "../../helpers/validationHelpers.js";
+import { safeCall } from "../../helpers/safeCall.js";
+
+/**
+ * Custom hook to manage the container creation flow, step by step.
+ * Handles input, validation, and feedback for each creation step.
+ *
+ * @param {Object} params
+ * @param {Function} params.onCreate - Callback when creation is confirmed
+ * @param {Function} params.onCancel - Callback when creation is cancelled
+ * @param {Array&lt;string>} params.dbImages - List of DB image names for env var warning
+ * @returns {Object} Creation state, setters, and helpers
+ */
+export function useContainerCreation({ onCreate, onCancel, dbImages = [] }) {
+  const [step, setStep] = useState(0); // 0: image, 1: name, 2: ports, 3: env
+  const [imageName, setImageName] = useState("");
+  const [containerName, setContainerName] = useState("");
+  const [portInput, setPortInput] = useState("");
+  const [envInput, setEnvInput] = useState("");
+  const [message, setMessage] = useState("");
+  const [messageColor, setMessageColor] = useState("yellow");
+
+  /**
+   * Advances to the next step, with validation and feedback.
+   */
+  function nextStep() {
+    if (step === 0) {
+      if (!imageName.trim()) {
+        setMessage("Image name cannot be empty.");
+        setMessageColor("red");
+        return;
+      }
+      setStep(1);
+      setMessage("Optional: Enter container name or leave empty and press Enter");
+      setMessageColor("yellow");
+      return;
+    }
+    if (step === 1) {
+      setStep(2);
+      setMessage("Optional: Enter ports (format 8080:80,443:443) or leave empty and press Enter");
+      setMessageColor("yellow");
+      return;
+    }
+    if (step === 2) {
+      // Ports are now optional - only validate if provided
+      if (portInput.trim() &amp;&amp; !validatePorts(portInput)) {
+        setMessage("Port format must be host:container and both must be numbers (e.g. 8080:80)");
+        setMessageColor("red");
+        return;
+      }
+      setStep(3);
+      const isDb = dbImages.some(db => imageName.trim().toLowerCase().includes(db));
+      if (isDb) {
+        setMessage("Warning: This image usually requires environment variables (e.g. MYSQL_ROOT_PASSWORD=my-secret-pw for MySQL, POSTGRES_PASSWORD=yourpassword for Postgres). Enter them as VAR=val,VAR2=val2 or leave empty and press Enter.");
+        setMessageColor("yellow");
+      } else {
+        setMessage("Optional: Enter environment variables (format VAR1=val1,VAR2=val2) or leave empty and press Enter");
+        setMessageColor("yellow");
+      }
+      return;
+    }
+    if (step === 3) {
+      // Final step: call onCreate with all data (safely)
+      safeCall(onCreate, { imageName, containerName, portInput, envInput });
+    }
+  }
+
+  /**
+   * Cancels the creation process and resets state.
+   */
+  function cancelCreation() {
+    setStep(0);
+    setImageName("");
+    setContainerName("");
+    setPortInput("");
+    setEnvInput("");
+    setMessage("");
+    setMessageColor("yellow");
+    safeCall(onCancel);
+  }
+
+  return {
+    step,
+    setStep,
+    imageName,
+    setImageName,
+    containerName,
+    setContainerName,
+    portInput,
+    setPortInput,
+    envInput,
+    setEnvInput,
+    message,
+    setMessage,
+    messageColor,
+    setMessageColor,
+    nextStep,
+    cancelCreation,
+  };
+}
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-index.html">index</a></li></ul><h3>Global</h3><ul><li><a href="global.html#EXIT_DELAY">EXIT_DELAY</a></li><li><a href="global.html#LOG_LEVELS">LOG_LEVELS</a></li><li><a href="global.html#MESSAGE_TIMEOUTS">MESSAGE_TIMEOUTS</a></li><li><a href="global.html#PromptField">PromptField</a></li><li><a href="global.html#PromptMessage">PromptMessage</a></li><li><a href="global.html#REFRESH_INTERVALS">REFRESH_INTERVALS</a></li><li><a href="global.html#TIMEOUTS">TIMEOUTS</a></li><li><a href="global.html#VERSION">VERSION</a></li><li><a href="global.html#colorize">colorize</a></li><li><a href="global.html#createContainer">createContainer</a></li><li><a href="global.html#docker">docker</a></li><li><a href="global.html#exitWithMessage">exitWithMessage</a></li><li><a href="global.html#getContainers">getContainers</a></li><li><a href="global.html#getLogsStream">getLogsStream</a></li><li><a href="global.html#getStats">getStats</a></li><li><a href="global.html#handleAction">handleAction</a></li><li><a href="global.html#imageExists">imageExists</a></li><li><a href="global.html#logger">logger</a></li><li><a href="global.html#makeBar">makeBar</a></li><li><a href="global.html#normalizeContainerName">normalizeContainerName</a></li><li><a href="global.html#pullImage">pullImage</a></li><li><a href="global.html#removeContainer">removeContainer</a></li><li><a href="global.html#restartContainer">restartContainer</a></li><li><a href="global.html#safeCall">safeCall</a></li><li><a href="global.html#startContainer">startContainer</a></li><li><a href="global.html#stopContainer">stopContainer</a></li><li><a href="global.html#useContainerActions">useContainerActions</a></li><li><a href="global.html#useContainerCreation">useContainerCreation</a></li><li><a href="global.html#useControls">useControls</a></li><li><a href="global.html#useLogsStream">useLogsStream</a></li><li><a href="global.html#useLogsViewer">useLogsViewer</a></li><li><a href="global.html#validateEnvVars">validateEnvVars</a></li><li><a href="global.html#validatePorts">validatePorts</a></li><li><a href="global.html#withTimeout">withTimeout</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Sat Oct 18 2025 20:20:28 GMT+0000 (Coordinated Universal Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

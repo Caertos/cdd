@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: helpers/actionHelpers.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: helpers/actionHelpers.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>import { MESSAGE_TIMEOUTS } from "../helpers/constants.js";
+import { logger } from "./logger.js";
+/**
+ * Generic helper to perform a container action with user feedback.
+ *
+ * @param {Object} params
+ * @param {Array} params.containers - Array of container objects
+ * @param {number} params.selected - Index of the selected container
+ * @param {Function} params.actionFn - Async function that performs the action (receives container id)
+ * @param {string} params.actionLabel - Label used in feedback messages (e.g. 'Starting')
+ * @param {Function} params.setMessage - Setter for feedback message
+ * @param {Function} params.setMessageColor - Setter for feedback color
+ * @param {Function} [params.stateCheck] - Optional function that validates container state before action
+ * @returns {Promise&lt;void>}
+ */
+export async function handleAction({
+  containers,
+  selected,
+  actionFn,
+  actionLabel,
+  setMessage,
+  setMessageColor,
+  stateCheck
+}) {
+  const c = containers[selected];
+  if (!c) return;
+  if (stateCheck) {
+    const failureReason = stateCheck(c);
+    if (failureReason) {
+      logger.warn("Action %s blocked for container %s: %s", actionLabel, c.id, failureReason);
+      setMessage(failureReason);
+      setMessageColor("red");
+      setTimeout(() => setMessage(""), MESSAGE_TIMEOUTS.SHORT);
+      return;
+    }
+  }
+  setMessage(`${actionLabel} container...`);
+  setMessageColor("green");
+  logger.info("Action %s requested for container %s", actionLabel, c.id);
+  try {
+    await actionFn(c.id);
+    setMessage(`${actionLabel} container completed successfully`);
+    setMessageColor("green");
+    setTimeout(() => setMessage(""), MESSAGE_TIMEOUTS.DEFAULT);
+    logger.info("Action %s completed for container %s", actionLabel, c.id);
+  } catch (err) {
+    setMessage(`Failed to ${actionLabel.toLowerCase()} container.`);
+    setMessageColor("red");
+    setTimeout(() => setMessage(""), MESSAGE_TIMEOUTS.DEFAULT);
+    logger.error("Action %s failed for container %s", actionLabel, c.id, err);
+  }
+}</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-index.html">index</a></li></ul><h3>Global</h3><ul><li><a href="global.html#EXIT_DELAY">EXIT_DELAY</a></li><li><a href="global.html#LOG_LEVELS">LOG_LEVELS</a></li><li><a href="global.html#MESSAGE_TIMEOUTS">MESSAGE_TIMEOUTS</a></li><li><a href="global.html#PromptField">PromptField</a></li><li><a href="global.html#PromptMessage">PromptMessage</a></li><li><a href="global.html#REFRESH_INTERVALS">REFRESH_INTERVALS</a></li><li><a href="global.html#TIMEOUTS">TIMEOUTS</a></li><li><a href="global.html#VERSION">VERSION</a></li><li><a href="global.html#colorize">colorize</a></li><li><a href="global.html#createContainer">createContainer</a></li><li><a href="global.html#docker">docker</a></li><li><a href="global.html#exitWithMessage">exitWithMessage</a></li><li><a href="global.html#getContainers">getContainers</a></li><li><a href="global.html#getLogsStream">getLogsStream</a></li><li><a href="global.html#getStats">getStats</a></li><li><a href="global.html#handleAction">handleAction</a></li><li><a href="global.html#imageExists">imageExists</a></li><li><a href="global.html#logger">logger</a></li><li><a href="global.html#makeBar">makeBar</a></li><li><a href="global.html#normalizeContainerName">normalizeContainerName</a></li><li><a href="global.html#pullImage">pullImage</a></li><li><a href="global.html#removeContainer">removeContainer</a></li><li><a href="global.html#restartContainer">restartContainer</a></li><li><a href="global.html#safeCall">safeCall</a></li><li><a href="global.html#startContainer">startContainer</a></li><li><a href="global.html#stopContainer">stopContainer</a></li><li><a href="global.html#useContainerActions">useContainerActions</a></li><li><a href="global.html#useContainerCreation">useContainerCreation</a></li><li><a href="global.html#useControls">useControls</a></li><li><a href="global.html#useLogsStream">useLogsStream</a></li><li><a href="global.html#useLogsViewer">useLogsViewer</a></li><li><a href="global.html#validateEnvVars">validateEnvVars</a></li><li><a href="global.html#validatePorts">validatePorts</a></li><li><a href="global.html#withTimeout">withTimeout</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Sat Oct 18 2025 20:20:28 GMT+0000 (Coordinated Universal Time)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>
