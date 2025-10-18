@@ -1,16 +1,16 @@
-/* Home page styles for CDD docs */
+/* Home page styles for CDD docs (dark theme) */
 :root{
-  --bg: #0f1724;
+  --bg: #071022;
   --card: #0b1220;
   --muted: #9aa4b2;
   --accent: #38bdf8;
   --accent-2: #60a5fa;
-  --surface: #0b1220;
+  --surface: #071022;
   --text: #e6eef6;
 }
-body{
-  background: linear-gradient(180deg,var(--bg),#071022);
-  color:var(--text);
+html, body{
+  background: linear-gradient(180deg,var(--bg),#04121a) !important;
+  color:var(--text) !important;
   font-family: Inter, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   margin:0; padding:0;
 }
@@ -18,13 +18,25 @@ body{
 .home-header{padding:18px 0;border-bottom:1px solid rgba(255,255,255,0.04);}
 .page-title{font-size:2.2rem;margin:0 0 6px}
 .subtitle{color:var(--muted);margin:0 0 12px}
-.btn{display:inline-block;margin-right:8px;padding:8px 14px;border-radius:8px;background:linear-gradient(90deg,var(--accent),var(--accent-2));color:#072031;text-decoration:none;font-weight:600}
+.btn{display:inline-block;margin-right:8px;padding:8px 14px;border-radius:8px;background:linear-gradient(90deg,var(--accent),var(--accent-2));color:#072031;text-decoration:none;font-weight:700}
 .hero-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px;margin-top:18px}
-.card{background:rgba(255,255,255,0.03);padding:16px;border-radius:10px;border:1px solid rgba(255,255,255,0.03)}
+.card{background:rgba(255,255,255,0.02);padding:16px;border-radius:10px;border:1px solid rgba(255,255,255,0.03)}
 .card h3{margin:0 0 8px}
-.card pre{background:rgba(0,0,0,0.18);padding:8px;border-radius:6px;overflow:auto;color:var(--text)}
+.card pre{background:rgba(0,0,0,0.22);padding:8px;border-radius:6px;overflow:auto;color:var(--text)}
 .quickstart{margin-top:22px;background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent);padding:16px;border-radius:10px;border:1px solid rgba(255,255,255,0.02)}
 .quickstart ol{margin:8px 0 12px 20px}
-.quickstart pre{background:rgba(0,0,0,0.14);padding:12px;border-radius:6px}
+.quickstart pre{background:rgba(0,0,0,0.18);padding:12px;border-radius:6px}
 .note{color:var(--muted);font-size:0.95rem}
 @media (max-width:600px){.page-title{font-size:1.6rem}.home-header p{margin:8px 0}.hero-cards{gap:12px}}
+
+/* Navigation adjustments to improve contrast */
+nav{background:var(--surface);padding:18px;border-left:1px solid rgba(255,255,255,0.02);color:var(--muted)}
+nav a{color:var(--muted);text-decoration:none}
+nav a:hover{color:var(--accent)}
+
+/* Ensure code and pre elements are readable */
+code, pre, .params td.code{color:var(--text);background:transparent}
+
+/* Buttons: ensure contrast on dark background */
+.btn{color:#072031;font-weight:700}
+.btn:hover{filter:brightness(0.95)}
