@@ -12,12 +12,15 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Changed
 
+- Container creation now inspects image `EXPOSE` declarations and auto-binds ports when the user leaves the ports step empty, reusing the next free host port to avoid conflicts (e.g. second `nginx` gets `81:80`).
+- CLI clears the terminal when starting and again after exiting with `q` for a cleaner shell experience.
 - Replaced direct optional callback invocations and stream destruction calls with `safeCall` in several modules (`containerLogs`, `useLogsStream`, `useLogsViewer`, `useContainerCreation`, `useContainerActions`, `LogViewer`).
 - ESLint config updated to include `jest` env and allow keeping `import React` for build compatibility.
 
 ### Fixed
 
 - Added unit tests for `safeCall` and adjusted several components to silence lint warnings (unused variables).
+- Clamp `StatsBar` CPU/memory percentages to avoid negative repeat errors when streaming container stats (also refreshed component JSDoc to note the clamping).
 
 ### Testing
 

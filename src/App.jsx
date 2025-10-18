@@ -1,5 +1,7 @@
 /**
  * Main React component for the CDD CLI UI.
+ * Handles container listing, action feedback, optional creation prompt,
+ * and renders the live debug log panel (toggle with the D shortcut).
  *
  * @component
  * @returns {JSX.Element} The rendered app
@@ -51,6 +53,18 @@ export default function App() {
         <Spacer />
         <MessageFeedback message={controls.message} color={controls.messageColor} />
         <UsageMenu />
+        {controls.showDebugLogs && (
+          <Box marginTop={1} flexDirection="column" borderStyle="round" borderColor="gray" padding={1}>
+            <Text color="cyan">Debug log — press D or ESC to close</Text>
+            {controls.debugLogs.length === 0 ? (
+              <Text dimColor>No debug entries yet. Run with CDD_LOG_LEVEL=debug for verbose output.</Text>
+            ) : (
+              controls.debugLogs.slice(-15).map((line, idx) => (
+                <Text key={idx} color="gray">{line}</Text>
+              ))
+            )}
+          </Box>
+        )}
         <Footer />
       </Box>
       {controls.showLogs && (

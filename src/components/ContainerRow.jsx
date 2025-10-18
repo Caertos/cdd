@@ -19,7 +19,7 @@ const stateText = (state) => {
  * @param {Object} props.container - Container object with id, name, image, state and ports
  * @returns {JSX.Element}
  */
-export default function ContainerRow({ container }) {
+export default function ContainerRow({ container, isSelected = false }) {
   const { id, name, image, state } = container;
   const [stats, setStats] = useState({
     cpuPercent: 0,
@@ -76,19 +76,24 @@ export default function ContainerRow({ container }) {
   return (
     <Box flexDirection="column" marginBottom={1}>
       <Box flexDirection="row" alignItems="center">
-        <Box width={20} flexShrink={1} paddingRight={1}>
-          <Text color="cyan">{truncate(name, 20)}</Text>
+        <Box width={2} minWidth={2} justifyContent="flex-end" paddingRight={1}>
+          <Text color={isSelected ? "green" : undefined}>
+            {isSelected ? "➤" : "  "}
+          </Text>
         </Box>
-        <Box width={20} flexShrink={1} paddingRight={1}>
-          <Text color="gray">{truncate(image, 20)}</Text>
+        <Box width={18} flexShrink={1} paddingRight={1}>
+          <Text color="cyan">{truncate(name, 18)}</Text>
         </Box>
-        <Box width={16} minWidth={10} paddingRight={1}>
+        <Box width={18} flexShrink={1} paddingRight={1}>
+          <Text color="gray">{truncate(image, 18)}</Text>
+        </Box>
+        <Box width={14} minWidth={12} paddingRight={1}>
           <Text color={stateInfo.color}>{stateInfo.text}</Text>
         </Box>
         <Box flexGrow={1} flexShrink={1} paddingLeft={0} paddingRight={1}>
           <Text color="yellow">{formatPorts(container.ports)}</Text>
         </Box>
-        <Box width={30} flexShrink={0} paddingLeft={1}>
+        <Box flexShrink={0} paddingLeft={1}>
           {state === "running" ? (
             <StatsBar cpu={parseFloat(stats.cpuPercent)} mem={parseFloat(stats.memPercent)} />
           ) : null}
@@ -107,4 +112,5 @@ ContainerRow.propTypes = {
     state: PropTypes.string,
     ports: PropTypes.oneOfType([PropTypes.array, PropTypes.string])
   }).isRequired,
+  isSelected: PropTypes.bool,
 };

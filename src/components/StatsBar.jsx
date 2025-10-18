@@ -3,17 +3,19 @@ import { Text } from "ink";
 import chalk from "chalk";
 import PropTypes from 'prop-types';
 
+const BAR_WIDTH = 8;
+
 /**
  * Small visual bar that shows CPU and memory usage percentages.
  *
  * @param {Object} props
- * @param {number} props.cpu - CPU percentage (0-100)
- * @param {number} props.mem - Memory percentage (0-100)
+ * @param {number} props.cpu - CPU percentage (values outside 0-100 are clamped)
+ * @param {number} props.mem - Memory percentage (values outside 0-100 are clamped)
  * @returns {JSX.Element}
  */
 export default function StatsBar({ cpu, mem }) {
-  const cpuBar = makeBar(cpu);
-  const memBar = makeBar(mem);
+  const cpuBar = makeBar(cpu, BAR_WIDTH);
+  const memBar = makeBar(mem, BAR_WIDTH);
 
   return (
     <Text>
@@ -30,27 +32,30 @@ StatsBar.propTypes = {
 /**
  * Build a fixed-width bar representation from a numeric percentage.
  *
- * @param {number} value - Percentage value (0-100)
+ * @param {number} value - Percentage value (values outside 0-100 are clamped)
+ * @param {number} width - Desired bar width in characters
  * @returns {string} Colored bar string
  */
-function makeBar(value) {
-  const width = 6;
-  const filled = Math.round((value / 100) * width);
-  const empty = Math.max(0, width - filled);
+function makeBar(value, width) {
+  const safeWidth = Math.max(1, Math.round(width));
+  const normalized = Number.isFinite(value) ? Math.min(Math.max(value, 0), 100) : 0;
+  const filled = Math.round((normalized / 100) * safeWidth);
+  const empty = Math.max(0, safeWidth - filled);
   const bar = "█".repeat(filled) + "░".repeat(empty);
-  return colorize(value, bar);
+  return colorize(normalized, bar);
 }
 
 function formatPercent(value) {
   if (!Number.isFinite(value)) return 0;
-  if (value >= 10) return Math.round(value);
-  return value.toFixed(1).replace(/\.0$/, "");
+  const normalized = Math.min(Math.max(value, 0), 100);
+  if (normalized >= 10) return Math.round(normalized);
+  return normalized.toFixed(1).replace(/\.0$/, "");
 }
 
 /**
  * Colorize a value or text depending on thresholds.
  *
- * @param {number} value - Numeric value used to pick color
+ * @param {number} value - Numeric value used to pick color; receives clamped percentage
  * @param {string} [text] - Text to colorize, defaults to the numeric string
  * @returns {string}
  */

@@ -1,4 +1,5 @@
 import { MESSAGE_TIMEOUTS } from "../helpers/constants.js";
+import { logger } from "./logger.js";
 /**
  * Generic helper to perform a container action with user feedback.
  *
@@ -23,22 +24,29 @@ export async function handleAction({
 }) {
   const c = containers[selected];
   if (!c) return;
-  if (stateCheck && stateCheck(c)) {
-    setMessage(stateCheck(c));
-    setMessageColor("red");
-    setTimeout(() => setMessage(""), MESSAGE_TIMEOUTS.SHORT);
-    return;
+  if (stateCheck) {
+    const failureReason = stateCheck(c);
+    if (failureReason) {
+      logger.warn("Action %s blocked for container %s: %s", actionLabel, c.id, failureReason);
+      setMessage(failureReason);
+      setMessageColor("red");
+      setTimeout(() => setMessage(""), MESSAGE_TIMEOUTS.SHORT);
+      return;
+    }
   }
   setMessage(`${actionLabel} container...`);
   setMessageColor("green");
+  logger.info("Action %s requested for container %s", actionLabel, c.id);
   try {
     await actionFn(c.id);
     setMessage(`${actionLabel} container completed successfully`);
     setMessageColor("green");
     setTimeout(() => setMessage(""), MESSAGE_TIMEOUTS.DEFAULT);
+    logger.info("Action %s completed for container %s", actionLabel, c.id);
   } catch (err) {
     setMessage(`Failed to ${actionLabel.toLowerCase()} container.`);
     setMessageColor("red");
     setTimeout(() => setMessage(""), MESSAGE_TIMEOUTS.DEFAULT);
+    logger.error("Action %s failed for container %s", actionLabel, c.id, err);
   }
 }

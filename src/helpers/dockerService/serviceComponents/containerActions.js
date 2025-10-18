@@ -1,6 +1,7 @@
 import { docker } from "../dockerService.js";
 import { imageExists, pullImage } from "./imageUtils.js";
 import { TIMEOUTS } from "../../constants.js";
+import { logger } from "../../logger.js";
 
 /**
  * Helper to add timeout to promises. If the provided promise does not settle
@@ -28,10 +29,13 @@ function withTimeout(promise, ms = TIMEOUTS.CONTAINER_OP) {
  * @throws {Error} If Docker reports an error
  */
 export async function removeContainer(containerId) {
+  logger.debug("Removing container %s", containerId);
   const container = docker.getContainer(containerId);
   try {
-  await withTimeout(container.remove({ force: true }), TIMEOUTS.CONTAINER_OP);
+    await withTimeout(container.remove({ force: true }), TIMEOUTS.CONTAINER_OP);
+    logger.info("Removed container %s", containerId);
   } catch (err) {
+    logger.error("Failed to remove container %s", containerId, err);
     throw new Error('Error removing container: ' + err.message);
   }
 }
@@ -45,16 +49,21 @@ export async function removeContainer(containerId) {
  * @throws {Error} If image listing/pull or creation fails
  */
 export async function createContainer(imageName, options = {}) {
+  logger.info("Creating container from image %s", imageName);
   let exists;
   try {
     exists = await withTimeout(imageExists(imageName), 10000);
   } catch (err) {
+    logger.error("Could not check local images for %s", imageName, err);
     throw new Error('Error listing local images: ' + err.message);
   }
   if (!exists) {
+    logger.info("Image %s not found locally, pulling", imageName);
     try {
-    await withTimeout(pullImage(imageName), TIMEOUTS.PULL_IMAGE); // 5 minutes for pull
+      await withTimeout(pullImage(imageName), TIMEOUTS.PULL_IMAGE);
+      logger.info("Pulled image %s", imageName);
     } catch (err) {
+      logger.error("Failed to pull image %s", imageName, err);
       throw new Error('Could not pull image: ' + err.message);
     }
   }
@@ -82,7 +91,7 @@ export async function createContainer(imageName, options = {}) {
               });
             });
           } catch (err) {
-            // Ignore problems fetching containers; fall back to defaults.
+            logger.warn("Could not inspect existing containers to auto-map ports", err);
           }
         }
         const reservePort = (port) => {
@@ -134,13 +143,16 @@ export async function createContainer(imageName, options = {}) {
         }
       }
     } catch (err) {
-      // If inspect fails, continue without auto-mapping ports to avoid blocking container creation.
+      logger.warn("Could not inspect image %s for default ports", imageName, err);
     }
   }
   try {
-  const container = await withTimeout(docker.createContainer(createOpts), TIMEOUTS.CONTAINER_OP);
+    const container = await withTimeout(docker.createContainer(createOpts), TIMEOUTS.CONTAINER_OP);
+    const containerId = container.id || container.Id;
+    logger.info("Created container %s from image %s", containerId, imageName);
     return container.id || container.Id;
   } catch (err) {
+    logger.error("Failed to create container from image %s", imageName, err);
     throw new Error('Error creating container: ' + err.message);
   }
 }
@@ -152,7 +164,14 @@ export async function createContainer(imageName, options = {}) {
  */
 export async function startContainer(containerId) {
   const container = docker.getContainer(containerId);
-  await withTimeout(container.start(), TIMEOUTS.CONTAINER_OP);
+  logger.debug("Starting container %s", containerId);
+  try {
+    await withTimeout(container.start(), TIMEOUTS.CONTAINER_OP);
+    logger.info("Started container %s", containerId);
+  } catch (err) {
+    logger.error("Failed to start container %s", containerId, err);
+    throw err;
+  }
 }
 
 /**
@@ -162,7 +181,14 @@ export async function startContainer(containerId) {
  */
 export async function stopContainer(containerId) {
   const container = docker.getContainer(containerId);
-  await withTimeout(container.stop(), TIMEOUTS.CONTAINER_OP);
+  logger.debug("Stopping container %s", containerId);
+  try {
+    await withTimeout(container.stop(), TIMEOUTS.CONTAINER_OP);
+    logger.info("Stopped container %s", containerId);
+  } catch (err) {
+    logger.error("Failed to stop container %s", containerId, err);
+    throw err;
+  }
 }
 
 /**
@@ -172,5 +198,12 @@ export async function stopContainer(containerId) {
  */
 export async function restartContainer(containerId) {
   const container = docker.getContainer(containerId);
-  await withTimeout(container.restart(), TIMEOUTS.CONTAINER_OP);
+  logger.debug("Restarting container %s", containerId);
+  try {
+    await withTimeout(container.restart(), TIMEOUTS.CONTAINER_OP);
+    logger.info("Restarted container %s", containerId);
+  } catch (err) {
+    logger.error("Failed to restart container %s", containerId, err);
+    throw err;
+  }
 }

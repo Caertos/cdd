@@ -1,4 +1,5 @@
-import { docker } from "../dockerService";
+import { docker } from "../dockerService.js";
+import { logger } from "../../logger.js";
 
 /**
  * Retrieve a snapshot of container resource usage (CPU, memory, network).
@@ -8,7 +9,14 @@ import { docker } from "../dockerService";
  */
 export async function getStats(containerId) {
   const container = docker.getContainer(containerId);
-  const stream = await container.stats({ stream: false });
+  logger.debug("Fetching stats for container %s", containerId);
+  let stream;
+  try {
+    stream = await container.stats({ stream: false });
+  } catch (err) {
+    logger.error("Failed to fetch stats for container %s", containerId, err);
+    throw err;
+  }
 
   const cpuDelta =
     stream.cpu_stats.cpu_usage.total_usage -
@@ -48,9 +56,12 @@ export async function getStats(containerId) {
         .reduce((a, b) => a + b, 0)
     : 0;
 
-  return {
+  const snapshot = {
     cpuPercent: cpuPercent.toFixed(1),
     memPercent: memPercent.toFixed(1),
     netIO: { rx, tx },
   };
+
+  logger.debug("Stats fetched for container %s", containerId, snapshot);
+  return snapshot;
 }

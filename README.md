@@ -50,6 +50,7 @@ cdd
 - R: restart selected container
 - C: create container (interactive prompt)
 - L: view logs for selected container
+- D: toggle the on-screen debug log panel
 - E: erase (remove) selected container (confirmation required)
 - Q: quit
 
@@ -114,6 +115,27 @@ Tests are located in `test/` and cover utility helpers.
 - If you don't see containers, ensure Docker is running and that your user has access to the Docker socket.
 - If Docker permissions are required, run the CLI with `sudo` (Linux/macOS) or as Administrator (Windows).
 - The project generates `dist/` — keep it out of version control (it's in .gitignore).
+
+---
+
+## Logging
+
+- The CLI logs high-level `info`, `warn`, and `error` messages by default so you see meaningful feedback without noise.
+- When you need deeper diagnostics (for example, to troubleshoot why stats or logs are not updating), start the CLI with debug logging enabled:
+
+```bash
+CDD_LOG_LEVEL=debug cdd          # if you installed globally
+# or
+CDD_LOG_LEVEL=debug node dist/index.js
+```
+
+- The same effect can be achieved with `LOG_LEVEL=debug`. Set `LOG_LEVEL=warn` if you only want to see warnings and errors.
+- Inside the CLI, press `D` to toggle the live debug log panel; press `D` again or `Esc` to hide it.
+- Redirect output to a file when users report issues so they can share the log easily:
+
+```bash
+CDD_LOG_LEVEL=debug cdd > cdd-debug.log 2>&1
+```
 
 ---
 
