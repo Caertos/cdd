@@ -1,93 +1,65 @@
 <!DOCTYPE html>
-<div id="main">
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>CDD — Documentation</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <link rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link rel="stylesheet" href="styles/jsdoc-default.css">
+        <link rel="stylesheet" href="styles/home.css">
+</head>
+<body>
+
+<main id="main">
 
     <header class="home-header">
         <h1 class="page-title">CDD — CLI Docker Dashboard</h1>
-        <p class="subtitle">Herramienta CLI para visualizar y gestionar contenedores Docker desde la terminal.</p>
+        <p class="subtitle">Command-line dashboard to inspect and manage Docker containers.</p>
         <p>
-            <a class="btn" href="index.html">Ver documentación completa</a>
-            <a class="btn" href="https://github.com/Caertos/cdd#readme" target="_blank" rel="noopener">Ver README</a>
+            <a class="btn" href="module-index.html">View API Documentation</a>
+            <a class="btn" href="https://github.com/Caertos/cdd#readme" target="_blank" rel="noopener">Open README on GitHub</a>
         </p>
     </header>
 
-    <section class="hero-cards">
-        <article class="card">
-            <h3>Instalación</h3>
-            <p>Instala desde npm o usa el binario precompilado.</p>
-            <p><strong>Ejemplo:</strong></p>
-            <!DOCTYPE html>
-            <html lang="en">
-            <head>
-                <meta charset="utf-8">
-                <title>CDD — Home</title>
-
-                <script src="scripts/prettify/prettify.js"> </script>
-                <script src="scripts/prettify/lang-css.js"> </script>
-                <!--[if lt IE 9]>
-                  <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
-                <![endif]-->
-                <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
-                <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
-                <link type="text/css" rel="stylesheet" href="styles/home.css">
-            </head>
-
-            <body>
-
-            <div id="main">
-
-        <article class="card">
-            <h3>Uso (Quickstart)</h3>
-            <p>Comandos útiles para empezar rápidamente.</p>
-            <pre>cdd --help
-cdd list
-cdd start &lt;container-id&gt;
-
-            <p><a href="module-index.html">Ver API / módulos</a></p>
-        </article>
-
-        <article class="card">
-            <h3>Contribuir</h3>
-            <p>¿Encontraste un bug o quieres mejorar algo? Lee <a href="../CONTRIBUTING.md">CONTRIBUTING</a>.</p>
-            <p><a href="https://github.com/Caertos/cdd">Repositorio en GitHub</a></p>
-        </article>
-    </section>
-
     <section class="quickstart">
-        <h2>Guía rápida</h2>
+        <h2>Quickstart</h2>
         <ol>
-            <li><strong>Instalar</strong>: <code>npm install -g cdd-cli</code> o usar el binario.</li>
-            <li><strong>Iniciar</strong>: Ejecuta <code>cdd</code> para ver el panel interactivo.</li>
-            <li><strong>Listar contenedores</strong>: <code>cdd list</code> muestra contenedores locales.</li>
-            <li><strong>Ver logs</strong>: <code>cdd logs &lt;id&gt;</code> para seguir los logs en tiempo real.</li>
+            <li><strong>Install</strong>: <code>npm install -g cdd-cli</code></li>
+            <li><strong>List</strong>: <code>cdd list</code></li>
+            <li><strong>Logs</strong>: <code>cdd logs &lt;container-id&gt;</code></li>
         </ol>
 
-        <h3>Ejemplo rápido</h3>
+        <h3>Example</h3>
         <pre>
-# listar contenedores
+# list containers
 cdd list
 
-# ver logs en tiempo real
+# follow logs live
 cdd logs 4a7b3c2d
         </pre>
 
-        <p class="note">Si tienes problemas con permisos Docker, asegúrate de que tu usuario esté en el grupo <code>docker</code> o ejecuta con sudo según tu sistema.</p>
+        <p class="note">If you run into Docker permission issues, add your user to the <code>docker</code> group or run commands with <code>sudo</code>.</p>
     </section>
 
-</div>
+    <footer style="text-align:center; padding:2rem 1rem; color:#98a9c9;">
+        Documentation generated with <a href="https://github.com/jsdoc/jsdoc">JSDoc</a> — <a href="https://github.com/Caertos/cdd">Repository</a>
+    </footer>
 
+</main>
 
+<nav class="side-nav" aria-label="Navigation">
+    <h3>Navigation</h3>
+    <ul>
+        <li><a href="module-index.html">Modules</a></li>
+        <li><a href="global.html">Globals</a></li>
+        <li><a href="index.html">Home</a></li>
+    </ul>
+</nav>
 
-
-    
-
-
-
-
-
-
-
-
-
+<script> if (typeof prettyPrint === 'function') prettyPrint(); </script>
+<script src="scripts/linenumber.js"></script>
+</body>
+</html>
 </div>
 
 </body>
