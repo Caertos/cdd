@@ -9,6 +9,20 @@ const LOG_LEVELS = {
   debug: 3
 };
 
+/**
+ * @typedef {Object} LogEntry
+ * @property {string} level Severity string (error, warn, info, debug)
+ * @property {string} message Primary log message
+ * @property {any[]} args Additional payload values forwarded to listeners
+ * @property {string} timestamp ISO timestamp when the entry was created
+ * @property {string} formatted Preformatted message used for console output
+ */
+
+/**
+ * @callback LogListener
+ * @param {LogEntry} entry Log entry data emitted by the logger
+ */
+
 function parseLevel(value) {
   if (typeof value !== "string") {
     return null;
@@ -86,9 +100,8 @@ export const logger = {
   /**
    * Subscribe to log events.
    *
-   * @param {(entry: { level: string, message: string, args: any[], timestamp: string, formatted: string }) => void} listener
-   * Listener invoked for every log entry that passes the current level filter.
-   * @returns {Function} Cleanup function that removes the listener when called.
+  * @param {LogListener} listener Listener invoked for every log entry that passes the current level filter.
+  * @returns {function(): void} Cleanup function that removes the listener when called.
    */
   subscribe(listener) {
     if (typeof listener !== "function") {

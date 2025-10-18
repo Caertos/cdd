@@ -5,10 +5,15 @@ All notable changes to this project will be documented in this file.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
+- Nothing yet.
+
+## [3.1.5] - 2025-10-18
+_Note: I'm sorry about the issues you've run into; this is a brand-new app and I'm still learning, but I'm moving as quickly as I can to deliver a quality experience._
+
 ### Added
 
 - `safeCall` utility to safely invoke optional callbacks and avoid uncaught errors from consumer callbacks.
- - PropTypes added to core React components for runtime prop validation (ContainerRow, ContainerList, LogViewer, StatsBar, ContainerCreationPrompt, PromptField, MessageFeedback, Header, ContainerSection).
+- PropTypes added to core React components for runtime prop validation (ContainerRow, ContainerList, LogViewer, StatsBar, ContainerCreationPrompt, PromptField, MessageFeedback, Header, ContainerSection).
 
 ### Changed
 
@@ -16,6 +21,13 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - CLI clears the terminal when starting and again after exiting with `q` for a cleaner shell experience.
 - Replaced direct optional callback invocations and stream destruction calls with `safeCall` in several modules (`containerLogs`, `useLogsStream`, `useLogsViewer`, `useContainerCreation`, `useContainerActions`, `LogViewer`).
 - ESLint config updated to include `jest` env and allow keeping `import React` for build compatibility.
+- Extracted common magic numbers into `src/helpers/constants.js` and replaced hardcoded values across the codebase:
+	- `REFRESH_INTERVALS.CONTAINER_LIST` (3000)
+	- `REFRESH_INTERVALS.CONTAINER_STATS` (1500)
+	- `MESSAGE_TIMEOUTS.SHORT` (2000) and `MESSAGE_TIMEOUTS.DEFAULT` (3000)
+	- `EXIT_DELAY` (500)
+	- `TIMEOUTS.CONTAINER_OP` (30000) and `TIMEOUTS.PULL_IMAGE` (300000)
+- Files updated to use constants: `useContainers`, `ContainerRow`, `actionHelpers`, `useControls`, `exitWithMessage`, `containerActions`.
 
 ### Fixed
 
@@ -24,19 +36,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Testing
 
-
- - Added additional unit tests for Docker service functions and hooks. All tests pass locally (5 suites, 26 tests).
- - Removed generated `dist/` artifacts and deleted obsolete test files that referenced incompatible test helpers.
-
-### Changed
-- Extracted common magic numbers into `src/helpers/constants.js` and replaced hardcoded values across the codebase:
-	- `REFRESH_INTERVALS.CONTAINER_LIST` (3000)
-	- `REFRESH_INTERVALS.CONTAINER_STATS` (1500)
-	- `MESSAGE_TIMEOUTS.SHORT` (2000) and `MESSAGE_TIMEOUTS.DEFAULT` (3000)
-	- `EXIT_DELAY` (500)
-	- `TIMEOUTS.CONTAINER_OP` (30000) and `TIMEOUTS.PULL_IMAGE` (300000)
-
-- Files updated to use constants: `useContainers`, `ContainerRow`, `actionHelpers`, `useControls`, `exitWithMessage`, `containerActions`.
+- Added additional unit tests for Docker service functions and hooks. All tests pass locally (5 suites, 26 tests).
+- Removed generated `dist/` artifacts and deleted obsolete test files that referenced incompatible test helpers.
 
 Incoming fixes and smaller tests / docs updates
 
