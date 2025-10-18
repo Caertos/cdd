@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <link rel="stylesheet" href="styles/prettify-tomorrow.css">
     <link rel="stylesheet" href="styles/jsdoc-default.css">
-        <link rel="stylesheet" href="styles/home.css">
+    <link rel="stylesheet" href="styles/home.css">
 </head>
 <body>
 
@@ -14,31 +14,104 @@
 
     <header class="home-header">
         <h1 class="page-title">CDD — CLI Docker Dashboard</h1>
-        <p class="subtitle">Command-line dashboard to inspect and manage Docker containers.</p>
+        <p class="subtitle">Interactive terminal dashboard to visualize and manage Docker containers in real time.</p>
         <p>
             <a class="btn" href="module-index.html">View API Documentation</a>
             <a class="btn" href="https://github.com/Caertos/cdd#readme" target="_blank" rel="noopener">Open README on GitHub</a>
         </p>
     </header>
 
+    <section class="intro">
+        <h2>What is CDD?</h2>
+        <p>CDD is a <strong>keyboard-driven CLI tool</strong> that displays all your Docker containers in a clean, auto-refreshing table with live CPU and memory stats for running containers. It's built with React (Ink) and connects directly to your local Docker socket.</p>
+        
+        <h3>Main Features</h3>
+        <ul>
+            <li>🐳 <strong>Clear visualization</strong>: See all containers at a glance with status, ports, and resource usage.</li>
+            <li>⌨️ <strong>Keyboard shortcuts</strong>: Navigate and control containers without leaving the terminal.</li>
+            <li>📊 <strong>Live stats</strong>: CPU and memory usage refreshed every 2 seconds for running containers.</li>
+            <li>🪵 <strong>Real-time logs</strong>: Stream container logs directly in the CLI.</li>
+            <li>🎨 <strong>Visual interface</strong>: Colors and emojis indicate container states (running, stopped, etc.).</li>
+            <li>🚀 <strong>Interactive creation</strong>: Create new containers with a step-by-step wizard.</li>
+        </ul>
+    </section>
+
     <section class="quickstart">
-        <h2>Quickstart</h2>
-        <ol>
-            <li><strong>Install</strong>: <code>npm install -g cdd-cli</code></li>
-            <li><strong>List</strong>: <code>cdd list</code></li>
-            <li><strong>Logs</strong>: <code>cdd logs &lt;container-id&gt;</code></li>
-        </ol>
+        <h2>Installation</h2>
+        <p>Install CDD globally via npm:</p>
+        <pre>npm install -g cdd-cli</pre>
+        <p>Once installed, launch the dashboard by running:</p>
+        <pre>cdd</pre>
 
-        <h3>Example</h3>
-        <pre>
-# list containers
-cdd list
+        <h3>What You'll See</h3>
+        <p>When you run <code>cdd</code>, the CLI displays an <strong>interactive table</strong> listing all containers on your system. The interface auto-refreshes, and you can navigate and control containers using keyboard shortcuts—<strong>no command-line arguments needed</strong>.</p>
 
-# follow logs live
-cdd logs 4a7b3c2d
-        </pre>
+        <h2>Keyboard Controls</h2>
+        <p>The CLI is fully controlled via keyboard shortcuts. Here's what each key does:</p>
+        <table style="width:100%; border-collapse:collapse; margin:1rem 0;">
+            <thead>
+                <tr style="background:rgba(255,255,255,0.05);">
+                    <th style="padding:8px; text-align:left; border-bottom:1px solid rgba(255,255,255,0.1);">Key</th>
+                    <th style="padding:8px; text-align:left; border-bottom:1px solid rgba(255,255,255,0.1);">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td style="padding:8px; border-bottom:1px solid rgba(255,255,255,0.05);"><code>↑ / ↓</code></td>
+                    <td style="padding:8px; border-bottom:1px solid rgba(255,255,255,0.05);">Navigate up/down through the container list</td>
+                </tr>
+                <tr>
+                    <td style="padding:8px; border-bottom:1px solid rgba(255,255,255,0.05);"><code>I</code></td>
+                    <td style="padding:8px; border-bottom:1px solid rgba(255,255,255,0.05);">Start (initiate) the selected container</td>
+                </tr>
+                <tr>
+                    <td style="padding:8px; border-bottom:1px solid rgba(255,255,255,0.05);"><code>P</code></td>
+                    <td style="padding:8px; border-bottom:1px solid rgba(255,255,255,0.05);">Pause (stop) the selected container</td>
+                </tr>
+                <tr>
+                    <td style="padding:8px; border-bottom:1px solid rgba(255,255,255,0.05);"><code>R</code></td>
+                    <td style="padding:8px; border-bottom:1px solid rgba(255,255,255,0.05);">Restart the selected container</td>
+                </tr>
+                <tr>
+                    <td style="padding:8px; border-bottom:1px solid rgba(255,255,255,0.05);"><code>L</code></td>
+                    <td style="padding:8px; border-bottom:1px solid rgba(255,255,255,0.05);">View real-time logs for the selected container (press <code>ESC</code> or <code>Q</code> to exit)</td>
+                </tr>
+                <tr>
+                    <td style="padding:8px; border-bottom:1px solid rgba(255,255,255,0.05);"><code>C</code></td>
+                    <td style="padding:8px; border-bottom:1px solid rgba(255,255,255,0.05);">Create a new container (interactive wizard prompts for image, ports, env vars)</td>
+                </tr>
+                <tr>
+                    <td style="padding:8px; border-bottom:1px solid rgba(255,255,255,0.05);"><code>E</code></td>
+                    <td style="padding:8px; border-bottom:1px solid rgba(255,255,255,0.05);">Erase (remove) the selected container (requires confirmation: <code>Y/N</code>)</td>
+                </tr>
+                <tr>
+                    <td style="padding:8px; border-bottom:1px solid rgba(255,255,255,0.05);"><code>D</code></td>
+                    <td style="padding:8px; border-bottom:1px solid rgba(255,255,255,0.05);">Toggle the on-screen debug log panel (shows internal CLI logs)</td>
+                </tr>
+                <tr>
+                    <td style="padding:8px; border-bottom:1px solid rgba(255,255,255,0.05);"><code>Q</code></td>
+                    <td style="padding:8px; border-bottom:1px solid rgba(255,255,255,0.05);">Quit the CLI</td>
+                </tr>
+            </tbody>
+        </table>
 
-        <p class="note">If you run into Docker permission issues, add your user to the <code>docker</code> group or run commands with <code>sudo</code>.</p>
+        <h2>Use Cases</h2>
+        <ul>
+            <li><strong>Quick container overview</strong>: See status, resource usage, and ports for all containers at once.</li>
+            <li><strong>Start/stop containers</strong>: Control containers without typing <code>docker start/stop</code> commands.</li>
+            <li><strong>Monitor logs in real time</strong>: Stream logs directly in the terminal for debugging.</li>
+            <li><strong>Rapid prototyping</strong>: Create and test containers interactively with the creation wizard.</li>
+            <li><strong>DevOps workflows</strong>: Integrate CDD into local development to manage microservices or databases.</li>
+        </ul>
+
+        <h2>Requirements</h2>
+        <ul>
+            <li>Node.js ≥ 18</li>
+            <li>Docker installed and running (CDD connects to the local Docker socket)</li>
+        </ul>
+
+        <h2>Troubleshooting</h2>
+        <p class="note">If you don't see any containers, ensure Docker is running and your user has permission to access the Docker socket. On Linux, add your user to the <code>docker</code> group or run with <code>sudo</code>.</p>
     </section>
 
     <footer style="text-align:center; padding:2rem 1rem; color:#98a9c9;">
