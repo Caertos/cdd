@@ -1,0 +1,13 @@
+# Configure GitHub Pages to treat the generated docs as a static site.
+source: docs
+# Disable the default theme so Jekyll does not expect its SCSS assets.
+theme: null
+
+# Allow Jekyll to copy across these asset folders untouched.
+include:
+  - fonts
+  - scripts
+  - styles
+
+# We do not rely on any Jekyll plugins for this site.
+plugins: []
