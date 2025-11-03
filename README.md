@@ -10,6 +10,7 @@
   <a href="https://caertos.github.io/cdd/">
     <img src="https://img.shields.io/badge/docs-GitHub%20Pages-blue" alt="Docs" />
   </a>
+<a href="https://deepwiki.com/Caertos/cdd"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki"></a>
 </p>
 
 Short, bilingual README with quickstart, development and tests.
