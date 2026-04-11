@@ -6,35 +6,47 @@
   <a href="https://github.com/caertos/cdd/actions/workflows/ci.yml">
     <img src="https://github.com/caertos/cdd/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI status" />
   </a>
-  <!-- Documentation published to GitHub Pages -->
   <a href="https://caertos.github.io/cdd/">
     <img src="https://img.shields.io/badge/docs-GitHub%20Pages-blue" alt="Docs" />
   </a>
-<a href="https://deepwiki.com/Caertos/cdd"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki"></a>
+  <a href="https://deepwiki.com/Caertos/cdd"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki"></a>
 </p>
 
-Short, bilingual README with quickstart, development and tests.
+A terminal dashboard for monitoring and managing Docker containers in real time. Shows live CPU/memory stats, supports keyboard-driven actions, and requires no GUI.
+
+---
+
+## Features
+
+- 🐳 Clear, compact view of all Docker containers
+- 🔄 Auto-refresh every few seconds
+- ⌨️ Keyboard shortcuts for fast actions (navigate, start, stop, logs, quit)
+- 📊 Live CPU and memory stats for running containers
+- 🪵 Real-time log streaming for selected containers
+- 🎨 Color-coded states and visual feedback
+
+---
+
+## Install globally
+
+```bash
+npm install -g cdd-cli
+cdd
+```
 
 ---
 
 ## Quick start (local)
 
-1. Clone the repo and install dependencies:
-
 ```bash
 git clone https://github.com/caertos/cdd.git
 cd cdd
 npm install
-```
-
-2. Build and run locally:
-
-```bash
 npm run build
 node dist/index.js
 ```
 
-3. To test the CLI as a globally available command during development:
+To use it as a global command during development:
 
 ```bash
 npm link
@@ -43,96 +55,65 @@ cdd
 
 ---
 
-## Usage (interactive)
+## Usage
 
-- Use ↑/↓ to navigate containers.
-- I: start selected container
-- P: stop selected container
-- R: restart selected container
-- C: create container (interactive prompt)
-- L: view logs for selected container
-- D: toggle the on-screen debug log panel
-- E: erase (remove) selected container (confirmation required)
-- Q: quit
+Use ↑/↓ to navigate containers. Available keyboard shortcuts:
 
-The dashboard auto-refreshes container list every few seconds.
+| Key | Action |
+|-----|--------|
+| `I` | Start selected container |
+| `P` | Stop selected container |
+| `R` | Restart selected container |
+| `C` | Create container (interactive prompt) |
+| `L` | View logs for selected container |
+| `E` | Erase (remove) selected container — confirmation required |
+| `D` | Toggle live debug log panel |
+| `Q` | Quit |
 
 ---
 
-## Install globally
+## Requirements
 
-To install the CLI globally so you can run `cdd` from any terminal, use:
-
-```bash
-npm install -g cdd-cli
-```
-
-After installing globally, run the CLI with:
-
-```bash
-cdd
-```
+- Node.js >= 18
+- Docker installed and running (CLI connects to the local Docker socket)
 
 ---
 
 ## Development
 
-- Node.js >= 18 is recommended.
-- To run the app from source during development:
-
 ```bash
 npm install
-npm run build
-node dist/index.js
+npm run build        # compile src/ → dist/
+node dist/index.js   # run from compiled output
 ```
 
-If you change source files, re-run `npm run build` before running the CLI.
+Re-run `npm run build` after any source changes.
 
 ---
 
 ## Tests
 
-We use Jest for unit tests. Run:
-
 ```bash
 npm test
 ```
 
-Tests are located in `test/` and cover utility helpers.
-
----
-
-## Contributing
-
-1. Fork the repo and create a feature branch.
-2. Add tests for new behavior.
-3. Ensure `npm test` and `npm run build` pass.
-4. Open a Pull Request with a clear description.
-
----
-
-## Troubleshooting
-
-- If you don't see containers, ensure Docker is running and that your user has access to the Docker socket.
-- If Docker permissions are required, run the CLI with `sudo` (Linux/macOS) or as Administrator (Windows).
-- The project generates `dist/` — keep it out of version control (it's in .gitignore).
+Tests are in `test/` and cover helpers, services, and hooks.
 
 ---
 
 ## Logging
 
-- The CLI logs high-level `info`, `warn`, and `error` messages by default so you see meaningful feedback without noise.
-- When you need deeper diagnostics (for example, to troubleshoot why stats or logs are not updating), start the CLI with debug logging enabled:
+By default the CLI shows `info`, `warn`, and `error` messages. For deeper diagnostics:
 
 ```bash
-CDD_LOG_LEVEL=debug cdd          # if you installed globally
+CDD_LOG_LEVEL=debug cdd
 # or
 CDD_LOG_LEVEL=debug node dist/index.js
 ```
 
-- The same effect can be achieved with `LOG_LEVEL=debug`. Set `LOG_LEVEL=warn` if you only want to see warnings and errors.
-- Inside the CLI, press `D` to toggle the live debug log panel; press `D` again or `Esc` to hide it.
-- Redirect output to a file when users report issues so they can share the log easily:
+Press `D` inside the CLI to toggle the live debug panel. Press `D` again or `Esc` to hide it.
+
+To capture logs to a file:
 
 ```bash
 CDD_LOG_LEVEL=debug cdd > cdd-debug.log 2>&1
@@ -140,34 +121,20 @@ CDD_LOG_LEVEL=debug cdd > cdd-debug.log 2>&1
 
 ---
 
-## License
-
-This project is MIT/ISC licensed (see `LICENSE`).
-
-   ```
-
-## Usage
-- When you run `cdd`, you'll see a table with all your Docker containers.
-- Running containers show live CPU and memory stats.
-- Use `Ctrl+C` to exit.
-
-## Main features
-- 🐳 Clear, compact visualization of all containers.
-- 🔄 Automatic data refresh (every 2 seconds).
-- ⌨️ Keyboard shortcuts for fast actions (navigate, start, stop, logs, quit).
-- 📊 Live resource usage stats for running containers.
-- 🪵 Real-time log streaming for selected containers.
-- 🎨 Visual interface with colors and emojis for states.
-- 👤 Author: Carlos Cochero (2025)
-
-## Requirements
-- Node.js >= 18
-- Docker installed and running (CLI connects to local Docker socket)
-
 ## Troubleshooting
-- If you don't see containers, make sure Docker is running and your user has permission to access the Docker socket.
-- If you have issues with global install, try with `sudo` (Linux/macOS) or run terminal as administrator (Windows).
+
+- If you don't see containers, ensure Docker is running and your user has access to the Docker socket.
+- On Linux/macOS, try `sudo cdd` if you have permission issues. On Windows, run as Administrator.
+- `dist/` is generated by the build — it's in `.gitignore` and should not be committed.
 
 ---
 
-¡Disfruta monitoreando tus contenedores Docker desde la terminal con estilo! / Enjoy monitoring your Docker containers from the terminal in style!
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+---
+
+## License
+
+MIT/ISC — see [`LICENSE`](LICENSE).
