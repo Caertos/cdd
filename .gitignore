@@ -24,3 +24,6 @@ dist-ssr
 *.sw?
 
 AUDIT_REPORT.md
+
+# Generated docs (deployed to gh-pages via CI, not committed)
+docs/
