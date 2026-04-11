@@ -12,7 +12,7 @@ import PropTypes from 'prop-types';
  * @param {Object} [props.container] - Optional container metadata (used for title)
  * @returns {JSX.Element}
  */
-export default function LogViewer({ logs, onExit, container }) {
+export default function LogViewer({ logs, onExit: _onExit, container }) {
   const visibleLogs = logs.slice(-15);
 
   return (
