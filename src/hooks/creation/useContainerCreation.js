@@ -80,6 +80,20 @@ export function useContainerCreation({ onCreate, onCancel, dbImages = [] }) {
     safeCall(onCancel);
   }
 
+  /**
+   * Resets all creation state to initial values without triggering onCancel.
+   * Used by the command router when the user presses 'c' to open the creation wizard.
+   */
+  function resetCreation() {
+    setStep(0);
+    setImageName("");
+    setContainerName("");
+    setPortInput("");
+    setEnvInput("");
+    setMessage("Insert the name of the image to create: ");
+    setMessageColor("yellow");
+  }
+
   return {
     step,
     setStep,
@@ -97,5 +111,6 @@ export function useContainerCreation({ onCreate, onCancel, dbImages = [] }) {
     setMessageColor,
     nextStep,
     cancelCreation,
+    resetCreation,
   };
 }

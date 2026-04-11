@@ -1,12 +1,16 @@
 import React from "react";
+import { useInput } from "ink";
 import { useContainerActions } from "./creation/useContainerActions";
 import { useContainerCreation } from "./creation/useContainerCreation";
 import { useLogsViewer } from "./creation/useLogsViewer";
-import { useInput, useApp } from "ink";
+import { useContainerSelection } from "./navigation/useContainerSelection";
+import { useDebugLogs } from "./debug/useDebugLogs";
+import { useEraseConfirmation } from "./useEraseConfirmation";
+import { useExitHandler } from "./useExitHandler";
+import { useContainerCommandRouter } from "./useContainerCommandRouter";
 import { getLogsStream } from "../helpers/dockerService/serviceComponents/containerLogs.js";
-import { EXIT_DELAY } from "../helpers/constants.js";
 import { createContainer as svcCreateContainer } from "../helpers/dockerService/serviceComponents/containerActions.js";
-import { logger } from "../helpers/logger.js";
+import { buildContainerOptions } from "../helpers/containerOptionsBuilder.js";
 
 // Principal hook to manage user inputs and control the app state
 /**
@@ -15,63 +19,18 @@ import { logger } from "../helpers/logger.js";
  *
  * @param {Array<Object>} containers - Current list of Docker containers
  * @returns {Object} controls - API for the App component
- * @property {number} selected - Index of the currently selected container
- * @property {function} setSelected - Setter for selected index
- * @property {string} message - Current feedback message (creation or actions)
- * @property {string} messageColor - Color to show for the feedback message
- * @property {boolean} showLogs - Whether the logs viewer is active
- * @property {Array<string>} logs - Array of log lines currently collected
- * @property {function} exitLogs - Helper to close the logs viewer
- * @property {boolean} creatingContainer - Whether the create-container prompt is open
- * @property {number} creationStep - Current step in the creation flow
- * @property {string} imageNameInput - Current value of the image name field
- * @property {string} containerNameInput - Current value of the container name field
- * @property {string} portInput - Current value of the port input field
- * @property {string} envInput - Current value of the env input field
- * @property {Object} creation - The creation hook API (setters and helpers)
- * @property {Object} actions - The actions hook API (helpers to start/stop/remove)
- * @property {Object} logsViewer - The logs viewer hook API
- * @property {boolean} showDebugLogs - Whether the debug log panel is visible
- * @property {Array<string>} debugLogs - Buffered log lines captured from the shared logger
- * @property {boolean} confirmErase - Whether the erase confirmation dialog is active
  */
 export function useControls(containers = []) {
-  const [selected, setSelected] = React.useState(0);
   const [creatingContainer, setCreatingContainer] = React.useState(false);
-  const [confirmErase, setConfirmErase] = React.useState(false);
-  const [showDebugLogs, setShowDebugLogs] = React.useState(false);
-  const [debugLogs, setDebugLogs] = React.useState([]);
-  const total = containers.length;
-  const { exit } = useApp();
 
-  // Modular hooks
+  // — Modular hooks —
   const actions = useContainerActions({ containers });
+
   const creation = useContainerCreation({
     onCreate: async ({ imageName, containerName, portInput, envInput }) => {
-      // Build Docker options
-      const env = (envInput || "").split(",").map(s => s.trim()).filter(Boolean);
-      const ports = (portInput || "").split(",").map(s => s.trim()).filter(Boolean);
-      const ExposedPorts = {};
-      const PortBindings = {};
-      ports.forEach(pair => {
-        const [host, cont] = pair.split(":");
-        if (!host || !cont) return;
-        const key = `${cont}/tcp`;
-        ExposedPorts[key] = {};
-        PortBindings[key] = PortBindings[key] || [];
-        PortBindings[key].push({ HostPort: `${host}` });
-      });
-
-      const options = {
-        Tty: true,
-      };
-      if (Object.keys(ExposedPorts).length) options.ExposedPorts = ExposedPorts;
-      if (Object.keys(PortBindings).length) options.HostConfig = { PortBindings };
-      if (env.length) options.Env = env;
-    if (containerName) options.name = containerName;
-
-    actions.setMessage(`Creating container ${imageName}...`);
-    actions.setMessageColor("yellow");
+      const options = buildContainerOptions({ imageName, containerName, portInput, envInput });
+      actions.setMessage(`Creating container ${imageName}...`);
+      actions.setMessageColor("yellow");
       try {
         const id = await svcCreateContainer(imageName, options);
         actions.setMessage(`Created container ${id}`);
@@ -84,12 +43,27 @@ export function useControls(containers = []) {
       }
     },
     onCancel: () => setCreatingContainer(false),
-    dbImages: ["mysql", "mariadb", "postgres", "mongo", "mssql", "redis"]
+    dbImages: ["mysql", "mariadb", "postgres", "mongo", "mssql", "redis"],
   });
-  const logsViewer = useLogsViewer();
 
-  // Handler to exit logs (delegated to logsViewer)
-  const exitLogs = logsViewer.closeLogs;
+  const logsViewer = useLogsViewer();
+  const selection = useContainerSelection(containers.length);
+  const debugLogs = useDebugLogs();
+
+  const eraseConfirmation = useEraseConfirmation({
+    onConfirm: () => {
+      actions.handleAction({
+        actionFn: async (id) => await actions.removeContainer(id),
+        actionLabel: "Erasing",
+        selected: selection.selected,
+      });
+      actions.setMessageColor("yellow");
+    },
+    onCancel: () => {
+      actions.setMessage("");
+      actions.setMessageColor("");
+    },
+  });
 
   /**
    * Pipe container logs into the viewer while applying a hard limit.
@@ -107,40 +81,30 @@ export function useControls(containers = []) {
     );
   }, [logsViewer]);
 
-  /**
-   * Manage the erase confirmation short-circuit flow.
-   */
-  const processEraseConfirmation = React.useCallback((input, key) => {
-    if (input === "y" || input === "Y") {
-      actions.handleAction({
-        actionFn: async (id) => await actions.removeContainer(id),
-        actionLabel: "Erasing",
-        selected,
-      });
-      setConfirmErase(false);
+  const commandRouter = useContainerCommandRouter({
+    actions,
+    containers,
+    selected: selection.selected,
+    creation,
+    logsViewer,
+    startLogsStream,
+    onStartErase: () => {
+      eraseConfirmation.startErase();
+      actions.setMessage("Are you sure you want to erase this container? (y/n)");
       actions.setMessageColor("yellow");
-      return;
-    }
+    },
+    onToggleDebug: () => debugLogs.setShowDebugLogs((prev) => !prev),
+    onStartCreate: () => setCreatingContainer(true),
+  });
 
-    if (input === "n" || input === "N" || key.escape) {
-      setConfirmErase(false);
-      actions.setMessage("");
-      actions.setMessageColor("");
-      return;
-    }
-
-    actions.setMessage("Are you sure you want to erase this container? (y/n)");
-    actions.setMessageColor("yellow");
-  }, [actions, selected]);
-
-  /**
-   * Handle inputs while the logs viewer is active.
-   */
-  const processLogsInput = React.useCallback((input, key) => {
-    if (input === "q" || key.escape) {
+  const exitHandler = useExitHandler({
+    onBeforeExit: () => {
+      actions.setMessage("Exiting...");
+      actions.setMessageColor("yellow");
       logsViewer.closeLogs();
-    }
-  }, [logsViewer]);
+      debugLogs.setShowDebugLogs(false);
+    },
+  });
 
   /**
    * Route keystrokes to the container creation wizard.
@@ -178,164 +142,17 @@ export function useControls(containers = []) {
     }
   }, [creation, setCreatingContainer]);
 
-  /**
-   * Navigate the container list using arrow keys.
-   * @returns {boolean} True when the input was consumed.
-   */
-  const handleNavigation = React.useCallback((input, key) => {
-    if (total === 0) {
-      return false;
-    }
-
-    if (key.upArrow) {
-      setSelected((i) => (i === 0 ? total - 1 : i - 1));
-      return true;
-    }
-
-    if (key.downArrow) {
-      setSelected((i) => (i === total - 1 ? 0 : i + 1));
-      return true;
-    }
-
-    return false;
-  }, [total]);
-
-  /**
-   * Handle the quit command.
-   * @returns {boolean} True when the input was consumed.
-   */
-  const handleExitCommand = React.useCallback((input) => {
-    if (input !== "q") {
-      return false;
-    }
-
-    actions.setMessage("Exiting...");
-    actions.setMessageColor("yellow");
-    logsViewer.closeLogs();
-    setShowDebugLogs(false);
-
-    const clearTerminal = () => {
-      try {
-        if (process.stdout && process.stdout.isTTY) {
-          process.stdout.write("\u001Bc");
-        } else {
-          console.clear();
-        }
-      } catch (err) {
-        // Ignore clear errors to avoid blocking exit.
-      }
-    };
-
-    setTimeout(() => {
-      clearTerminal();
-      exit();
-      if (process.env.NODE_ENV !== "test") {
-        setTimeout(() => process.exit(0), 50);
-      }
-    }, EXIT_DELAY);
-    return true;
-  }, [actions, exit, logsViewer]);
-
-  /**
-   * Execute Docker-related commands and prompt transitions.
-   * @returns {boolean} True when the input was consumed.
-   */
-  const handleDockerCommands = React.useCallback((input) => {
-    const container = containers[selected];
-
-    if (input === "i") {
-      actions.handleAction({
-        actionFn: async (id) => await actions.startContainer(id),
-        actionLabel: "Starting",
-        selected,
-        stateCheck: (c) => (c.state === "running" || c.status === "running") && "Container is already running."
-      });
-      return true;
-    }
-
-    if (input === "p") {
-      actions.handleAction({
-        actionFn: async (id) => await actions.stopContainer(id),
-        actionLabel: "Stopping",
-        selected,
-        stateCheck: (c) => (c.state === "exited" || c.status === "exited" || c.state === "stopped" || c.status === "stopped") && "Container is already stopped."
-      });
-      return true;
-    }
-
-    if (input === "r") {
-      actions.handleAction({
-        actionFn: async (id) => await actions.restartContainer(id),
-        actionLabel: "Restarting",
-        selected,
-      });
-      return true;
-    }
-
-    if (input === "e") {
-      if (!container) {
-        return true;
-      }
-
-      setConfirmErase(true);
-      actions.setMessage("Are you sure you want to erase this container? (y/n)");
-      actions.setMessageColor("yellow");
-      return true;
-    }
-
-    if (input === "l") {
-      if (!container) {
-        return true;
-      }
-
-      logsViewer.openLogs();
-      startLogsStream(container.id);
-      return true;
-    }
-
-    if (input === "c") {
-      setCreatingContainer(true);
-      creation.setStep(0);
-      creation.setImageName("");
-      creation.setContainerName("");
-      creation.setPortInput("");
-      creation.setEnvInput("");
-      creation.setMessage("Insert the name of the image to create: ");
-      creation.setMessageColor("yellow");
-      return true;
-    }
-
-    if (input === "d") {
-      setShowDebugLogs((prev) => !prev);
-      return true;
-    }
-
-    return false;
-  }, [actions, containers, creation, logsViewer, selected, setConfirmErase, setCreatingContainer, startLogsStream, setShowDebugLogs]);
-
-  /**
-   * Default handler executed when no special mode is active.
-   */
-  const processGlobalInput = React.useCallback((input, key) => {
-    if (handleNavigation(input, key)) {
-      return;
-    }
-
-    if (handleExitCommand(input)) {
-      return;
-    }
-
-    handleDockerCommands(input);
-  }, [handleDockerCommands, handleExitCommand, handleNavigation]);
-
+  // Single keyboard entry point
   useInput((input, key) => {
-    if (confirmErase) {
-      processEraseConfirmation(input, key);
+    if (eraseConfirmation.confirmErase) {
+      eraseConfirmation.processEraseConfirmation(input, key);
       return;
     }
 
     if (logsViewer.showLogs) {
-      processLogsInput(input, key);
+      if (input === "q" || key.escape) {
+        logsViewer.closeLogs();
+      }
       return;
     }
 
@@ -344,46 +161,25 @@ export function useControls(containers = []) {
       return;
     }
 
-    if (showDebugLogs && key.escape) {
-      setShowDebugLogs(false);
+    if (debugLogs.showDebugLogs && key.escape) {
+      debugLogs.setShowDebugLogs(false);
       return;
     }
 
-    processGlobalInput(input, key);
+    commandRouter.handleDockerCommands(input);
+    exitHandler.handleExitCommand(input);
+    selection.handleNavigation(input, key);
   });
 
-  // Mirror global logger entries so the D shortcut can surface them without leaving the CLI.
-  React.useEffect(() => {
-    const unsubscribe = logger.subscribe((entry) => {
-      setDebugLogs((prev) => {
-        const extras = (entry.args || []).map((arg) => {
-          if (typeof arg === "string") return arg;
-          if (typeof arg === "number" || typeof arg === "boolean") return String(arg);
-          try {
-            return JSON.stringify(arg);
-          } catch (err) {
-            return "[unserializable]";
-          }
-        }).filter(Boolean);
-        const line = extras.length ? `${entry.formatted} ${extras.join(" ")}` : entry.formatted;
-        const next = [...prev, line];
-        return next.slice(-200);
-      });
-    });
-    return unsubscribe;
-  }, []);
-
   return {
-    selected,
-    setSelected,
-    // Map messaging to creation when creating, otherwise to actions
+    selected: selection.selected,
+    setSelected: selection.setSelected,
     message: creatingContainer ? creation.message : actions.message,
     messageColor: creatingContainer ? creation.messageColor : actions.messageColor,
     showLogs: logsViewer.showLogs,
     logs: logsViewer.logs,
-    exitLogs,
+    exitLogs: logsViewer.closeLogs,
     creatingContainer,
-    // Expose creation fields in the shape App expects
     creationStep: creation.step,
     imageNameInput: creation.imageName,
     containerNameInput: creation.containerName,
@@ -392,8 +188,8 @@ export function useControls(containers = []) {
     creation,
     actions,
     logsViewer,
-    confirmErase,
-    showDebugLogs,
-    debugLogs,
+    confirmErase: eraseConfirmation.confirmErase,
+    showDebugLogs: debugLogs.showDebugLogs,
+    debugLogs: debugLogs.debugLogs,
   };
 }

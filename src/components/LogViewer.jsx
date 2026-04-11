@@ -1,10 +1,10 @@
 import React from "react";
-import { Text, useInput } from "ink";
-import { safeCall } from "../helpers/safeCall";
+import { Text } from "ink";
 import PropTypes from 'prop-types';
 
 /**
- * Log viewer overlay component. Shows the most recent lines and closes on ESC.
+ * Log viewer overlay component. Shows the most recent lines.
+ * Purely presentational — keyboard handling is centralized in useControls.
  *
  * @param {Object} props
  * @param {Array<string>} props.logs - Array of log lines
@@ -13,12 +13,6 @@ import PropTypes from 'prop-types';
  * @returns {JSX.Element}
  */
 export default function LogViewer({ logs, onExit, container }) {
-  useInput((input, key) => {
-    if (key.escape) {
-      safeCall(onExit);
-    }
-  });
-
   const visibleLogs = logs.slice(-15);
 
   return (
