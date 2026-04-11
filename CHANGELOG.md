@@ -7,6 +7,12 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 - Nothing yet.
 
+## [3.1.9] - 2026-04-11
+
+### Changed
+
+- CI: added lint step to the test-and-build job; docs deploy now waits for CI to pass successfully via `workflow_run` trigger.
+
 ## [3.1.8] - 2026-04-11
 
 ### Refactored
