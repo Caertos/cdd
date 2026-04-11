@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>JSDoc: Source: hooks/creation/useContainerActions.js</title>
+    <title>JSDoc: Source: hooks/useContainerCommandRouter.js</title>
 
     <script src="scripts/prettify/prettify.js"> </script>
     <script src="scripts/prettify/lang-css.js"> </script>
@@ -17,7 +17,7 @@
 
 <div id="main">
 
-    <h1 class="page-title">Source: hooks/creation/useContainerActions.js</h1>
+    <h1 class="page-title">Source: hooks/useContainerCommandRouter.js</h1>
 
     
 
@@ -26,74 +26,115 @@
     
     <section>
         <article>
-            <pre class="prettyprint source linenums"><code>import { useState } from "react";
-import { safeCall } from "../../helpers/safeCall.js";
-import { startContainer as svcStartContainer, stopContainer as svcStopContainer, restartContainer as svcRestartContainer, removeContainer as svcRemoveContainer } from "../../helpers/dockerService/serviceComponents/containerActions.js";
+            <pre class="prettyprint source linenums"><code>import { useCallback } from "react";
 
 /**
- * Custom hook to manage container actions (start, stop, restart, remove).
- * Handles feedback messages and exposes helpers for each action.
+ * Hook responsible solely for routing Docker action keystrokes to the correct handler.
+ * Has no domain state of its own — it delegates every side-effect to its dependencies.
+ *
+ * Handled keys:
+ *   i  — start container
+ *   p  — stop container
+ *   r  — restart container
+ *   e  — request erase confirmation
+ *   l  — open logs viewer and start log stream
+ *   c  — open container creation wizard (reset + activate)
+ *   d  — toggle debug log panel
  *
  * @param {Object} params
- * @param {Array} params.containers - List of containers
- * @param {Function} params.onAction - Callback after action is performed
- * @returns {Object} Action helpers and feedback state
+ * @param {Object} params.actions       - API from useContainerActions
+ * @param {Array&lt;Object>} params.containers - Current list of Docker containers
+ * @param {number} params.selected      - Index of the currently selected container
+ * @param {Object} params.creation      - API from useContainerCreation (must expose resetCreation)
+ * @param {Object} params.logsViewer    - API from useLogsViewer
+ * @param {Function} params.startLogsStream - Starts the log stream for a container id
+ * @param {Function} params.onStartErase    - Callback: activates confirmErase state
+ * @param {Function} params.onToggleDebug   - Callback: toggles showDebugLogs state
+ * @param {Function} params.onStartCreate   - Callback: sets creatingContainer = true
+ * @returns {{ handleDockerCommands: Function }}
  */
-export function useContainerActions({ containers, onAction }) {
-  const [message, setMessage] = useState("");
-  const [messageColor, setMessageColor] = useState("yellow");
-
-  /**
-   * Handles a generic container action and sets feedback.
-   * @param {Function} actionFn - The async action function (start, stop, etc)
-   * @param {string} actionLabel - Action label for feedback
-   * @param {number} selected - Index of selected container
-   * @param {Function} [stateCheck] - Optional function to check state before action
-   */
-  async function handleAction({ actionFn, actionLabel, selected, stateCheck }) {
+export function useContainerCommandRouter({
+  actions,
+  containers,
+  selected,
+  creation,
+  logsViewer,
+  startLogsStream,
+  onStartErase,
+  onToggleDebug,
+  onStartCreate,
+}) {
+  const handleDockerCommands = useCallback((input) => {
     const container = containers[selected];
-    if (!container) return;
-    if (stateCheck) {
-      const checkMsg = stateCheck(container);
-      if (checkMsg) {
-        setMessage(checkMsg);
-        setMessageColor("yellow");
-        return;
-      }
-    }
-    setMessage(`${actionLabel} container...`);
-    setMessageColor("yellow");
-    try {
-      await actionFn(container.id);
-  setMessage(`${actionLabel} container successful.`);
-  setMessageColor("green");
-  safeCall(onAction);
-    } catch (err) {
-      setMessage(`Failed to ${actionLabel.toLowerCase()} container: ${err.message}`);
-      setMessageColor("red");
-    }
-  }
 
-  return {
-    message,
-    setMessage,
-    messageColor,
-    setMessageColor,
-    handleAction,
-    // Expose concrete actions so callers can use actions.startContainer(id)
-    startContainer: async (id) => {
-      return await svcStartContainer(id);
-    },
-    stopContainer: async (id) => {
-      return await svcStopContainer(id);
-    },
-    restartContainer: async (id) => {
-      return await svcRestartContainer(id);
-    },
-    removeContainer: async (id) => {
-      return await svcRemoveContainer(id);
-    },
-  };
+    if (input === "i") {
+      actions.handleAction({
+        actionFn: async (id) => await actions.startContainer(id),
+        actionLabel: "Starting",
+        selected,
+        stateCheck: (c) =>
+          (c.state === "running" || c.status === "running") &amp;&amp;
+          "Container is already running.",
+      });
+      return true;
+    }
+
+    if (input === "p") {
+      actions.handleAction({
+        actionFn: async (id) => await actions.stopContainer(id),
+        actionLabel: "Stopping",
+        selected,
+        stateCheck: (c) =>
+          (c.state === "exited" ||
+            c.status === "exited" ||
+            c.state === "stopped" ||
+            c.status === "stopped") &amp;&amp;
+          "Container is already stopped.",
+      });
+      return true;
+    }
+
+    if (input === "r") {
+      actions.handleAction({
+        actionFn: async (id) => await actions.restartContainer(id),
+        actionLabel: "Restarting",
+        selected,
+      });
+      return true;
+    }
+
+    if (input === "e") {
+      if (!container) {
+        return true;
+      }
+      onStartErase();
+      return true;
+    }
+
+    if (input === "l") {
+      if (!container) {
+        return true;
+      }
+      logsViewer.openLogs();
+      startLogsStream(container.id);
+      return true;
+    }
+
+    if (input === "c") {
+      onStartCreate();
+      creation.resetCreation();
+      return true;
+    }
+
+    if (input === "d") {
+      onToggleDebug();
+      return true;
+    }
+
+    return false;
+  }, [actions, containers, creation, logsViewer, onStartCreate, onStartErase, onToggleDebug, selected, startLogsStream]);
+
+  return { handleDockerCommands };
 }
 </code></pre>
         </article>

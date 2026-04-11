@@ -1170,6 +1170,328 @@ The cursor is represented with a trailing underscore.
     
 
     
+    <h4 class="name" id="buildContainerOptions"><span class="type-signature"></span>buildContainerOptions<span class="signature">(params)</span><span class="type-signature"> &rarr; {object}</span></h4>
+    
+
+    
+
+
+
+<div class="description">
+    Builds Docker container creation options from raw user inputs.
+
+This is a pure function — it has no side effects and calls no services.
+It mirrors exactly the option-building logic in useControls.js onCreate callback.
+</div>
+
+
+
+
+
+
+
+
+
+    <h5>Parameters:</h5>
+    
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>params</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">object</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">
+                <h6>Properties</h6>
+                
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+        <th>Attributes</th>
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>imageName</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">string</span>
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+
+                
+
+                
+                </td>
+            
+
+            
+
+            <td class="description last">Docker image name (e.g. "nginx:alpine")</td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>containerName</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">string</span>
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+                    &lt;optional><br>
+                
+
+                
+
+                
+                </td>
+            
+
+            
+
+            <td class="description last">Optional container name</td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>portInput</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">string</span>
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+                    &lt;optional><br>
+                
+
+                
+
+                
+                </td>
+            
+
+            
+
+            <td class="description last">Comma-separated host:container port pairs
+                                           (e.g. "8080:80,3000:3000")</td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>envInput</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">string</span>
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+                    &lt;optional><br>
+                
+
+                
+
+                
+                </td>
+            
+
+            
+
+            <td class="description last">Comma-separated KEY=VALUE pairs
+                                           (e.g. "NODE_ENV=production,PORT=3000")</td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+            </td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="helpers_containerOptionsBuilder.js.html">helpers/containerOptionsBuilder.js</a>, <a href="helpers_containerOptionsBuilder.js.html#line16">line 16</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<h5>Returns:</h5>
+
+        
+<div class="param-desc">
+    Docker container options ready to pass to createContainer
+</div>
+
+
+
+<dl>
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type">object</span>
+
+
+    </dd>
+</dl>
+
+    
+
+
+
+
+
+        
+            
+
+    
+
+    
     <h4 class="name" id="colorize"><span class="type-signature"></span>colorize<span class="signature">(value, text<span class="signature-attributes">opt</span>)</span><span class="type-signature"> &rarr; {string}</span></h4>
     
 
@@ -2379,408 +2701,6 @@ The cursor is represented with a trailing underscore.
     <dd>
         
 <span class="param-type">Promise.&lt;Object></span>
-
-
-    </dd>
-</dl>
-
-    
-
-
-
-
-
-        
-            
-
-    
-
-    
-    <h4 class="name" id="handleAction"><span class="type-signature"></span>handleAction<span class="signature">(params)</span><span class="type-signature"> &rarr; {Promise.&lt;void>}</span></h4>
-    
-
-    
-
-
-
-<div class="description">
-    Generic helper to perform a container action with user feedback.
-</div>
-
-
-
-
-
-
-
-
-
-    <h5>Parameters:</h5>
-    
-
-<table class="params">
-    <thead>
-    <tr>
-        
-        <th>Name</th>
-        
-
-        <th>Type</th>
-
-        
-
-        
-
-        <th class="last">Description</th>
-    </tr>
-    </thead>
-
-    <tbody>
-    
-
-        <tr>
-            
-                <td class="name"><code>params</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">Object</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">
-                <h6>Properties</h6>
-                
-
-<table class="params">
-    <thead>
-    <tr>
-        
-        <th>Name</th>
-        
-
-        <th>Type</th>
-
-        
-        <th>Attributes</th>
-        
-
-        
-
-        <th class="last">Description</th>
-    </tr>
-    </thead>
-
-    <tbody>
-    
-
-        <tr>
-            
-                <td class="name"><code>containers</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">Array</span>
-
-
-            
-            </td>
-
-            
-                <td class="attributes">
-                
-
-                
-
-                
-                </td>
-            
-
-            
-
-            <td class="description last">Array of container objects</td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>selected</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">number</span>
-
-
-            
-            </td>
-
-            
-                <td class="attributes">
-                
-
-                
-
-                
-                </td>
-            
-
-            
-
-            <td class="description last">Index of the selected container</td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>actionFn</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">function</span>
-
-
-            
-            </td>
-
-            
-                <td class="attributes">
-                
-
-                
-
-                
-                </td>
-            
-
-            
-
-            <td class="description last">Async function that performs the action (receives container id)</td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>actionLabel</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">string</span>
-
-
-            
-            </td>
-
-            
-                <td class="attributes">
-                
-
-                
-
-                
-                </td>
-            
-
-            
-
-            <td class="description last">Label used in feedback messages (e.g. 'Starting')</td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>setMessage</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">function</span>
-
-
-            
-            </td>
-
-            
-                <td class="attributes">
-                
-
-                
-
-                
-                </td>
-            
-
-            
-
-            <td class="description last">Setter for feedback message</td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>setMessageColor</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">function</span>
-
-
-            
-            </td>
-
-            
-                <td class="attributes">
-                
-
-                
-
-                
-                </td>
-            
-
-            
-
-            <td class="description last">Setter for feedback color</td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>stateCheck</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">function</span>
-
-
-            
-            </td>
-
-            
-                <td class="attributes">
-                
-                    &lt;optional><br>
-                
-
-                
-
-                
-                </td>
-            
-
-            
-
-            <td class="description last">Optional function that validates container state before action</td>
-        </tr>
-
-    
-    </tbody>
-</table>
-
-            </td>
-        </tr>
-
-    
-    </tbody>
-</table>
-
-
-
-
-
-
-<dl class="details">
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-    <dt class="tag-source">Source:</dt>
-    <dd class="tag-source"><ul class="dummy"><li>
-        <a href="helpers_actionHelpers.js.html">helpers/actionHelpers.js</a>, <a href="helpers_actionHelpers.js.html#line16">line 16</a>
-    </li></ul></dd>
-    
-
-    
-
-    
-
-    
-</dl>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<h5>Returns:</h5>
-
-        
-
-
-<dl>
-    <dt>
-        Type
-    </dt>
-    <dd>
-        
-<span class="param-type">Promise.&lt;void></span>
 
 
     </dd>
@@ -4515,6 +4435,404 @@ Handles feedback messages and exposes helpers for each action.
     
 
     
+    <h4 class="name" id="useContainerCommandRouter"><span class="type-signature"></span>useContainerCommandRouter<span class="signature">(params)</span><span class="type-signature"> &rarr; {Object}</span></h4>
+    
+
+    
+
+
+
+<div class="description">
+    Hook responsible solely for routing Docker action keystrokes to the correct handler.
+Has no domain state of its own — it delegates every side-effect to its dependencies.
+
+Handled keys:
+  i  — start container
+  p  — stop container
+  r  — restart container
+  e  — request erase confirmation
+  l  — open logs viewer and start log stream
+  c  — open container creation wizard (reset + activate)
+  d  — toggle debug log panel
+</div>
+
+
+
+
+
+
+
+
+
+    <h5>Parameters:</h5>
+    
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>params</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Object</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">
+                <h6>Properties</h6>
+                
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>actions</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Object</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">API from useContainerActions</td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>containers</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Array.&lt;Object></span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">Current list of Docker containers</td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>selected</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">number</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">Index of the currently selected container</td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>creation</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Object</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">API from useContainerCreation (must expose resetCreation)</td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>logsViewer</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Object</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">API from useLogsViewer</td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>startLogsStream</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">function</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">Starts the log stream for a container id</td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>onStartErase</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">function</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">Callback: activates confirmErase state</td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>onToggleDebug</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">function</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">Callback: toggles showDebugLogs state</td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>onStartCreate</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">function</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">Callback: sets creatingContainer = true</td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+            </td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="hooks_useContainerCommandRouter.js.html">hooks/useContainerCommandRouter.js</a>, <a href="hooks_useContainerCommandRouter.js.html#line28">line 28</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<h5>Returns:</h5>
+
+        
+
+
+<dl>
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type">Object</span>
+
+
+    </dd>
+</dl>
+
+    
+
+
+
+
+
+        
+            
+
+    
+
+    
     <h4 class="name" id="useContainerCreation"><span class="type-signature"></span>useContainerCreation<span class="signature">(params)</span><span class="type-signature"> &rarr; {Object}</span></h4>
     
 
@@ -4843,472 +5161,6 @@ It coordinates the modular hooks and exposes a compact API consumed by the App.
 
 
 
-    <h5 class="subsection-title">Properties:</h5>
-
-    
-
-<table class="props">
-    <thead>
-    <tr>
-        
-        <th>Name</th>
-        
-
-        <th>Type</th>
-
-        
-
-        
-
-        <th class="last">Description</th>
-    </tr>
-    </thead>
-
-    <tbody>
-    
-
-        <tr>
-            
-                <td class="name"><code>selected</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">number</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">Index of the currently selected container</td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>setSelected</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">function</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">Setter for selected index</td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>message</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">string</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">Current feedback message (creation or actions)</td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>messageColor</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">string</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">Color to show for the feedback message</td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>showLogs</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">boolean</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">Whether the logs viewer is active</td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>logs</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">Array.&lt;string></span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">Array of log lines currently collected</td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>exitLogs</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">function</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">Helper to close the logs viewer</td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>creatingContainer</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">boolean</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">Whether the create-container prompt is open</td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>creationStep</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">number</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">Current step in the creation flow</td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>imageNameInput</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">string</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">Current value of the image name field</td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>containerNameInput</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">string</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">Current value of the container name field</td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>portInput</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">string</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">Current value of the port input field</td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>envInput</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">string</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">Current value of the env input field</td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>creation</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">Object</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">The creation hook API (setters and helpers)</td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>actions</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">Object</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">The actions hook API (helpers to start/stop/remove)</td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>logsViewer</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">Object</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">The logs viewer hook API</td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>showDebugLogs</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">boolean</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">Whether the debug log panel is visible</td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>debugLogs</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">Array.&lt;string></span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">Buffered log lines captured from the shared logger</td>
-        </tr>
-
-    
-
-        <tr>
-            
-                <td class="name"><code>confirmErase</code></td>
-            
-
-            <td class="type">
-            
-                
-<span class="param-type">boolean</span>
-
-
-            
-            </td>
-
-            
-
-            
-
-            <td class="description last">Whether the erase confirmation dialog is active</td>
-        </tr>
-
-    
-    </tbody>
-</table>
-
-
-
-
 <dl class="details">
 
     
@@ -5338,7 +5190,7 @@ It coordinates the modular hooks and exposes a compact API consumed by the App.
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="hooks_useControls.js.html">hooks/useControls.js</a>, <a href="hooks_useControls.js.html#line38">line 38</a>
+        <a href="hooks_useControls.js.html">hooks/useControls.js</a>, <a href="hooks_useControls.js.html#line23">line 23</a>
     </li></ul></dd>
     
 
@@ -5396,7 +5248,7 @@ It coordinates the modular hooks and exposes a compact API consumed by the App.
     
 
     
-    <h4 class="name" id="useLogsStream"><span class="type-signature"></span>useLogsStream<span class="signature">()</span><span class="type-signature"> &rarr; {Object}</span></h4>
+    <h4 class="name" id="useEraseConfirmation"><span class="type-signature"></span>useEraseConfirmation<span class="signature">(params)</span><span class="type-signature"> &rarr; {Object}</span></h4>
     
 
     
@@ -5404,7 +5256,10 @@ It coordinates the modular hooks and exposes a compact API consumed by the App.
 
 
 <div class="description">
-    Hook that manages opening and closing a logs stream for a container.
+    Hook to manage the erase confirmation dialog flow.
+
+Encapsulates the `confirmErase` state and the input handler that resolves it.
+The caller is responsible for what happens on confirm/cancel via the callbacks.
 </div>
 
 
@@ -5413,6 +5268,127 @@ It coordinates the modular hooks and exposes a compact API consumed by the App.
 
 
 
+
+
+    <h5>Parameters:</h5>
+    
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>params</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Object</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">
+                <h6>Properties</h6>
+                
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>onConfirm</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">function</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">Called when the user presses y/Y. Should trigger the erase action.</td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>onCancel</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">function</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">Called when the user presses n/N or Escape. Should clean up messages.</td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+            </td>
+        </tr>
+
+    
+    </tbody>
+</table>
 
 
 
@@ -5448,7 +5424,7 @@ It coordinates the modular hooks and exposes a compact API consumed by the App.
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="hooks_useLogsStream.js.html">hooks/useLogsStream.js</a>, <a href="hooks_useLogsStream.js.html#line10">line 10</a>
+        <a href="hooks_useEraseConfirmation.js.html">hooks/useEraseConfirmation.js</a>, <a href="hooks_useEraseConfirmation.js.html#line14">line 14</a>
     </li></ul></dd>
     
 
@@ -5476,10 +5452,241 @@ It coordinates the modular hooks and exposes a compact API consumed by the App.
 <h5>Returns:</h5>
 
         
-<div class="param-desc">
-    { openLogs, closeLogs }
+
+
+<dl>
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type">Object</span>
+
+
+    </dd>
+</dl>
+
+    
+
+
+
+
+
+        
+            
+
+    
+
+    
+    <h4 class="name" id="useExitHandler"><span class="type-signature"></span>useExitHandler<span class="signature">(options<span class="signature-attributes">opt</span>)</span><span class="type-signature"> &rarr; {Object}</span></h4>
+    
+
+    
+
+
+
+<div class="description">
+    Hook that encapsulates the application exit sequence triggered by pressing `q`.
+
+Responsibilities:
+- Detect the `q` keypress
+- Invoke an optional `onBeforeExit` callback for resource cleanup (e.g. closing logs)
+- Clear the terminal after a short delay
+- Call Ink's `exit()` and, outside of test environments, `process.exit(0)`
 </div>
 
+
+
+
+
+
+
+
+
+    <h5>Parameters:</h5>
+    
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+        <th>Attributes</th>
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>options</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Object</span>
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+                    &lt;optional><br>
+                
+
+                
+
+                
+                </td>
+            
+
+            
+
+            <td class="description last">
+                <h6>Properties</h6>
+                
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+        <th>Attributes</th>
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>onBeforeExit</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">function</span>
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+                    &lt;optional><br>
+                
+
+                
+
+                
+                </td>
+            
+
+            
+
+            <td class="description last">Optional callback invoked synchronously
+  before the exit delay starts. Use it to close logs, reset UI state, etc.</td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+            </td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="hooks_useExitHandler.js.html">hooks/useExitHandler.js</a>, <a href="hooks_useExitHandler.js.html#line19">line 19</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<h5>Returns:</h5>
+
+        
 
 
 <dl>
@@ -6920,13 +7127,13 @@ Use a generic object shape so JSDoc can render a meaningful type.
 </div>
 
 <nav>
-    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-index.html">index</a></li></ul><h3>Global</h3><ul><li><a href="global.html#EXIT_DELAY">EXIT_DELAY</a></li><li><a href="global.html#LOG_LEVELS">LOG_LEVELS</a></li><li><a href="global.html#MESSAGE_TIMEOUTS">MESSAGE_TIMEOUTS</a></li><li><a href="global.html#PromptField">PromptField</a></li><li><a href="global.html#PromptMessage">PromptMessage</a></li><li><a href="global.html#REFRESH_INTERVALS">REFRESH_INTERVALS</a></li><li><a href="global.html#TIMEOUTS">TIMEOUTS</a></li><li><a href="global.html#VERSION">VERSION</a></li><li><a href="global.html#colorize">colorize</a></li><li><a href="global.html#createContainer">createContainer</a></li><li><a href="global.html#docker">docker</a></li><li><a href="global.html#exitWithMessage">exitWithMessage</a></li><li><a href="global.html#getContainers">getContainers</a></li><li><a href="global.html#getLogsStream">getLogsStream</a></li><li><a href="global.html#getStats">getStats</a></li><li><a href="global.html#handleAction">handleAction</a></li><li><a href="global.html#imageExists">imageExists</a></li><li><a href="global.html#logger">logger</a></li><li><a href="global.html#makeBar">makeBar</a></li><li><a href="global.html#normalizeContainerName">normalizeContainerName</a></li><li><a href="global.html#pullImage">pullImage</a></li><li><a href="global.html#removeContainer">removeContainer</a></li><li><a href="global.html#restartContainer">restartContainer</a></li><li><a href="global.html#safeCall">safeCall</a></li><li><a href="global.html#startContainer">startContainer</a></li><li><a href="global.html#stopContainer">stopContainer</a></li><li><a href="global.html#useContainerActions">useContainerActions</a></li><li><a href="global.html#useContainerCreation">useContainerCreation</a></li><li><a href="global.html#useControls">useControls</a></li><li><a href="global.html#useLogsStream">useLogsStream</a></li><li><a href="global.html#useLogsViewer">useLogsViewer</a></li><li><a href="global.html#validateEnvVars">validateEnvVars</a></li><li><a href="global.html#validatePorts">validatePorts</a></li><li><a href="global.html#withTimeout">withTimeout</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-index.html">index</a></li></ul><h3>Global</h3><ul><li><a href="global.html#EXIT_DELAY">EXIT_DELAY</a></li><li><a href="global.html#LOG_LEVELS">LOG_LEVELS</a></li><li><a href="global.html#MESSAGE_TIMEOUTS">MESSAGE_TIMEOUTS</a></li><li><a href="global.html#PromptField">PromptField</a></li><li><a href="global.html#PromptMessage">PromptMessage</a></li><li><a href="global.html#REFRESH_INTERVALS">REFRESH_INTERVALS</a></li><li><a href="global.html#TIMEOUTS">TIMEOUTS</a></li><li><a href="global.html#VERSION">VERSION</a></li><li><a href="global.html#buildContainerOptions">buildContainerOptions</a></li><li><a href="global.html#colorize">colorize</a></li><li><a href="global.html#createContainer">createContainer</a></li><li><a href="global.html#docker">docker</a></li><li><a href="global.html#exitWithMessage">exitWithMessage</a></li><li><a href="global.html#getContainers">getContainers</a></li><li><a href="global.html#getLogsStream">getLogsStream</a></li><li><a href="global.html#getStats">getStats</a></li><li><a href="global.html#imageExists">imageExists</a></li><li><a href="global.html#logger">logger</a></li><li><a href="global.html#makeBar">makeBar</a></li><li><a href="global.html#normalizeContainerName">normalizeContainerName</a></li><li><a href="global.html#pullImage">pullImage</a></li><li><a href="global.html#removeContainer">removeContainer</a></li><li><a href="global.html#restartContainer">restartContainer</a></li><li><a href="global.html#safeCall">safeCall</a></li><li><a href="global.html#startContainer">startContainer</a></li><li><a href="global.html#stopContainer">stopContainer</a></li><li><a href="global.html#useContainerActions">useContainerActions</a></li><li><a href="global.html#useContainerCommandRouter">useContainerCommandRouter</a></li><li><a href="global.html#useContainerCreation">useContainerCreation</a></li><li><a href="global.html#useControls">useControls</a></li><li><a href="global.html#useEraseConfirmation">useEraseConfirmation</a></li><li><a href="global.html#useExitHandler">useExitHandler</a></li><li><a href="global.html#useLogsViewer">useLogsViewer</a></li><li><a href="global.html#validateEnvVars">validateEnvVars</a></li><li><a href="global.html#validatePorts">validatePorts</a></li><li><a href="global.html#withTimeout">withTimeout</a></li></ul>
 </nav>
 
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Mon Nov 03 2025 03:49:01 GMT+0000 (Coordinated Universal Time)
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Sat Apr 11 2026 03:38:35 GMT+0000 (Coordinated Universal Time)
 </footer>
 
 <script> prettyPrint(); </script>

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>JSDoc: Source: components/ContainerCreationPrompt.jsx</title>
+    <title>JSDoc: Source: hooks/useEraseConfirmation.js</title>
 
     <script src="scripts/prettify/prettify.js"> </script>
     <script src="scripts/prettify/lang-css.js"> </script>
@@ -17,7 +17,7 @@
 
 <div id="main">
 
-    <h1 class="page-title">Source: components/ContainerCreationPrompt.jsx</h1>
+    <h1 class="page-title">Source: hooks/useEraseConfirmation.js</h1>
 
     
 
@@ -26,69 +26,45 @@
     
     <section>
         <article>
-            <pre class="prettyprint source linenums"><code>import React from "react";
-import { Box, Text } from "ink";
-import { PromptField, PromptMessage } from "./PromptField.jsx";
-import PropTypes from 'prop-types';
+            <pre class="prettyprint source linenums"><code>import { useState, useCallback } from "react";
 
 /**
- * Prompt UI shown when creating a new container.
- * Presents a step-by-step form (image, name, ports, env) and displays
- * a contextual message provided by the creation hook.
+ * Hook to manage the erase confirmation dialog flow.
  *
- * @param {Object} props
- * @param {number} props.step - Current step index (0..3)
- * @param {string} props.imageName - Value for the image name field
- * @param {string} props.containerName - Value for the container name field
- * @param {string} props.portInput - Value for the ports input field
- * @param {string} props.envInput - Value for the environment variables field
- * @param {string} props.message - Contextual message to display (errors/hints)
- * @param {string} props.messageColor - Color for the contextual message
- * @returns {JSX.Element}
+ * Encapsulates the `confirmErase` state and the input handler that resolves it.
+ * The caller is responsible for what happens on confirm/cancel via the callbacks.
+ *
+ * @param {Object} params
+ * @param {Function} params.onConfirm - Called when the user presses y/Y. Should trigger the erase action.
+ * @param {Function} params.onCancel  - Called when the user presses n/N or Escape. Should clean up messages.
+ * @returns {{ confirmErase: boolean, startErase: Function, processEraseConfirmation: Function }}
  */
-export default function ContainerCreationPrompt(props) {
-  const { step, imageName, containerName, portInput, envInput, message, messageColor } = props;
-  const prompts = [
-    {
-      label: "Name of the image to create (e.g., nginx:latest):",
-      value: imageName,
-      required: true,
-    },
-    {
-      label: "Name of the container (optional):",
-      value: containerName,
-      required: false,
-    },
-    {
-      label: "Ports (optional, format 8080:80,443:443):",
-      value: portInput,
-      required: false,
-    },
-    {
-      label: "Environment variables (optional, format VAR1=val1,VAR2=val2):",
-      value: envInput,
-      required: false,
-    },
-  ];
-  const { label, value, required } = prompts[step] || {};
-  return (
-    &lt;Box flexDirection="column" borderStyle="round" borderColor="yellow" padding={1}>
-      &lt;PromptField label={label} value={value} required={required} />
-      &lt;PromptMessage message={message} color={messageColor} />
-      &lt;Text dimColor>Press Enter to continue, Escape to cancel&lt;/Text>
-    &lt;/Box>
-  );
-}
+export function useEraseConfirmation({ onConfirm, onCancel }) {
+  const [confirmErase, setConfirmErase] = useState(false);
 
-ContainerCreationPrompt.propTypes = {
-  step: PropTypes.number.isRequired,
-  imageName: PropTypes.string,
-  containerName: PropTypes.string,
-  portInput: PropTypes.string,
-  envInput: PropTypes.string,
-  message: PropTypes.string,
-  messageColor: PropTypes.string,
-};
+  const startErase = useCallback(() => {
+    setConfirmErase(true);
+  }, []);
+
+  const processEraseConfirmation = useCallback(
+    (input, key) => {
+      if (input === "y" || input === "Y") {
+        onConfirm();
+        setConfirmErase(false);
+        return;
+      }
+
+      if (input === "n" || input === "N" || key.escape) {
+        setConfirmErase(false);
+        onCancel();
+        return;
+      }
+    },
+    [onConfirm, onCancel]
+  );
+
+  return { confirmErase, startErase, processEraseConfirmation };
+}
 </code></pre>
         </article>
     </section>
