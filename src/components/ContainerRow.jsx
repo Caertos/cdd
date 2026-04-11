@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { Box, Text } from "ink";
-import { getStats } from "../helpers/dockerService/serviceComponents/containerStats";
-import { REFRESH_INTERVALS } from "../helpers/constants.js";
 import StatsBar from "./StatsBar.jsx";
 import PropTypes from 'prop-types';
+import { useContainerStats } from '../hooks/useContainerStats.js';
 
 const stateText = (state) => {
   if (state === "running") return { text: "🟢 RUNNING", color: "green" };
@@ -21,11 +20,7 @@ const stateText = (state) => {
  */
 export default function ContainerRow({ container, isSelected = false }) {
   const { id, name, image, state } = container;
-  const [stats, setStats] = useState({
-    cpuPercent: 0,
-    memPercent: 0,
-    netIO: { rx: 0, tx: 0 },
-  });
+  const { stats, statsError } = useContainerStats(id, state);
 
   // Format ports for display (no leading space to avoid layout shifts)
   const formatPorts = (ports) => {
@@ -41,36 +36,6 @@ export default function ContainerRow({ container, isSelected = false }) {
     if (!s) return "";
     return s.length > max ? s.slice(0, max - 1) + "…" : s;
   };
-
-  const [statsError, setStatsError] = useState("");
-  useEffect(() => {
-    if (state !== "running") return;
-    
-    let isMounted = true;
-    
-    const fetchStats = async () => {
-      try {
-        const s = await getStats(id);
-        if (isMounted) {
-          setStats(s);
-          setStatsError("");
-        }
-      } catch (err) {
-        if (isMounted) {
-          setStats({ cpuPercent: 0, memPercent: 0, netIO: { rx: 0, tx: 0 } });
-          setStatsError("Error fetching stats");
-        }
-      }
-    };
-    
-    fetchStats();
-  const timer = setInterval(fetchStats, REFRESH_INTERVALS.CONTAINER_STATS);
-    
-    return () => {
-      isMounted = false;
-      clearInterval(timer);
-    };
-  }, [id, state]);
 
   const stateInfo = stateText(state);
   return (
