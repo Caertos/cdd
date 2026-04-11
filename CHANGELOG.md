@@ -7,6 +7,23 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 - Nothing yet.
 
+## [3.1.8] - 2026-04-11
+
+### Refactored
+
+- Removed dead code: `actionHelpers`, `useLogsStream`, and esbuild-related artifacts that were no longer in use.
+- Consolidated Babel configuration into a single env-aware file, eliminating duplicate/split config files.
+- Decomposed `useControls` god hook into focused single-responsibility hooks, each owning one concern.
+- Extracted `useContainerStats` hook from `ContainerRow` to separate data-fetching from rendering.
+- Set Jest default environment to `node`; `jsdom` is now opt-in per test file, reducing unnecessary DOM overhead.
+
+### Changed
+
+- Removed generated JSDoc output from the repository; added the generated docs directory to `.gitignore`.
+- Enabled `react/prop-types` ESLint rule project-wide and resolved all resulting warnings.
+- Rewrote `README.md` and `CONTRIBUTING.md`: consolidated overlapping content, removed duplication, and updated both for accuracy.
+- Various `docs(style)` and `docs` commits between v3.1.5 and the refactor wave: dark theme, sticky nav, landing page rewrite, CSS consolidation, and English translation for the JSDoc home (GitHub Pages site).
+
 ## [3.1.5] - 2025-10-18
 _Note: I'm sorry about the issues you've run into; this is a brand-new app and I'm still learning, but I'm moving as quickly as I can to deliver a quality experience._
 
