@@ -1,3 +1,6 @@
+/**
+ * @jest-environment jsdom
+ */
 import React, { useEffect } from 'react';
 import { render, act } from '@testing-library/react';
 import { useContainerCreation } from '../src/hooks/creation/useContainerCreation.js';
