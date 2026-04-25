@@ -7,6 +7,23 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 - Nothing yet.
 
+## [3.2.0] - 2026-04-25
+
+### Added
+
+- `IMAGE_PROFILES` map in `src/helpers/constants.js` — defines `requiredEnv` and `defaultPort` per image type (mysql, mariadb, postgres, mongo, mssql, redis).
+- `DB_IMAGES` constant exported from `src/helpers/constants.js`.
+- Contextual validation in wizard: if image matches a known profile, required env vars are enforced before creation.
+- Auto-assigned port feedback: after successful container creation, the success message shows which ports were mapped (e.g. `Ports: 3306→3306/tcp`).
+- Image name normalization: tags and registry prefixes are stripped before profile lookup (`mysql:8`, `docker.io/library/postgres:16` → `mysql`, `postgres`).
+- New test files: `test/containerOptionsBuilder.test.js`, `test/useControls.dom.test.js`.
+
+### Fixed
+
+- `validateEnvVars()` was never called in the container creation wizard step 3 — now connected and blocks on invalid input.
+- Env var parsing split on all `=` characters — fixed to split only on the first `=`, preserving values like `JWT=abc=def`.
+- `dbImages` was hardcoded in `useControls.js` — now imports `DB_IMAGES` from constants.
+
 ## [3.1.9] - 2026-04-11
 
 ### Changed
