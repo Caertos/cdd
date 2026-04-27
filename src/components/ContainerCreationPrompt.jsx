@@ -1,6 +1,7 @@
 import React from 'react';
 import { Box, Text } from 'ink';
 import { PromptField, PromptMessage } from './PromptField.jsx';
+import { SuggestionPanel } from './SuggestionPanel.jsx';
 import PropTypes from 'prop-types';
 
 /**
@@ -16,6 +17,9 @@ import PropTypes from 'prop-types';
  * @param {string} props.envInput - Value for the environment variables field
  * @param {string} props.message - Contextual message to display (errors/hints)
  * @param {string} props.messageColor - Color for the contextual message
+ * @param {string[]} [props.suggestions] - Autocomplete suggestions (shown only on step 0)
+ * @param {number} [props.selectedSuggestionIndex] - Currently focused suggestion index
+ * @param {number} [props.visibleOffset] - First visible suggestion offset
  * @returns {JSX.Element}
  */
 export default function ContainerCreationPrompt(props) {
@@ -27,6 +31,9 @@ export default function ContainerCreationPrompt(props) {
     envInput,
     message,
     messageColor,
+    suggestions = [],
+    selectedSuggestionIndex = -1,
+    visibleOffset = 0,
   } = props;
   const prompts = [
     {
@@ -51,6 +58,7 @@ export default function ContainerCreationPrompt(props) {
     },
   ];
   const { label, value, required } = prompts[step] || {};
+  const showSuggestions = step === 0 && suggestions.length > 0;
   return (
     <Box
       flexDirection="column"
@@ -59,6 +67,13 @@ export default function ContainerCreationPrompt(props) {
       padding={1}
     >
       <PromptField label={label} value={value} required={required} />
+      {showSuggestions && (
+        <SuggestionPanel
+          items={suggestions}
+          selectedIndex={selectedSuggestionIndex}
+          visibleOffset={visibleOffset}
+        />
+      )}
       <PromptMessage message={message} color={messageColor} />
       <Text dimColor>Press Enter to continue, Escape to cancel</Text>
     </Box>
@@ -73,4 +88,10 @@ ContainerCreationPrompt.propTypes = {
   envInput: PropTypes.string,
   message: PropTypes.string,
   messageColor: PropTypes.string,
+  suggestions: PropTypes.arrayOf(PropTypes.string),
+  selectedSuggestionIndex: PropTypes.number,
+  visibleOffset: PropTypes.number,
 };
+
+// Named export for test compatibility with jest ESM interop
+export { ContainerCreationPrompt };

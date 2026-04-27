@@ -145,12 +145,32 @@ export function useControls(containers = []) {
       }
 
       if (input === '\r' || input === '\n') {
+        // If on step 0 with a focused suggestion, apply it instead of advancing
+        if (step === 0 && creation.selectedSuggestionIndex >= 0) {
+          creation.applyFocusedSuggestion();
+          return;
+        }
         creation.nextStep();
         return;
       }
 
+      // Arrow keys on step 0: navigate suggestion list
+      if (step === 0 && creation.suggestions.length > 0) {
+        if (key.upArrow) {
+          creation.moveSuggestionSelection(-1);
+          return;
+        }
+        if (key.downArrow) {
+          creation.moveSuggestionSelection(1);
+          return;
+        }
+      }
+
       if (key.backspace || key.delete) {
-        if (step === 0) removeLastChar(creation.setImageName);
+        if (step === 0) {
+          const newValue = (creation.imageName || '').slice(0, -1);
+          creation.updateImageInput(newValue);
+        }
         if (step === 1) removeLastChar(creation.setContainerName);
         if (step === 2) removeLastChar(creation.setPortInput);
         if (step === 3) removeLastChar(creation.setEnvInput);
@@ -158,8 +178,9 @@ export function useControls(containers = []) {
       }
 
       if (input && input.length === 1 && !key.ctrl && !key.meta) {
-        if (step === 0)
-          appendChar(creation.setImageName, creation.imageName, input);
+        if (step === 0) {
+          creation.updateImageInput((creation.imageName || '') + input);
+        }
         if (step === 1)
           appendChar(creation.setContainerName, creation.containerName, input);
         if (step === 2)

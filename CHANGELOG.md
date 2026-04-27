@@ -7,6 +7,22 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 - Nothing yet.
 
+## [3.2.2] - 2026-04-27
+
+### Added
+
+- Interactive suggestion panel in container creation wizard (step 0) — shows filtered image suggestions below the input as the user types, navigable with ↑↓ and selectable with Enter
+- `IMAGE_PROFILES` expanded from 6 to 20 curated images (nginx, node, python, postgres, mysql, mongo, redis, kafka, elasticsearch, minio, wordpress, and more) each with `requiredEnv`, `defaultPort`, and `suggestedEnv`
+- `SuggestionPanel` component (`src/components/SuggestionPanel.jsx`) — offline, non-overlay panel with scrollable window and focused-row highlight
+- Contextual env var hints in step 3 — when a known image is selected, suggested variables (e.g. `POSTGRES_USER`, `POSTGRES_DB`) are shown as guidance
+- `updateImageInput()`, `moveSuggestionSelection()`, `applyFocusedSuggestion()` functions in `useContainerCreation` hook for autocomplete state management
+- Ink mock infrastructure (`__mocks__/ink.cjs`) with `triggerInput` helper for reliable keyboard routing tests
+
+### Changed
+
+- `useControls.js` keyboard routing — ↑↓ and Enter are conditionally intercepted for suggestion navigation only on step 0 when suggestions are visible; all other steps preserve existing behavior
+- `ContainerCreationPrompt.jsx` — renders `SuggestionPanel` below the image input field on step 0
+
 ## [3.2.1] - 2026-04-27
 
 ### Changed

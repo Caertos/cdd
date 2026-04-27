@@ -139,3 +139,126 @@ describe('useContainerCreation (DOM render)', () => {
     expect(created[0].imageName).toBe('mysql:8');
   });
 });
+
+describe('useContainerCreation — suggestions & updateImageInput()', () => {
+  test('hook exposes suggestions, selectedSuggestionIndex, visibleOffset', () => {
+    const expose = { current: null };
+    render(<HookTester onCreate={() => {}} onCancel={() => {}} dbImages={[]} imageProfiles={IMAGE_PROFILES} expose={expose} />);
+    expect(Array.isArray(expose.current.suggestions)).toBe(true);
+    expect(typeof expose.current.selectedSuggestionIndex).toBe('number');
+    expect(typeof expose.current.visibleOffset).toBe('number');
+  });
+
+  test('updateImageInput() with "ng" filters IMAGE_PROFILES keys containing "ng"', () => {
+    const expose = { current: null };
+    render(<HookTester onCreate={() => {}} onCancel={() => {}} dbImages={[]} imageProfiles={IMAGE_PROFILES} expose={expose} />);
+
+    act(() => { expose.current.updateImageInput('ng'); });
+
+    expect(expose.current.imageName).toBe('ng');
+    expect(expose.current.suggestions).toContain('nginx');
+  });
+
+  test('updateImageInput() with empty string clears suggestions', () => {
+    const expose = { current: null };
+    render(<HookTester onCreate={() => {}} onCancel={() => {}} dbImages={[]} imageProfiles={IMAGE_PROFILES} expose={expose} />);
+
+    act(() => { expose.current.updateImageInput('ng'); });
+    act(() => { expose.current.updateImageInput(''); });
+
+    expect(expose.current.suggestions).toHaveLength(0);
+  });
+
+  test('updateImageInput() resets selectedSuggestionIndex to -1', () => {
+    const expose = { current: null };
+    render(<HookTester onCreate={() => {}} onCancel={() => {}} dbImages={[]} imageProfiles={IMAGE_PROFILES} expose={expose} />);
+
+    act(() => { expose.current.updateImageInput('ng'); });
+
+    expect(expose.current.selectedSuggestionIndex).toBe(-1);
+  });
+
+  test('step-3 message includes suggestedEnv hints when profile has them', () => {
+    const expose = { current: null };
+    render(<HookTester onCreate={() => {}} onCancel={() => {}} dbImages={[]} imageProfiles={IMAGE_PROFILES} expose={expose} />);
+
+    act(() => { expose.current.setImageName('postgres'); });
+    act(() => { expose.current.nextStep(); }); // → step 1
+    act(() => { expose.current.nextStep(); }); // → step 2
+    act(() => { expose.current.nextStep(); }); // → step 3
+
+    expect(expose.current.message).toMatch(/POSTGRES_PASSWORD/i);
+    expect(expose.current.message).toMatch(/POSTGRES_USER/i);
+  });
+});
+
+describe('useContainerCreation — moveSuggestionSelection() & applyFocusedSuggestion()', () => {
+  test('moveSuggestionSelection(1) increases selectedSuggestionIndex', () => {
+    const expose = { current: null };
+    render(<HookTester onCreate={() => {}} onCancel={() => {}} dbImages={[]} imageProfiles={IMAGE_PROFILES} expose={expose} />);
+
+    act(() => { expose.current.updateImageInput('m'); });
+    // There should be several suggestions with "m"
+    act(() => { expose.current.moveSuggestionSelection(1); });
+
+    expect(expose.current.selectedSuggestionIndex).toBe(0);
+  });
+
+  test('moveSuggestionSelection() clamps at last item', () => {
+    const expose = { current: null };
+    render(<HookTester onCreate={() => {}} onCancel={() => {}} dbImages={[]} imageProfiles={IMAGE_PROFILES} expose={expose} />);
+
+    act(() => { expose.current.updateImageInput('m'); });
+    const count = expose.current.suggestions.length;
+
+    // Move past end
+    for (let i = 0; i <= count + 2; i++) {
+      act(() => { expose.current.moveSuggestionSelection(1); });
+    }
+
+    expect(expose.current.selectedSuggestionIndex).toBe(count - 1);
+  });
+
+  test('moveSuggestionSelection(-1) clamps at -1 (no selection)', () => {
+    const expose = { current: null };
+    render(<HookTester onCreate={() => {}} onCancel={() => {}} dbImages={[]} imageProfiles={IMAGE_PROFILES} expose={expose} />);
+
+    act(() => { expose.current.updateImageInput('m'); });
+    act(() => { expose.current.moveSuggestionSelection(-1); });
+
+    expect(expose.current.selectedSuggestionIndex).toBe(-1);
+  });
+
+  test('applyFocusedSuggestion() fills imageName with focused suggestion', () => {
+    const expose = { current: null };
+    render(<HookTester onCreate={() => {}} onCancel={() => {}} dbImages={[]} imageProfiles={IMAGE_PROFILES} expose={expose} />);
+
+    act(() => { expose.current.updateImageInput('ng'); });
+    act(() => { expose.current.moveSuggestionSelection(1); }); // select first
+    act(() => { expose.current.applyFocusedSuggestion(); });
+
+    expect(expose.current.imageName).toBe('nginx');
+  });
+
+  test('applyFocusedSuggestion() does NOT advance step', () => {
+    const expose = { current: null };
+    render(<HookTester onCreate={() => {}} onCancel={() => {}} dbImages={[]} imageProfiles={IMAGE_PROFILES} expose={expose} />);
+
+    act(() => { expose.current.updateImageInput('ng'); });
+    act(() => { expose.current.moveSuggestionSelection(1); });
+    act(() => { expose.current.applyFocusedSuggestion(); });
+
+    expect(expose.current.step).toBe(0);
+  });
+
+  test('applyFocusedSuggestion() clears suggestions after applying', () => {
+    const expose = { current: null };
+    render(<HookTester onCreate={() => {}} onCancel={() => {}} dbImages={[]} imageProfiles={IMAGE_PROFILES} expose={expose} />);
+
+    act(() => { expose.current.updateImageInput('ng'); });
+    act(() => { expose.current.moveSuggestionSelection(1); });
+    act(() => { expose.current.applyFocusedSuggestion(); });
+
+    expect(expose.current.suggestions).toHaveLength(0);
+  });
+});

@@ -6,6 +6,8 @@ import {
 import { IMAGE_PROFILES } from '../../helpers/constants.js';
 import { safeCall } from '../../helpers/safeCall.js';
 
+const MAX_VISIBLE = 6;
+
 /**
  * Custom hook to manage the container creation flow, step by step.
  * Handles input, validation, and feedback for each creation step.
@@ -30,6 +32,65 @@ export function useContainerCreation({
   const [envInput, setEnvInput] = useState('');
   const [message, setMessage] = useState('');
   const [messageColor, setMessageColor] = useState('yellow');
+
+  // Autocomplete state
+  const [suggestions, setSuggestions] = useState([]);
+  const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
+  const [visibleOffset, setVisibleOffset] = useState(0);
+
+  /**
+   * Updates the image name input and recalculates autocomplete suggestions.
+   * Resets selectedSuggestionIndex to -1 on every keystroke.
+   *
+   * @param {string} value - New raw image name typed by user
+   */
+  function updateImageInput(value) {
+    setImageName(value);
+    setSelectedSuggestionIndex(-1);
+    setVisibleOffset(0);
+    if (!value.trim()) {
+      setSuggestions([]);
+      return;
+    }
+    const lower = value.toLowerCase();
+    const matches = Object.keys(imageProfiles).filter((key) =>
+      key.includes(lower)
+    );
+    setSuggestions(matches);
+  }
+
+  /**
+   * Moves the suggestion selection up (-1) or down (+1).
+   * Clamps index to [-1, suggestions.length - 1].
+   * Adjusts visibleOffset to keep selected item in the visible window.
+   *
+   * @param {number} direction - -1 (up) or 1 (down)
+   */
+  function moveSuggestionSelection(direction) {
+    setSelectedSuggestionIndex((prev) => {
+      const next = Math.max(-1, Math.min(suggestions.length - 1, prev + direction));
+      // Adjust visibleOffset to keep selected in view
+      setVisibleOffset((offset) => {
+        if (next < offset) return Math.max(0, next);
+        if (next >= offset + MAX_VISIBLE) return next - MAX_VISIBLE + 1;
+        return offset;
+      });
+      return next;
+    });
+  }
+
+  /**
+   * Applies the currently focused suggestion to imageName.
+   * Does NOT advance the step. Clears suggestions after applying.
+   */
+  function applyFocusedSuggestion() {
+    if (selectedSuggestionIndex < 0 || selectedSuggestionIndex >= suggestions.length) return;
+    const chosen = suggestions[selectedSuggestionIndex];
+    setImageName(chosen);
+    setSuggestions([]);
+    setSelectedSuggestionIndex(-1);
+    setVisibleOffset(0);
+  }
 
   /**
    * Advances to the next step, with validation and feedback.
@@ -78,8 +139,17 @@ export function useContainerCreation({
         .pop();
       const profile = imageProfiles[baseName];
       if (profile && profile.requiredEnv && profile.requiredEnv.length) {
+        const suggestedPart =
+          profile.suggestedEnv && profile.suggestedEnv.length
+            ? ` | Suggested: ${profile.suggestedEnv.join(', ')}`
+            : '';
         setMessage(
-          `Required env vars for ${baseName}: ${profile.requiredEnv.join(', ')}. Enter as VAR=val,VAR2=val2`
+          `Required env vars for ${baseName}: ${profile.requiredEnv.join(', ')}. Enter as VAR=val,VAR2=val2${suggestedPart}`
+        );
+        setMessageColor('yellow');
+      } else if (profile && profile.suggestedEnv && profile.suggestedEnv.length) {
+        setMessage(
+          `Suggested env vars for ${baseName}: ${profile.suggestedEnv.join(', ')}. Enter as VAR=val,VAR2=val2 or leave empty.`
         );
         setMessageColor('yellow');
       } else if (isDb) {
@@ -119,6 +189,9 @@ export function useContainerCreation({
     setEnvInput('');
     setMessage('');
     setMessageColor('yellow');
+    setSuggestions([]);
+    setSelectedSuggestionIndex(-1);
+    setVisibleOffset(0);
     safeCall(onCancel);
   }
 
@@ -134,6 +207,9 @@ export function useContainerCreation({
     setEnvInput('');
     setMessage('Insert the name of the image to create: ');
     setMessageColor('yellow');
+    setSuggestions([]);
+    setSelectedSuggestionIndex(-1);
+    setVisibleOffset(0);
   }
 
   return {
@@ -151,6 +227,12 @@ export function useContainerCreation({
     setMessage,
     messageColor,
     setMessageColor,
+    suggestions,
+    selectedSuggestionIndex,
+    visibleOffset,
+    updateImageInput,
+    moveSuggestionSelection,
+    applyFocusedSuggestion,
     nextStep,
     cancelCreation,
     resetCreation,
