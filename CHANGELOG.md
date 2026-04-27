@@ -7,6 +7,19 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 - Nothing yet.
 
+## [3.2.1] - 2026-04-27
+
+### Changed
+
+- Unified `normalizeImageName` into a single `src/helpers/imageNameUtils.js` module; removed duplicate definitions from `validationHelpers.js` and `containerActions.js`.
+- Added Prettier and EditorConfig for automatic code formatting enforcement; 37 source files reformatted to consistent style (single quotes, 2-space indent, trailing commas ES5).
+- Added `eslint-config-prettier` to disable ESLint rules that conflict with Prettier.
+- Added `format` and `format:check` npm scripts.
+
+### Fixed
+
+- Missing `.jsx` extension on `import App from './App'` in `src/index.js` (ESM correctness).
+
 ## [3.2.0] - 2026-04-25
 
 ### Added

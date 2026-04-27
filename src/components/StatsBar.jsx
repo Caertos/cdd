@@ -1,6 +1,6 @@
-import React from "react";
-import { Text } from "ink";
-import chalk from "chalk";
+import React from 'react';
+import { Text } from 'ink';
+import chalk from 'chalk';
 import PropTypes from 'prop-types';
 
 const BAR_WIDTH = 8;
@@ -19,7 +19,9 @@ export default function StatsBar({ cpu, mem }) {
 
   return (
     <Text>
-      CPU:{cpuBar}{colorize(cpu, ` ${formatPercent(cpu)}%`)} MEM:{memBar}{colorize(mem, ` ${formatPercent(mem)}%`)}
+      CPU:{cpuBar}
+      {colorize(cpu, ` ${formatPercent(cpu)}%`)} MEM:{memBar}
+      {colorize(mem, ` ${formatPercent(mem)}%`)}
     </Text>
   );
 }
@@ -38,10 +40,12 @@ StatsBar.propTypes = {
  */
 function makeBar(value, width) {
   const safeWidth = Math.max(1, Math.round(width));
-  const normalized = Number.isFinite(value) ? Math.min(Math.max(value, 0), 100) : 0;
+  const normalized = Number.isFinite(value)
+    ? Math.min(Math.max(value, 0), 100)
+    : 0;
   const filled = Math.round((normalized / 100) * safeWidth);
   const empty = Math.max(0, safeWidth - filled);
-  const bar = "█".repeat(filled) + "░".repeat(empty);
+  const bar = '█'.repeat(filled) + '░'.repeat(empty);
   return colorize(normalized, bar);
 }
 
@@ -49,7 +53,7 @@ function formatPercent(value) {
   if (!Number.isFinite(value)) return 0;
   const normalized = Math.min(Math.max(value, 0), 100);
   if (normalized >= 10) return Math.round(normalized);
-  return normalized.toFixed(1).replace(/\.0$/, "");
+  return normalized.toFixed(1).replace(/\.0$/, '');
 }
 
 /**

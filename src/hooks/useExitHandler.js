@@ -30,37 +30,40 @@ export function useExitHandler({ onBeforeExit } = {}) {
    * @param {string} input - Raw character input from Ink's useInput
    * @returns {boolean} True when the input was consumed, false otherwise
    */
-  const handleExitCommand = useCallback((input) => {
-    if (input !== 'q') {
-      return false;
-    }
+  const handleExitCommand = useCallback(
+    (input) => {
+      if (input !== 'q') {
+        return false;
+      }
 
-    if (typeof onBeforeExit === 'function') {
-      onBeforeExit();
-    }
+      if (typeof onBeforeExit === 'function') {
+        onBeforeExit();
+      }
 
-    const clearTerminal = () => {
-      try {
-        if (process.stdout && process.stdout.isTTY) {
-          process.stdout.write('\u001Bc');
-        } else {
-          console.clear();
+      const clearTerminal = () => {
+        try {
+          if (process.stdout && process.stdout.isTTY) {
+            process.stdout.write('\u001Bc');
+          } else {
+            console.clear();
+          }
+        } catch (err) {
+          // Ignore clear errors to avoid blocking exit.
         }
-      } catch (err) {
-        // Ignore clear errors to avoid blocking exit.
-      }
-    };
+      };
 
-    setTimeout(() => {
-      clearTerminal();
-      exit();
-      if (process.env.NODE_ENV !== 'test') {
-        setTimeout(() => process.exit(0), 50);
-      }
-    }, EXIT_DELAY);
+      setTimeout(() => {
+        clearTerminal();
+        exit();
+        if (process.env.NODE_ENV !== 'test') {
+          setTimeout(() => process.exit(0), 50);
+        }
+      }, EXIT_DELAY);
 
-    return true;
-  }, [exit, onBeforeExit]);
+      return true;
+    },
+    [exit, onBeforeExit]
+  );
 
   return { handleExitCommand };
 }

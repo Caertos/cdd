@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback } from 'react';
 
 /**
  * Hook responsible solely for routing Docker action keystrokes to the correct handler.
@@ -36,75 +36,88 @@ export function useContainerCommandRouter({
   onToggleDebug,
   onStartCreate,
 }) {
-  const handleDockerCommands = useCallback((input) => {
-    const container = containers[selected];
+  const handleDockerCommands = useCallback(
+    (input) => {
+      const container = containers[selected];
 
-    if (input === "i") {
-      actions.handleAction({
-        actionFn: async (id) => await actions.startContainer(id),
-        actionLabel: "Starting",
-        selected,
-        stateCheck: (c) =>
-          (c.state === "running" || c.status === "running") &&
-          "Container is already running.",
-      });
-      return true;
-    }
-
-    if (input === "p") {
-      actions.handleAction({
-        actionFn: async (id) => await actions.stopContainer(id),
-        actionLabel: "Stopping",
-        selected,
-        stateCheck: (c) =>
-          (c.state === "exited" ||
-            c.status === "exited" ||
-            c.state === "stopped" ||
-            c.status === "stopped") &&
-          "Container is already stopped.",
-      });
-      return true;
-    }
-
-    if (input === "r") {
-      actions.handleAction({
-        actionFn: async (id) => await actions.restartContainer(id),
-        actionLabel: "Restarting",
-        selected,
-      });
-      return true;
-    }
-
-    if (input === "e") {
-      if (!container) {
+      if (input === 'i') {
+        actions.handleAction({
+          actionFn: async (id) => await actions.startContainer(id),
+          actionLabel: 'Starting',
+          selected,
+          stateCheck: (c) =>
+            (c.state === 'running' || c.status === 'running') &&
+            'Container is already running.',
+        });
         return true;
       }
-      onStartErase();
-      return true;
-    }
 
-    if (input === "l") {
-      if (!container) {
+      if (input === 'p') {
+        actions.handleAction({
+          actionFn: async (id) => await actions.stopContainer(id),
+          actionLabel: 'Stopping',
+          selected,
+          stateCheck: (c) =>
+            (c.state === 'exited' ||
+              c.status === 'exited' ||
+              c.state === 'stopped' ||
+              c.status === 'stopped') &&
+            'Container is already stopped.',
+        });
         return true;
       }
-      logsViewer.openLogs();
-      startLogsStream(container.id);
-      return true;
-    }
 
-    if (input === "c") {
-      onStartCreate();
-      creation.resetCreation();
-      return true;
-    }
+      if (input === 'r') {
+        actions.handleAction({
+          actionFn: async (id) => await actions.restartContainer(id),
+          actionLabel: 'Restarting',
+          selected,
+        });
+        return true;
+      }
 
-    if (input === "d") {
-      onToggleDebug();
-      return true;
-    }
+      if (input === 'e') {
+        if (!container) {
+          return true;
+        }
+        onStartErase();
+        return true;
+      }
 
-    return false;
-  }, [actions, containers, creation, logsViewer, onStartCreate, onStartErase, onToggleDebug, selected, startLogsStream]);
+      if (input === 'l') {
+        if (!container) {
+          return true;
+        }
+        logsViewer.openLogs();
+        startLogsStream(container.id);
+        return true;
+      }
+
+      if (input === 'c') {
+        onStartCreate();
+        creation.resetCreation();
+        return true;
+      }
+
+      if (input === 'd') {
+        onToggleDebug();
+        return true;
+      }
+
+      return false;
+    },
+    [
+      actions,
+      containers,
+      creation,
+      logsViewer,
+      onStartCreate,
+      onStartErase,
+      onToggleDebug,
+      selected,
+      startLogsStream,
+    ]
+  );
 
   return { handleDockerCommands };
 }

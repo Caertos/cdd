@@ -1,4 +1,4 @@
-import { docker } from "../dockerService.js";
+import { docker } from '../dockerService.js';
 
 /**
  * Check whether an image exists locally.
@@ -7,9 +7,10 @@ import { docker } from "../dockerService.js";
  */
 export async function imageExists(imageName) {
   const images = await docker.listImages();
-  return images.some(img =>
-    (img.RepoTags || []).includes(imageName) ||
-    (img.RepoDigests || []).some(d => d.includes(imageName))
+  return images.some(
+    (img) =>
+      (img.RepoTags || []).includes(imageName) ||
+      (img.RepoDigests || []).some((d) => d.includes(imageName))
   );
 }
 

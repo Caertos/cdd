@@ -1,14 +1,14 @@
-import React from "react";
-import { Box, Text } from "ink";
-import StatsBar from "./StatsBar.jsx";
+import React from 'react';
+import { Box, Text } from 'ink';
+import StatsBar from './StatsBar.jsx';
 import PropTypes from 'prop-types';
 import { useContainerStats } from '../hooks/useContainerStats.js';
 
 const stateText = (state) => {
-  if (state === "running") return { text: "🟢 RUNNING", color: "green" };
-  if (state === "exited") return { text: "🔴 EXITED", color: "red" };
-  if (state === "paused") return { text: "🟠 PAUSED", color: "yellow" };
-  return { text: state.toUpperCase(), color: "gray" };
+  if (state === 'running') return { text: '🟢 RUNNING', color: 'green' };
+  if (state === 'exited') return { text: '🔴 EXITED', color: 'red' };
+  if (state === 'paused') return { text: '🟠 PAUSED', color: 'yellow' };
+  return { text: state.toUpperCase(), color: 'gray' };
 };
 
 /**
@@ -24,17 +24,17 @@ export default function ContainerRow({ container, isSelected = false }) {
 
   // Format ports for display (no leading space to avoid layout shifts)
   const formatPorts = (ports) => {
-    if (!ports || ports.length === 0) return "";
+    if (!ports || ports.length === 0) return '';
     if (Array.isArray(ports)) {
-      return ports.map((p, _i) => `🔗 ${p}`).join("  ");
+      return ports.map((p, _i) => `🔗 ${p}`).join('  ');
     }
     return `🔗 ${ports}`;
   };
 
   // Helper to truncate long strings to a max length without adding trailing spaces
   const truncate = (s, max = 20) => {
-    if (!s) return "";
-    return s.length > max ? s.slice(0, max - 1) + "…" : s;
+    if (!s) return '';
+    return s.length > max ? s.slice(0, max - 1) + '…' : s;
   };
 
   const stateInfo = stateText(state);
@@ -42,8 +42,8 @@ export default function ContainerRow({ container, isSelected = false }) {
     <Box flexDirection="column" marginBottom={1}>
       <Box flexDirection="row" alignItems="center">
         <Box width={2} minWidth={2} justifyContent="flex-end" paddingRight={1}>
-          <Text color={isSelected ? "green" : undefined}>
-            {isSelected ? "➤" : "  "}
+          <Text color={isSelected ? 'green' : undefined}>
+            {isSelected ? '➤' : '  '}
           </Text>
         </Box>
         <Box width={18} flexShrink={1} paddingRight={1}>
@@ -59,8 +59,11 @@ export default function ContainerRow({ container, isSelected = false }) {
           <Text color="yellow">{formatPorts(container.ports)}</Text>
         </Box>
         <Box flexShrink={0} paddingLeft={1}>
-          {state === "running" ? (
-            <StatsBar cpu={parseFloat(stats.cpuPercent)} mem={parseFloat(stats.memPercent)} />
+          {state === 'running' ? (
+            <StatsBar
+              cpu={parseFloat(stats.cpuPercent)}
+              mem={parseFloat(stats.memPercent)}
+            />
           ) : null}
         </Box>
       </Box>
@@ -75,7 +78,7 @@ ContainerRow.propTypes = {
     name: PropTypes.string.isRequired,
     image: PropTypes.string,
     state: PropTypes.string,
-    ports: PropTypes.oneOfType([PropTypes.array, PropTypes.string])
+    ports: PropTypes.oneOfType([PropTypes.array, PropTypes.string]),
   }).isRequired,
   isSelected: PropTypes.bool,
 };

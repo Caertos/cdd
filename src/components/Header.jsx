@@ -1,8 +1,8 @@
-import React from "react";
-import { Box, Text } from "ink";
-import chalk from "chalk";
+import React from 'react';
+import { Box, Text } from 'ink';
+import chalk from 'chalk';
 import PropTypes from 'prop-types';
-import { getAppVersion } from "../helpers/appInfo.js";
+import { getAppVersion } from '../helpers/appInfo.js';
 
 /**
  * Header component displayed at the top of the CLI UI.
@@ -18,18 +18,18 @@ import { getAppVersion } from "../helpers/appInfo.js";
 const VERSION = getAppVersion();
 
 export default function Header({ count }) {
-  const formattedVersion = VERSION === "unknown" ? "unknown" : `v${VERSION}`;
+  const formattedVersion = VERSION === 'unknown' ? 'unknown' : `v${VERSION}`;
 
   return (
     <Box justifyContent="space-between">
       <Text color="cyanBright">
-        🐳 {chalk.bold("CDD")}
+        🐳 {chalk.bold('CDD')}
         <Text color="gray"> — CLI Docker Dashboard</Text>
       </Text>
       <Box flexDirection="column" alignItems="flex-end">
         <Text color="gray">{formattedVersion}</Text>
         <Text color="gray">
-          {count} container{count === 1 ? "" : "s"} found
+          {count} container{count === 1 ? '' : 's'} found
         </Text>
       </Box>
     </Box>

@@ -1,4 +1,4 @@
-import { logger } from "./logger.js";
+import { logger } from './logger.js';
 
 /**
  * Call a function safely: if it's a function call it with provided args and
@@ -12,7 +12,7 @@ export function safeCall(fn, ...args) {
     try {
       return fn(...args);
     } catch (e) {
-      logger.error("safeCall caught error", e);
+      logger.error('safeCall caught error', e);
     }
   }
 }

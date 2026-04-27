@@ -4,9 +4,10 @@
 import React, { useEffect } from 'react';
 import { render, act } from '@testing-library/react';
 import { useContainerCreation } from '../src/hooks/creation/useContainerCreation.js';
+import { IMAGE_PROFILES } from '../src/helpers/constants.js';
 
-function HookTester({ onCreate, onCancel, dbImages, expose }) {
-  const hook = useContainerCreation({ onCreate, onCancel, dbImages });
+function HookTester({ onCreate, onCancel, dbImages, imageProfiles, expose }) {
+  const hook = useContainerCreation({ onCreate, onCancel, dbImages, imageProfiles });
   // keep exposing the latest hook values on every render
   useEffect(() => {
     if (expose) expose.current = hook;
@@ -96,5 +97,45 @@ describe('useContainerCreation (DOM render)', () => {
 
       expect(created.length).toBe(1);
       expect(created[0]).toEqual({ imageName: 'redis', containerName: '', portInput: '', envInput: 'FOO=bar' });
+  });
+
+  test('step 3 with mysql image: missing MYSQL_ROOT_PASSWORD blocks creation', () => {
+    const created = [];
+    const expose = { current: null };
+
+    render(<HookTester onCreate={(d) => created.push(d)} onCancel={() => {}} dbImages={[]} imageProfiles={IMAGE_PROFILES} expose={expose} />);
+
+    // advance to step 3 (env) with mysql image
+    act(() => { expose.current.setImageName('mysql:8'); });
+    act(() => { expose.current.nextStep(); }); // step 0 → 1
+    act(() => { expose.current.nextStep(); }); // step 1 → 2
+    act(() => { expose.current.nextStep(); }); // step 2 → 3
+
+    expect(expose.current.step).toBe(3);
+
+    // try to advance without required env var
+    act(() => { expose.current.nextStep(); });
+
+    expect(expose.current.step).toBe(3); // still blocked
+    expect(expose.current.message).toMatch(/MYSQL_ROOT_PASSWORD/i);
+    expect(created.length).toBe(0);
+  });
+
+  test('step 3 with mysql image: valid env advances and calls onCreate', () => {
+    const created = [];
+    const expose = { current: null };
+
+    render(<HookTester onCreate={(d) => created.push(d)} onCancel={() => {}} dbImages={[]} imageProfiles={IMAGE_PROFILES} expose={expose} />);
+
+    act(() => { expose.current.setImageName('mysql:8'); });
+    act(() => { expose.current.nextStep(); });
+    act(() => { expose.current.nextStep(); });
+    act(() => { expose.current.nextStep(); }); // at step 3
+
+    act(() => { expose.current.setEnvInput('MYSQL_ROOT_PASSWORD=secret'); });
+    act(() => { expose.current.nextStep(); }); // should call onCreate
+
+    expect(created.length).toBe(1);
+    expect(created[0].imageName).toBe('mysql:8');
   });
 });

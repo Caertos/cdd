@@ -1,6 +1,10 @@
-import { useState } from "react";
-import { validatePorts } from "../../helpers/validationHelpers.js";
-import { safeCall } from "../../helpers/safeCall.js";
+import { useState } from 'react';
+import {
+  validatePorts,
+  validateEnvVars,
+} from '../../helpers/validationHelpers.js';
+import { IMAGE_PROFILES } from '../../helpers/constants.js';
+import { safeCall } from '../../helpers/safeCall.js';
 
 /**
  * Custom hook to manage the container creation flow, step by step.
@@ -9,17 +13,23 @@ import { safeCall } from "../../helpers/safeCall.js";
  * @param {Object} params
  * @param {Function} params.onCreate - Callback when creation is confirmed
  * @param {Function} params.onCancel - Callback when creation is cancelled
- * @param {Array<string>} params.dbImages - List of DB image names for env var warning
+ * @param {Array<string>} params.dbImages - List of DB image names for env var warning (legacy)
+ * @param {Object} [params.imageProfiles] - Image profiles map for contextual validation
  * @returns {Object} Creation state, setters, and helpers
  */
-export function useContainerCreation({ onCreate, onCancel, dbImages = [] }) {
+export function useContainerCreation({
+  onCreate,
+  onCancel,
+  dbImages = [],
+  imageProfiles = IMAGE_PROFILES,
+}) {
   const [step, setStep] = useState(0); // 0: image, 1: name, 2: ports, 3: env
-  const [imageName, setImageName] = useState("");
-  const [containerName, setContainerName] = useState("");
-  const [portInput, setPortInput] = useState("");
-  const [envInput, setEnvInput] = useState("");
-  const [message, setMessage] = useState("");
-  const [messageColor, setMessageColor] = useState("yellow");
+  const [imageName, setImageName] = useState('');
+  const [containerName, setContainerName] = useState('');
+  const [portInput, setPortInput] = useState('');
+  const [envInput, setEnvInput] = useState('');
+  const [message, setMessage] = useState('');
+  const [messageColor, setMessageColor] = useState('yellow');
 
   /**
    * Advances to the next step, with validation and feedback.
@@ -27,40 +37,72 @@ export function useContainerCreation({ onCreate, onCancel, dbImages = [] }) {
   function nextStep() {
     if (step === 0) {
       if (!imageName.trim()) {
-        setMessage("Image name cannot be empty.");
-        setMessageColor("red");
+        setMessage('Image name cannot be empty.');
+        setMessageColor('red');
         return;
       }
       setStep(1);
-      setMessage("Optional: Enter container name or leave empty and press Enter");
-      setMessageColor("yellow");
+      setMessage(
+        'Optional: Enter container name or leave empty and press Enter'
+      );
+      setMessageColor('yellow');
       return;
     }
     if (step === 1) {
       setStep(2);
-      setMessage("Optional: Enter ports (format 8080:80,443:443) or leave empty and press Enter");
-      setMessageColor("yellow");
+      setMessage(
+        'Optional: Enter ports (format 8080:80,443:443) or leave empty and press Enter'
+      );
+      setMessageColor('yellow');
       return;
     }
     if (step === 2) {
       // Ports are now optional - only validate if provided
       if (portInput.trim() && !validatePorts(portInput)) {
-        setMessage("Port format must be host:container and both must be numbers (e.g. 8080:80)");
-        setMessageColor("red");
+        setMessage(
+          'Port format must be host:container and both must be numbers (e.g. 8080:80)'
+        );
+        setMessageColor('red');
         return;
       }
       setStep(3);
-      const isDb = dbImages.some(db => imageName.trim().toLowerCase().includes(db));
-      if (isDb) {
-        setMessage("Warning: This image usually requires environment variables (e.g. MYSQL_ROOT_PASSWORD=my-secret-pw for MySQL, POSTGRES_PASSWORD=yourpassword for Postgres). Enter them as VAR=val,VAR2=val2 or leave empty and press Enter.");
-        setMessageColor("yellow");
+      const isDb = dbImages.some((db) =>
+        imageName.trim().toLowerCase().includes(db)
+      );
+      // Check if the image has a profile with required env vars
+      const baseName = imageName
+        .trim()
+        .toLowerCase()
+        .split(':')[0]
+        .split('/')
+        .pop();
+      const profile = imageProfiles[baseName];
+      if (profile && profile.requiredEnv && profile.requiredEnv.length) {
+        setMessage(
+          `Required env vars for ${baseName}: ${profile.requiredEnv.join(', ')}. Enter as VAR=val,VAR2=val2`
+        );
+        setMessageColor('yellow');
+      } else if (isDb) {
+        setMessage(
+          'Warning: This image usually requires environment variables (e.g. MYSQL_ROOT_PASSWORD=my-secret-pw for MySQL, POSTGRES_PASSWORD=yourpassword for Postgres). Enter them as VAR=val,VAR2=val2 or leave empty and press Enter.'
+        );
+        setMessageColor('yellow');
       } else {
-        setMessage("Optional: Enter environment variables (format VAR1=val1,VAR2=val2) or leave empty and press Enter");
-        setMessageColor("yellow");
+        setMessage(
+          'Optional: Enter environment variables (format VAR1=val1,VAR2=val2) or leave empty and press Enter'
+        );
+        setMessageColor('yellow');
       }
       return;
     }
     if (step === 3) {
+      // Contextual env validation using image profiles
+      const result = validateEnvVars(envInput, imageName, imageProfiles);
+      if (!result.valid) {
+        setMessage(result.errors.join(' | '));
+        setMessageColor('red');
+        return;
+      }
       // Final step: call onCreate with all data (safely)
       safeCall(onCreate, { imageName, containerName, portInput, envInput });
     }
@@ -71,12 +113,12 @@ export function useContainerCreation({ onCreate, onCancel, dbImages = [] }) {
    */
   function cancelCreation() {
     setStep(0);
-    setImageName("");
-    setContainerName("");
-    setPortInput("");
-    setEnvInput("");
-    setMessage("");
-    setMessageColor("yellow");
+    setImageName('');
+    setContainerName('');
+    setPortInput('');
+    setEnvInput('');
+    setMessage('');
+    setMessageColor('yellow');
     safeCall(onCancel);
   }
 
@@ -86,12 +128,12 @@ export function useContainerCreation({ onCreate, onCancel, dbImages = [] }) {
    */
   function resetCreation() {
     setStep(0);
-    setImageName("");
-    setContainerName("");
-    setPortInput("");
-    setEnvInput("");
-    setMessage("Insert the name of the image to create: ");
-    setMessageColor("yellow");
+    setImageName('');
+    setContainerName('');
+    setPortInput('');
+    setEnvInput('');
+    setMessage('Insert the name of the image to create: ');
+    setMessageColor('yellow');
   }
 
   return {

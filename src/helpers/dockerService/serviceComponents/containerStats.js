@@ -1,5 +1,5 @@
-import { docker } from "../dockerService.js";
-import { logger } from "../../logger.js";
+import { docker } from '../dockerService.js';
+import { logger } from '../../logger.js';
 
 /**
  * Retrieve a snapshot of container resource usage (CPU, memory, network).
@@ -9,12 +9,12 @@ import { logger } from "../../logger.js";
  */
 export async function getStats(containerId) {
   const container = docker.getContainer(containerId);
-  logger.debug("Fetching stats for container %s", containerId);
+  logger.debug('Fetching stats for container %s', containerId);
   let stream;
   try {
     stream = await container.stats({ stream: false });
   } catch (err) {
-    logger.error("Failed to fetch stats for container %s", containerId, err);
+    logger.error('Failed to fetch stats for container %s', containerId, err);
     throw err;
   }
 
@@ -23,10 +23,13 @@ export async function getStats(containerId) {
     stream.precpu_stats.cpu_usage.total_usage;
   const systemDelta =
     stream.cpu_stats.system_cpu_usage - stream.precpu_stats.system_cpu_usage;
-  
+
   // Get number of CPUs for proper normalization
   let numCpus = 1;
-  if (typeof stream.cpu_stats.online_cpus === 'number' && stream.cpu_stats.online_cpus > 0) {
+  if (
+    typeof stream.cpu_stats.online_cpus === 'number' &&
+    stream.cpu_stats.online_cpus > 0
+  ) {
     numCpus = stream.cpu_stats.online_cpus;
   } else if (
     stream.cpu_stats.cpu_usage &&
@@ -35,11 +38,10 @@ export async function getStats(containerId) {
   ) {
     numCpus = stream.cpu_stats.cpu_usage.percpu_usage.length;
   }
-  
+
   // Calculate normalized CPU percentage
-  const cpuPercent = systemDelta > 0 
-    ? ((cpuDelta / systemDelta) * numCpus * 100) 
-    : 0;
+  const cpuPercent =
+    systemDelta > 0 ? (cpuDelta / systemDelta) * numCpus * 100 : 0;
 
   const memUsage = stream.memory_stats.usage || 0;
   const memLimit = stream.memory_stats.limit || 1;
@@ -62,6 +64,6 @@ export async function getStats(containerId) {
     netIO: { rx, tx },
   };
 
-  logger.debug("Stats fetched for container %s", containerId, snapshot);
+  logger.debug('Stats fetched for container %s', containerId, snapshot);
   return snapshot;
 }

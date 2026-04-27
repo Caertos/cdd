@@ -1,5 +1,5 @@
-import React from "react";
-import { Text } from "ink";
+import React from 'react';
+import { Text } from 'ink';
 import PropTypes from 'prop-types';
 
 /**
@@ -18,7 +18,7 @@ export function PromptField({ label, value, required }) {
   return (
     <>
       <Text>{label}</Text>
-      <Text color={isEmpty ? "red" : "cyan"}>{value}_</Text>
+      <Text color={isEmpty ? 'red' : 'cyan'}>{value}_</Text>
     </>
   );
 }
@@ -33,7 +33,7 @@ export function PromptField({ label, value, required }) {
  */
 export function PromptMessage({ message, color }) {
   if (!message) return null;
-  return <Text color={color || "yellow"}>{message}</Text>;
+  return <Text color={color || 'yellow'}>{message}</Text>;
 }
 
 PromptField.propTypes = {

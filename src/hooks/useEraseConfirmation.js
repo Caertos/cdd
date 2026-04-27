@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback } from 'react';
 
 /**
  * Hook to manage the erase confirmation dialog flow.
@@ -20,13 +20,13 @@ export function useEraseConfirmation({ onConfirm, onCancel }) {
 
   const processEraseConfirmation = useCallback(
     (input, key) => {
-      if (input === "y" || input === "Y") {
+      if (input === 'y' || input === 'Y') {
         onConfirm();
         setConfirmErase(false);
         return;
       }
 
-      if (input === "n" || input === "N" || key.escape) {
+      if (input === 'n' || input === 'N' || key.escape) {
         setConfirmErase(false);
         onCancel();
         return;

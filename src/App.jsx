@@ -9,17 +9,17 @@
  * // Render the app
  * <App />
  */
-import React from "react";
-import { Box, Text, Spacer } from "ink";
-import { useContainers } from "./hooks/useContainers.js";
-import { useControls } from "./hooks/useControls.js";
-import ContainerSection from "./components/ContainerSection.jsx";
-import MessageFeedback from "./components/MessageFeedback.jsx";
-import Header from "./components/Header.jsx";
-import LogViewer from "./components/LogViewer.jsx";
-import ContainerCreationPrompt from "./components/ContainerCreationPrompt.jsx";
-import UsageMenu from "./components/UsageMenu.jsx";
-import Footer from "./components/Footer.jsx";
+import React from 'react';
+import { Box, Text, Spacer } from 'ink';
+import { useContainers } from './hooks/useContainers.js';
+import { useControls } from './hooks/useControls.js';
+import ContainerSection from './components/ContainerSection.jsx';
+import MessageFeedback from './components/MessageFeedback.jsx';
+import Header from './components/Header.jsx';
+import LogViewer from './components/LogViewer.jsx';
+import ContainerCreationPrompt from './components/ContainerCreationPrompt.jsx';
+import UsageMenu from './components/UsageMenu.jsx';
+import Footer from './components/Footer.jsx';
 
 export default function App() {
   const { containers } = useContainers();
@@ -49,18 +49,35 @@ export default function App() {
       >
         <Header count={containers.length} />
         <Text> </Text>
-        <ContainerSection containers={containers} selected={controls.selected} />
+        <ContainerSection
+          containers={containers}
+          selected={controls.selected}
+        />
         <Spacer />
-        <MessageFeedback message={controls.message} color={controls.messageColor} />
+        <MessageFeedback
+          message={controls.message}
+          color={controls.messageColor}
+        />
         <UsageMenu />
         {controls.showDebugLogs && (
-          <Box marginTop={1} flexDirection="column" borderStyle="round" borderColor="gray" padding={1}>
+          <Box
+            marginTop={1}
+            flexDirection="column"
+            borderStyle="round"
+            borderColor="gray"
+            padding={1}
+          >
             <Text color="cyan">Debug log — press D or ESC to close</Text>
             {controls.debugLogs.length === 0 ? (
-              <Text dimColor>No debug entries yet. Run with CDD_LOG_LEVEL=debug for verbose output.</Text>
+              <Text dimColor>
+                No debug entries yet. Run with CDD_LOG_LEVEL=debug for verbose
+                output.
+              </Text>
             ) : (
               controls.debugLogs.slice(-15).map((line, idx) => (
-                <Text key={idx} color="gray">{line}</Text>
+                <Text key={idx} color="gray">
+                  {line}
+                </Text>
               ))
             )}
           </Box>

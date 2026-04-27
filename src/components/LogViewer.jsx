@@ -1,5 +1,5 @@
-import React from "react";
-import { Text } from "ink";
+import React from 'react';
+import { Text } from 'ink';
 import PropTypes from 'prop-types';
 
 /**
@@ -17,7 +17,9 @@ export default function LogViewer({ logs, onExit: _onExit, container }) {
 
   return (
     <>
-      <Text color="green">{container?.name ?? "Container"} logs, press ESC to exit</Text>
+      <Text color="green">
+        {container?.name ?? 'Container'} logs, press ESC to exit
+      </Text>
       {visibleLogs.length === 0 ? (
         <Text dimColor>No logs...</Text>
       ) : (

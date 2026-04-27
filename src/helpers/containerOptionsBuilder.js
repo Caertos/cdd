@@ -13,15 +13,26 @@
  *                                            (e.g. "NODE_ENV=production,PORT=3000")
  * @returns {object} Docker container options ready to pass to createContainer
  */
-export function buildContainerOptions({ imageName: _imageName, containerName, portInput, envInput }) {
-  const env = (envInput || "").split(",").map(s => s.trim()).filter(Boolean);
-  const ports = (portInput || "").split(",").map(s => s.trim()).filter(Boolean);
+export function buildContainerOptions({
+  imageName: _imageName,
+  containerName,
+  portInput,
+  envInput,
+}) {
+  const env = (envInput || '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const ports = (portInput || '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
 
   const ExposedPorts = {};
   const PortBindings = {};
 
-  ports.forEach(pair => {
-    const [host, cont] = pair.split(":");
+  ports.forEach((pair) => {
+    const [host, cont] = pair.split(':');
     if (!host || !cont) return;
     const key = `${cont}/tcp`;
     ExposedPorts[key] = {};

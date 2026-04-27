@@ -1,5 +1,5 @@
-import { spawn } from "child_process";
-import { EXIT_DELAY } from "./constants";
+import { spawn } from 'child_process';
+import { EXIT_DELAY } from './constants';
 
 /**
  * Show an exit message using provided setters, clear the terminal and exit after a delay.
@@ -11,15 +11,21 @@ import { EXIT_DELAY } from "./constants";
  * @param {string} [params.color] - Color for the message
  * @param {number} [params.delay] - Delay in milliseconds before exiting
  */
-export function exitWithMessage({ setMessage, setMessageColor, message = "Exiting...", color = "yellow", delay = EXIT_DELAY }) {
+export function exitWithMessage({
+  setMessage,
+  setMessageColor,
+  message = 'Exiting...',
+  color = 'yellow',
+  delay = EXIT_DELAY,
+}) {
   setMessage(message);
   setMessageColor(color);
   setTimeout(() => {
-    setMessage("");
-    if (process.platform === "win32") {
-      spawn("cmd", ["/c", "cls"], { stdio: "inherit" });
+    setMessage('');
+    if (process.platform === 'win32') {
+      spawn('cmd', ['/c', 'cls'], { stdio: 'inherit' });
     } else {
-      spawn("clear", [], { stdio: "inherit" });
+      spawn('clear', [], { stdio: 'inherit' });
     }
     process.exit();
   }, delay);

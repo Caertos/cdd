@@ -9,10 +9,10 @@
  * // Render with containers
  * <ContainerList containers={containers} />
  */
-import React from "react";
+import React from 'react';
 import PropTypes from 'prop-types';
-import { Box } from "ink";
-import ContainerRow from "./ContainerRow.jsx";
+import { Box } from 'ink';
+import ContainerRow from './ContainerRow.jsx';
 
 export default function ContainerList({ containers, selected }) {
   return (

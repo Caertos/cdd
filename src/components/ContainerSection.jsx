@@ -1,6 +1,6 @@
-import React from "react";
-import { Text } from "ink";
-import ContainerList from "./ContainerList.jsx";
+import React from 'react';
+import { Text } from 'ink';
+import ContainerList from './ContainerList.jsx';
 import PropTypes from 'prop-types';
 
 /**

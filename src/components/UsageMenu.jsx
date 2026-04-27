@@ -1,16 +1,16 @@
-import React from "react";
-import { Box, Text } from "ink";
+import React from 'react';
+import { Box, Text } from 'ink';
 
 const SHORTCUTS = [
-  "Use ↑/↓ for navigation",
-  "I to initiate selected container",
-  "P to stop selected container",
-  "R to restart selected container",
-  "C to create a container",
-  "L to view logs of selected container",
-  "D to toggle debug log panel",
-  "E to remove selected container",
-  "Q to quit",
+  'Use ↑/↓ for navigation',
+  'I to initiate selected container',
+  'P to stop selected container',
+  'R to restart selected container',
+  'C to create a container',
+  'L to view logs of selected container',
+  'D to toggle debug log panel',
+  'E to remove selected container',
+  'Q to quit',
 ];
 
 const GRID_COLUMNS = 3;
@@ -24,7 +24,10 @@ const GRID_COLUMNS = 3;
 export default function UsageMenu() {
   const rowsPerColumn = Math.ceil(SHORTCUTS.length / GRID_COLUMNS);
   const columns = Array.from({ length: GRID_COLUMNS }, (_, columnIndex) =>
-    SHORTCUTS.slice(columnIndex * rowsPerColumn, (columnIndex + 1) * rowsPerColumn)
+    SHORTCUTS.slice(
+      columnIndex * rowsPerColumn,
+      (columnIndex + 1) * rowsPerColumn
+    )
   ).filter((column) => column.length > 0);
 
   return (
@@ -37,7 +40,9 @@ export default function UsageMenu() {
             marginRight={columnIndex === columns.length - 1 ? 0 : 3}
           >
             {column.map((shortcut, rowIndex) => (
-              <Text key={`shortcut-${columnIndex}-${rowIndex}`}>{shortcut}</Text>
+              <Text key={`shortcut-${columnIndex}-${rowIndex}`}>
+                {shortcut}
+              </Text>
             ))}
           </Box>
         ))}

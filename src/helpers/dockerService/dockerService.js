@@ -1,4 +1,4 @@
-import Docker from "dockerode";
+import Docker from 'dockerode';
 
 // Use default dockerode configuration which automatically handles:
 // - /var/run/docker.sock on Linux/Mac

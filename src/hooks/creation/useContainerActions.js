@@ -1,6 +1,11 @@
-import { useState } from "react";
-import { safeCall } from "../../helpers/safeCall.js";
-import { startContainer as svcStartContainer, stopContainer as svcStopContainer, restartContainer as svcRestartContainer, removeContainer as svcRemoveContainer } from "../../helpers/dockerService/serviceComponents/containerActions.js";
+import { useState } from 'react';
+import { safeCall } from '../../helpers/safeCall.js';
+import {
+  startContainer as svcStartContainer,
+  stopContainer as svcStopContainer,
+  restartContainer as svcRestartContainer,
+  removeContainer as svcRemoveContainer,
+} from '../../helpers/dockerService/serviceComponents/containerActions.js';
 
 /**
  * Custom hook to manage container actions (start, stop, restart, remove).
@@ -12,8 +17,8 @@ import { startContainer as svcStartContainer, stopContainer as svcStopContainer,
  * @returns {Object} Action helpers and feedback state
  */
 export function useContainerActions({ containers, onAction }) {
-  const [message, setMessage] = useState("");
-  const [messageColor, setMessageColor] = useState("yellow");
+  const [message, setMessage] = useState('');
+  const [messageColor, setMessageColor] = useState('yellow');
 
   /**
    * Handles a generic container action and sets feedback.
@@ -29,20 +34,22 @@ export function useContainerActions({ containers, onAction }) {
       const checkMsg = stateCheck(container);
       if (checkMsg) {
         setMessage(checkMsg);
-        setMessageColor("yellow");
+        setMessageColor('yellow');
         return;
       }
     }
     setMessage(`${actionLabel} container...`);
-    setMessageColor("yellow");
+    setMessageColor('yellow');
     try {
       await actionFn(container.id);
-  setMessage(`${actionLabel} container successful.`);
-  setMessageColor("green");
-  safeCall(onAction);
+      setMessage(`${actionLabel} container successful.`);
+      setMessageColor('green');
+      safeCall(onAction);
     } catch (err) {
-      setMessage(`Failed to ${actionLabel.toLowerCase()} container: ${err.message}`);
-      setMessageColor("red");
+      setMessage(
+        `Failed to ${actionLabel.toLowerCase()} container: ${err.message}`
+      );
+      setMessageColor('red');
     }
   }
 
