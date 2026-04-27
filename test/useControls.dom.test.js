@@ -148,7 +148,7 @@ describe('useControls — step 0 keyboard routing integration', () => {
     act(() => { expose.current.creation.moveSuggestionSelection(1); });
     act(() => { expose.current.creation.applyFocusedSuggestion(); });
 
-    expect(expose.current.creation.imageName).toBe('nginx');
+    expect(expose.current.creation.imageName).toBe('nginx:1.27-alpine');
     expect(expose.current.creation.step).toBe(0);
     expect(expose.current.creation.suggestions).toHaveLength(0);
   });
@@ -302,12 +302,12 @@ describe('useControls — FR4/FR5/FR6 keyboard routing via processCreationInput'
     const expose = renderAndStartCreation();
 
     act(() => { expose.current.creation.setImageName('nginx'); });
-    const nameBefore = expose.current.creation.imageName;
 
     act(() => { triggerInput('\r', {}); }); // advance to step 1
 
-    // imageName should be unchanged — applyFocusedSuggestion was NOT called
-    expect(expose.current.creation.imageName).toBe(nameBefore);
+    // nextStep resolves the tag — nginx becomes nginx:1.27-alpine; step advances to 1
+    // applyFocusedSuggestion was NOT called (no suggestion was focused)
+    expect(expose.current.creation.imageName).toBe('nginx:1.27-alpine');
     expect(expose.current.creation.step).toBe(1);
   });
 });

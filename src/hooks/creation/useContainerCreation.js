@@ -3,7 +3,7 @@ import {
   validatePorts,
   validateEnvVars,
 } from '../../helpers/validationHelpers.js';
-import { IMAGE_PROFILES } from '../../helpers/constants.js';
+import { IMAGE_PROFILES, resolveImageTag } from '../../helpers/constants.js';
 import { safeCall } from '../../helpers/safeCall.js';
 import { searchDockerHub, formatHubResult } from '../../helpers/dockerHubService.js';
 
@@ -140,7 +140,7 @@ export function useContainerCreation({
   function applyFocusedSuggestion() {
     if (selectedSuggestionIndex < 0 || selectedSuggestionIndex >= suggestions.length) return;
     const chosen = suggestions[selectedSuggestionIndex];
-    setImageName(chosen);
+    setImageName(resolveImageTag(chosen, imageProfiles));
     setSuggestions([]);
     setSelectedSuggestionIndex(-1);
     setVisibleOffset(0);
@@ -156,6 +156,8 @@ export function useContainerCreation({
         setMessageColor('red');
         return;
       }
+      const resolved = resolveImageTag(imageName, imageProfiles);
+      setImageName(resolved);
       setStep(1);
       setMessage(
         'Optional: Enter container name or leave empty and press Enter'

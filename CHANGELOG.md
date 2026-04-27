@@ -7,6 +7,15 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 - Nothing yet.
 
+## [3.2.4] - 2026-04-27
+
+### Fixed
+- Images no longer default to `:latest` — each profile now ships a correct stable tag (e.g. `postgres:17-alpine`, `redis:7-alpine`, `nginx:1.27-alpine`)
+- Selecting an image suggestion or confirming step 0 auto-appends the correct tag when none is typed
+
+### Added  
+- `resolveImageTag(imageName)` pure helper — preserves explicit user tags, appends profile default otherwise
+
 ## [3.2.3] - 2026-04-27
 
 ### Added

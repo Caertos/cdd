@@ -31,4 +31,11 @@ describe('IMAGE_PROFILES', () => {
   test('node has suggestedEnv with NODE_ENV hint', () => {
     expect(IMAGE_PROFILES.node.suggestedEnv).toContain('NODE_ENV=production');
   });
+
+  test('every entry has defaultTag as a non-empty string', () => {
+    for (const [key, profile] of Object.entries(IMAGE_PROFILES)) {
+      expect(typeof profile.defaultTag).toBe('string');
+      expect(profile.defaultTag.length).toBeGreaterThan(0);
+    }
+  });
 });

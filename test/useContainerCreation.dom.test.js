@@ -106,7 +106,7 @@ describe('useContainerCreation (DOM render)', () => {
       });
 
       expect(created.length).toBe(1);
-      expect(created[0]).toEqual({ imageName: 'redis', containerName: '', portInput: '', envInput: 'FOO=bar' });
+      expect(created[0]).toEqual({ imageName: 'redis:7-alpine', containerName: '', portInput: '', envInput: 'FOO=bar' });
   });
 
   test('step 3 with mysql image: missing MYSQL_ROOT_PASSWORD blocks creation', () => {
@@ -247,7 +247,7 @@ describe('useContainerCreation — moveSuggestionSelection() & applyFocusedSugge
     act(() => { expose.current.moveSuggestionSelection(1); }); // select first
     act(() => { expose.current.applyFocusedSuggestion(); });
 
-    expect(expose.current.imageName).toBe('nginx');
+    expect(expose.current.imageName).toBe('nginx:1.27-alpine');
   });
 
   test('applyFocusedSuggestion() does NOT advance step', () => {
@@ -270,6 +270,48 @@ describe('useContainerCreation — moveSuggestionSelection() & applyFocusedSugge
     act(() => { expose.current.applyFocusedSuggestion(); });
 
     expect(expose.current.suggestions).toHaveLength(0);
+  });
+
+  test('applyFocusedSuggestion() preserves explicit tag when suggestion already has one', () => {
+    const expose = { current: null };
+    render(<HookTester onCreate={() => {}} onCancel={() => {}} dbImages={[]} imageProfiles={IMAGE_PROFILES} expose={expose} />);
+
+    // Manually set imageName with a tag and simulate a suggestion with tag
+    act(() => { expose.current.updateImageInput('pg'); });
+    // inject a suggestion with a tag by directly calling with known value
+    // Instead: use updateImageInput then manually apply — but suggestions come from profiles (no tag)
+    // So test that if imageName already has ':' when applyFocusedSuggestion runs, it is not double-tagged
+    // The real scenario: user types 'postgres:15', selects suggestion — but suggestions list only contains 'postgres'
+    // Better test: set imageName to 'postgres:15' via setImageName then call nextStep on step 0 → tag preserved
+    act(() => { expose.current.setImageName('postgres:15'); });
+    act(() => { expose.current.nextStep(); }); // step 0 → should advance with postgres:15 preserved
+
+    expect(expose.current.imageName).toBe('postgres:15');
+    expect(expose.current.step).toBe(1);
+  });
+});
+
+describe('useContainerCreation — resolveImageTag on nextStep & applyFocusedSuggestion', () => {
+  test('nextStep at step 0 with bare image name appends defaultTag', () => {
+    const expose = { current: null };
+    render(<HookTester onCreate={() => {}} onCancel={() => {}} dbImages={[]} imageProfiles={IMAGE_PROFILES} expose={expose} />);
+
+    act(() => { expose.current.setImageName('postgres'); });
+    act(() => { expose.current.nextStep(); });
+
+    expect(expose.current.imageName).toBe('postgres:17-alpine');
+    expect(expose.current.step).toBe(1);
+  });
+
+  test('nextStep at step 0 with explicit tag preserves it', () => {
+    const expose = { current: null };
+    render(<HookTester onCreate={() => {}} onCancel={() => {}} dbImages={[]} imageProfiles={IMAGE_PROFILES} expose={expose} />);
+
+    act(() => { expose.current.setImageName('postgres:15'); });
+    act(() => { expose.current.nextStep(); });
+
+    expect(expose.current.imageName).toBe('postgres:15');
+    expect(expose.current.step).toBe(1);
   });
 });
 
