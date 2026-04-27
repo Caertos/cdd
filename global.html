@@ -98,6 +98,68 @@
 
         
             
+<h4 class="name" id="DB_IMAGES"><span class="type-signature">(constant) </span>DB_IMAGES<span class="type-signature"></span></h4>
+
+
+
+
+<div class="description">
+    List of well-known database image names (without tags or registry prefixes).
+</div>
+
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="helpers_constants.js.html">helpers/constants.js</a>, <a href="helpers_constants.js.html#line35">line 35</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+        
+            
 <h4 class="name" id="EXIT_DELAY"><span class="type-signature">(constant) </span>EXIT_DELAY<span class="type-signature"></span></h4>
 
 
@@ -143,6 +205,79 @@
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
         <a href="helpers_constants.js.html">helpers/constants.js</a>, <a href="helpers_constants.js.html#line22">line 22</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+        
+            
+<h4 class="name" id="IMAGE_PROFILES"><span class="type-signature">(constant) </span>IMAGE_PROFILES<span class="type-signature"> :Record.&lt;string, {requiredEnv: Array.&lt;string>, defaultPort: string, suggestedEnv: Array.&lt;string>}></span></h4>
+
+
+
+
+<div class="description">
+    Per-image profiles with required env vars, default exposed port, and suggested env vars.
+Keys are normalized image names (no tag, no registry prefix).
+</div>
+
+
+
+    <h5>Type:</h5>
+    <ul>
+        <li>
+            
+<span class="param-type">Record.&lt;string, {requiredEnv: Array.&lt;string>, defaultPort: string, suggestedEnv: Array.&lt;string>}></span>
+
+
+        </li>
+    </ul>
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="helpers_constants.js.html">helpers/constants.js</a>, <a href="helpers_constants.js.html#line50">line 50</a>
     </li></ul></dd>
     
 
@@ -1170,6 +1305,340 @@ The cursor is represented with a trailing underscore.
     
 
     
+    <h4 class="name" id="SuggestionPanel"><span class="type-signature"></span>SuggestionPanel<span class="signature">(props)</span><span class="type-signature"> &rarr; {JSX.Element|null}</span></h4>
+    
+
+    
+
+
+
+<div class="description">
+    Renders an autocomplete suggestion panel as a boxed list below the image input.
+Displays a window of `maxVisible` items starting at `visibleOffset`.
+The focused row (selectedIndex) is highlighted cyan with a › prefix.
+</div>
+
+
+
+
+
+
+
+
+
+    <h5>Parameters:</h5>
+    
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>props</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Object</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">
+                <h6>Properties</h6>
+                
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+        <th>Attributes</th>
+        
+
+        
+        <th>Default</th>
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>items</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Array.&lt;string></span>
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+
+                
+
+                
+                </td>
+            
+
+            
+                <td class="default">
+                
+                </td>
+            
+
+            <td class="description last">Full list of suggestion strings</td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>selectedIndex</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">number</span>
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+
+                
+
+                
+                </td>
+            
+
+            
+                <td class="default">
+                
+                </td>
+            
+
+            <td class="description last">Currently focused index (-1 = none)</td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>visibleOffset</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">number</span>
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+
+                
+
+                
+                </td>
+            
+
+            
+                <td class="default">
+                
+                </td>
+            
+
+            <td class="description last">First item index of the visible window</td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>maxVisible</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">number</span>
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+                    &lt;optional><br>
+                
+
+                
+
+                
+                </td>
+            
+
+            
+                <td class="default">
+                
+                    6
+                
+                </td>
+            
+
+            <td class="description last">Maximum number of items visible at once</td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+            </td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="components_SuggestionPanel.jsx.html">components/SuggestionPanel.jsx</a>, <a href="components_SuggestionPanel.jsx.html#line17">line 17</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<h5>Returns:</h5>
+
+        
+
+
+<dl>
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type">JSX.Element</span>
+|
+
+<span class="param-type">null</span>
+
+
+    </dd>
+</dl>
+
+    
+
+
+
+
+
+        
+            
+
+    
+
+    
     <h4 class="name" id="buildContainerOptions"><span class="type-signature"></span>buildContainerOptions<span class="signature">(params)</span><span class="type-signature"> &rarr; {object}</span></h4>
     
 
@@ -1636,7 +2105,7 @@ It mirrors exactly the option-building logic in useControls.js onCreate callback
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="components_StatsBar.jsx.html">components/StatsBar.jsx</a>, <a href="components_StatsBar.jsx.html#line62">line 62</a>
+        <a href="components_StatsBar.jsx.html">components/StatsBar.jsx</a>, <a href="components_StatsBar.jsx.html#line66">line 66</a>
     </li></ul></dd>
     
 
@@ -1690,7 +2159,7 @@ It mirrors exactly the option-building logic in useControls.js onCreate callback
     
 
     
-    <h4 class="name" id="createContainer"><span class="type-signature"></span>createContainer<span class="signature">(imageName, options<span class="signature-attributes">opt</span>)</span><span class="type-signature"> &rarr; {Promise.&lt;string>}</span></h4>
+    <h4 class="name" id="createContainer"><span class="type-signature"></span>createContainer<span class="signature">(imageName, options<span class="signature-attributes">opt</span>, imageProfiles<span class="signature-attributes">opt</span>)</span><span class="type-signature"> &rarr; {Promise.&lt;{id: string, ports: Array.&lt;{containerPort: string, hostPort: string, protocol: string, source: string}>}>}</span></h4>
     
 
     
@@ -1797,6 +2266,39 @@ It mirrors exactly the option-building logic in useControls.js onCreate callback
         </tr>
 
     
+
+        <tr>
+            
+                <td class="name"><code>imageProfiles</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Object</span>
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+                    &lt;optional><br>
+                
+
+                
+
+                
+                </td>
+            
+
+            
+
+            <td class="description last">Image profiles map for defaultPort fallback</td>
+        </tr>
+
+    
     </tbody>
 </table>
 
@@ -1834,7 +2336,7 @@ It mirrors exactly the option-building logic in useControls.js onCreate callback
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="helpers_dockerService_serviceComponents_containerActions.js.html">helpers/dockerService/serviceComponents/containerActions.js</a>, <a href="helpers_dockerService_serviceComponents_containerActions.js.html#line51">line 51</a>
+        <a href="helpers_dockerService_serviceComponents_containerActions.js.html">helpers/dockerService/serviceComponents/containerActions.js</a>, <a href="helpers_dockerService_serviceComponents_containerActions.js.html#line53">line 53</a>
     </li></ul></dd>
     
 
@@ -1891,10 +2393,6 @@ It mirrors exactly the option-building logic in useControls.js onCreate callback
 <h5>Returns:</h5>
 
         
-<div class="param-desc">
-    The created container id
-</div>
-
 
 
 <dl>
@@ -1903,7 +2401,7 @@ It mirrors exactly the option-building logic in useControls.js onCreate callback
     </dt>
     <dd>
         
-<span class="param-type">Promise.&lt;string></span>
+<span class="param-type">Promise.&lt;{id: string, ports: Array.&lt;{containerPort: string, hostPort: string, protocol: string, source: string}>}></span>
 
 
     </dd>
@@ -2299,7 +2797,7 @@ It mirrors exactly the option-building logic in useControls.js onCreate callback
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="helpers_dockerService_serviceComponents_containerList.js.html">helpers/dockerService/serviceComponents/containerList.js</a>, <a href="helpers_dockerService_serviceComponents_containerList.js.html#line38">line 38</a>
+        <a href="helpers_dockerService_serviceComponents_containerList.js.html">helpers/dockerService/serviceComponents/containerList.js</a>, <a href="helpers_dockerService_serviceComponents_containerList.js.html#line45">line 45</a>
     </li></ul></dd>
     
 
@@ -2997,7 +3495,7 @@ It mirrors exactly the option-building logic in useControls.js onCreate callback
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="components_StatsBar.jsx.html">components/StatsBar.jsx</a>, <a href="components_StatsBar.jsx.html#line39">line 39</a>
+        <a href="components_StatsBar.jsx.html">components/StatsBar.jsx</a>, <a href="components_StatsBar.jsx.html#line41">line 41</a>
     </li></ul></dd>
     
 
@@ -3214,6 +3712,170 @@ It mirrors exactly the option-building logic in useControls.js onCreate callback
     
 
     
+    <h4 class="name" id="normalizeImageName"><span class="type-signature"></span>normalizeImageName<span class="signature">(imageName)</span><span class="type-signature"> &rarr; {string}</span></h4>
+    
+
+    
+
+
+
+<div class="description">
+    Normalize an image name to its base name (strips registry prefix and tag).
+
+Examples:
+  "docker.io/library/postgres:16-alpine" → "postgres"
+  "nginx:alpine"                         → "nginx"
+  "myregistry.io/myorg/myapp:latest"     → "myapp"
+</div>
+
+
+
+
+
+
+
+
+
+    <h5>Parameters:</h5>
+    
+
+<table class="params">
+    <thead>
+    <tr>
+        
+        <th>Name</th>
+        
+
+        <th>Type</th>
+
+        
+
+        
+
+        <th class="last">Description</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    
+
+        <tr>
+            
+                <td class="name"><code>imageName</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">string</span>
+
+
+            
+            </td>
+
+            
+
+            
+
+            <td class="description last">Raw image name (from user input or Docker API)</td>
+        </tr>
+
+    
+    </tbody>
+</table>
+
+
+
+
+
+
+<dl class="details">
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+    <dt class="tag-source">Source:</dt>
+    <dd class="tag-source"><ul class="dummy"><li>
+        <a href="helpers_imageNameUtils.js.html">helpers/imageNameUtils.js</a>, <a href="helpers_imageNameUtils.js.html#line18">line 18</a>
+    </li></ul></dd>
+    
+
+    
+
+    
+
+    
+</dl>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<h5>Returns:</h5>
+
+        
+<div class="param-desc">
+    Base image name in lowercase, empty string if input is falsy
+</div>
+
+
+
+<dl>
+    <dt>
+        Type
+    </dt>
+    <dd>
+        
+<span class="param-type">string</span>
+
+
+    </dd>
+</dl>
+
+    
+
+
+
+
+
+        
+            
+
+    
+
+    
     <h4 class="name" id="pullImage"><span class="type-signature"></span>pullImage<span class="signature">(imageName)</span><span class="type-signature"> &rarr; {Promise.&lt;void>}</span></h4>
     
 
@@ -3315,7 +3977,7 @@ It mirrors exactly the option-building logic in useControls.js onCreate callback
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="helpers_dockerService_serviceComponents_imageUtils.js.html">helpers/dockerService/serviceComponents/imageUtils.js</a>, <a href="helpers_dockerService_serviceComponents_imageUtils.js.html#line21">line 21</a>
+        <a href="helpers_dockerService_serviceComponents_imageUtils.js.html">helpers/dockerService/serviceComponents/imageUtils.js</a>, <a href="helpers_dockerService_serviceComponents_imageUtils.js.html#line22">line 22</a>
     </li></ul></dd>
     
 
@@ -3470,7 +4132,7 @@ It mirrors exactly the option-building logic in useControls.js onCreate callback
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="helpers_dockerService_serviceComponents_containerActions.js.html">helpers/dockerService/serviceComponents/containerActions.js</a>, <a href="helpers_dockerService_serviceComponents_containerActions.js.html#line31">line 31</a>
+        <a href="helpers_dockerService_serviceComponents_containerActions.js.html">helpers/dockerService/serviceComponents/containerActions.js</a>, <a href="helpers_dockerService_serviceComponents_containerActions.js.html#line32">line 32</a>
     </li></ul></dd>
     
 
@@ -3658,7 +4320,7 @@ It mirrors exactly the option-building logic in useControls.js onCreate callback
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="helpers_dockerService_serviceComponents_containerActions.js.html">helpers/dockerService/serviceComponents/containerActions.js</a>, <a href="helpers_dockerService_serviceComponents_containerActions.js.html#line199">line 199</a>
+        <a href="helpers_dockerService_serviceComponents_containerActions.js.html">helpers/dockerService/serviceComponents/containerActions.js</a>, <a href="helpers_dockerService_serviceComponents_containerActions.js.html#line272">line 272</a>
     </li></ul></dd>
     
 
@@ -3994,7 +4656,7 @@ catch any errors so they don't bubble to the host application.
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="helpers_dockerService_serviceComponents_containerActions.js.html">helpers/dockerService/serviceComponents/containerActions.js</a>, <a href="helpers_dockerService_serviceComponents_containerActions.js.html#line165">line 165</a>
+        <a href="helpers_dockerService_serviceComponents_containerActions.js.html">helpers/dockerService/serviceComponents/containerActions.js</a>, <a href="helpers_dockerService_serviceComponents_containerActions.js.html#line238">line 238</a>
     </li></ul></dd>
     
 
@@ -4149,7 +4811,7 @@ catch any errors so they don't bubble to the host application.
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="helpers_dockerService_serviceComponents_containerActions.js.html">helpers/dockerService/serviceComponents/containerActions.js</a>, <a href="helpers_dockerService_serviceComponents_containerActions.js.html#line182">line 182</a>
+        <a href="helpers_dockerService_serviceComponents_containerActions.js.html">helpers/dockerService/serviceComponents/containerActions.js</a>, <a href="helpers_dockerService_serviceComponents_containerActions.js.html#line255">line 255</a>
     </li></ul></dd>
     
 
@@ -4377,7 +5039,7 @@ Handles feedback messages and exposes helpers for each action.
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="hooks_creation_useContainerActions.js.html">hooks/creation/useContainerActions.js</a>, <a href="hooks_creation_useContainerActions.js.html#line14">line 14</a>
+        <a href="hooks_creation_useContainerActions.js.html">hooks/creation/useContainerActions.js</a>, <a href="hooks_creation_useContainerActions.js.html#line19">line 19</a>
     </li></ul></dd>
     
 
@@ -4908,6 +5570,8 @@ Handles input, validation, and feedback for each creation step.
         <th>Type</th>
 
         
+        <th>Attributes</th>
+        
 
         
 
@@ -4933,6 +5597,14 @@ Handles input, validation, and feedback for each creation step.
             </td>
 
             
+                <td class="attributes">
+                
+
+                
+
+                
+                </td>
+            
 
             
 
@@ -4955,6 +5627,14 @@ Handles input, validation, and feedback for each creation step.
             
             </td>
 
+            
+                <td class="attributes">
+                
+
+                
+
+                
+                </td>
             
 
             
@@ -4979,10 +5659,51 @@ Handles input, validation, and feedback for each creation step.
             </td>
 
             
+                <td class="attributes">
+                
+
+                
+
+                
+                </td>
+            
 
             
 
-            <td class="description last">List of DB image names for env var warning</td>
+            <td class="description last">List of DB image names for env var warning (legacy)</td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>imageProfiles</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Object</span>
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+                    &lt;optional><br>
+                
+
+                
+
+                
+                </td>
+            
+
+            
+
+            <td class="description last">Image profiles map for contextual validation</td>
         </tr>
 
     
@@ -5030,7 +5751,7 @@ Handles input, validation, and feedback for each creation step.
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="hooks_creation_useContainerCreation.js.html">hooks/creation/useContainerCreation.js</a>, <a href="hooks_creation_useContainerCreation.js.html#line15">line 15</a>
+        <a href="hooks_creation_useContainerCreation.js.html">hooks/creation/useContainerCreation.js</a>, <a href="hooks_creation_useContainerCreation.js.html#line22">line 22</a>
     </li></ul></dd>
     
 
@@ -5190,7 +5911,7 @@ It coordinates the modular hooks and exposes a compact API consumed by the App.
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="hooks_useControls.js.html">hooks/useControls.js</a>, <a href="hooks_useControls.js.html#line23">line 23</a>
+        <a href="hooks_useControls.js.html">hooks/useControls.js</a>, <a href="hooks_useControls.js.html#line24">line 24</a>
     </li></ul></dd>
     
 
@@ -6014,7 +6735,7 @@ Handles showing/hiding logs and storing log lines.
     
 
     
-    <h4 class="name" id="validateEnvVars"><span class="type-signature"></span>validateEnvVars<span class="signature">(envInput)</span><span class="type-signature"> &rarr; {boolean}</span></h4>
+    <h4 class="name" id="validateEnvVars"><span class="type-signature"></span>validateEnvVars<span class="signature">(envInput, imageName<span class="signature-attributes">opt</span>, imageProfiles<span class="signature-attributes">opt</span>)</span><span class="type-signature"> &rarr; {boolean|Object}</span></h4>
     
 
     
@@ -6023,9 +6744,12 @@ Handles showing/hiding logs and storing log lines.
 
 <div class="description">
     Validate environment variable input as comma-separated VAR=value pairs.
-Empty or whitespace-only input is considered valid (no env vars).
-Variable names must start with a letter or underscore and contain only
-alphanumeric characters and underscores.
+
+When called with 3 arguments (envInput, imageName, imageProfiles), performs
+contextual validation: checks that all required env vars for the given image
+are present and non-empty. Returns an object { valid, errors, parsedEnv }.
+
+When called with 1 argument (legacy), returns a boolean for backward compatibility.
 </div>
 
 
@@ -6048,6 +6772,8 @@ alphanumeric characters and underscores.
 
         <th>Type</th>
 
+        
+        <th>Attributes</th>
         
 
         
@@ -6074,10 +6800,84 @@ alphanumeric characters and underscores.
             </td>
 
             
+                <td class="attributes">
+                
+
+                
+
+                
+                </td>
+            
 
             
 
             <td class="description last">Comma-separated environment variable assignments</td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>imageName</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">string</span>
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+                    &lt;optional><br>
+                
+
+                
+
+                
+                </td>
+            
+
+            
+
+            <td class="description last">Optional Docker image name for contextual validation</td>
+        </tr>
+
+    
+
+        <tr>
+            
+                <td class="name"><code>imageProfiles</code></td>
+            
+
+            <td class="type">
+            
+                
+<span class="param-type">Object</span>
+
+
+            
+            </td>
+
+            
+                <td class="attributes">
+                
+                    &lt;optional><br>
+                
+
+                
+
+                
+                </td>
+            
+
+            
+
+            <td class="description last">Optional map of image profiles (from constants.js)</td>
         </tr>
 
     
@@ -6118,7 +6918,7 @@ alphanumeric characters and underscores.
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="helpers_validationHelpers.js.html">helpers/validationHelpers.js</a>, <a href="helpers_validationHelpers.js.html#line31">line 31</a>
+        <a href="helpers_validationHelpers.js.html">helpers/validationHelpers.js</a>, <a href="helpers_validationHelpers.js.html#line40">line 40</a>
     </li></ul></dd>
     
 
@@ -6146,10 +6946,6 @@ alphanumeric characters and underscores.
 <h5>Returns:</h5>
 
         
-<div class="param-desc">
-    True when all env var assignments are valid, false otherwise
-</div>
-
 
 
 <dl>
@@ -6159,6 +6955,9 @@ alphanumeric characters and underscores.
     <dd>
         
 <span class="param-type">boolean</span>
+|
+
+<span class="param-type">Object</span>
 
 
     </dd>
@@ -6278,7 +7077,7 @@ Examples of valid input: "8080:80, 3000:3000"
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="helpers_validationHelpers.js.html">helpers/validationHelpers.js</a>, <a href="helpers_validationHelpers.js.html#line10">line 10</a>
+        <a href="helpers_validationHelpers.js.html">helpers/validationHelpers.js</a>, <a href="helpers_validationHelpers.js.html#line11">line 11</a>
     </li></ul></dd>
     
 
@@ -6493,7 +7292,7 @@ within `ms` milliseconds it will reject with an Error.
     
     <dt class="tag-source">Source:</dt>
     <dd class="tag-source"><ul class="dummy"><li>
-        <a href="helpers_dockerService_serviceComponents_containerActions.js.html">helpers/dockerService/serviceComponents/containerActions.js</a>, <a href="helpers_dockerService_serviceComponents_containerActions.js.html#line15">line 15</a>
+        <a href="helpers_dockerService_serviceComponents_containerActions.js.html">helpers/dockerService/serviceComponents/containerActions.js</a>, <a href="helpers_dockerService_serviceComponents_containerActions.js.html#line16">line 16</a>
     </li></ul></dd>
     
 
@@ -7127,13 +7926,13 @@ Use a generic object shape so JSDoc can render a meaningful type.
 </div>
 
 <nav>
-    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-index.html">index</a></li></ul><h3>Global</h3><ul><li><a href="global.html#EXIT_DELAY">EXIT_DELAY</a></li><li><a href="global.html#LOG_LEVELS">LOG_LEVELS</a></li><li><a href="global.html#MESSAGE_TIMEOUTS">MESSAGE_TIMEOUTS</a></li><li><a href="global.html#PromptField">PromptField</a></li><li><a href="global.html#PromptMessage">PromptMessage</a></li><li><a href="global.html#REFRESH_INTERVALS">REFRESH_INTERVALS</a></li><li><a href="global.html#TIMEOUTS">TIMEOUTS</a></li><li><a href="global.html#VERSION">VERSION</a></li><li><a href="global.html#buildContainerOptions">buildContainerOptions</a></li><li><a href="global.html#colorize">colorize</a></li><li><a href="global.html#createContainer">createContainer</a></li><li><a href="global.html#docker">docker</a></li><li><a href="global.html#exitWithMessage">exitWithMessage</a></li><li><a href="global.html#getContainers">getContainers</a></li><li><a href="global.html#getLogsStream">getLogsStream</a></li><li><a href="global.html#getStats">getStats</a></li><li><a href="global.html#imageExists">imageExists</a></li><li><a href="global.html#logger">logger</a></li><li><a href="global.html#makeBar">makeBar</a></li><li><a href="global.html#normalizeContainerName">normalizeContainerName</a></li><li><a href="global.html#pullImage">pullImage</a></li><li><a href="global.html#removeContainer">removeContainer</a></li><li><a href="global.html#restartContainer">restartContainer</a></li><li><a href="global.html#safeCall">safeCall</a></li><li><a href="global.html#startContainer">startContainer</a></li><li><a href="global.html#stopContainer">stopContainer</a></li><li><a href="global.html#useContainerActions">useContainerActions</a></li><li><a href="global.html#useContainerCommandRouter">useContainerCommandRouter</a></li><li><a href="global.html#useContainerCreation">useContainerCreation</a></li><li><a href="global.html#useControls">useControls</a></li><li><a href="global.html#useEraseConfirmation">useEraseConfirmation</a></li><li><a href="global.html#useExitHandler">useExitHandler</a></li><li><a href="global.html#useLogsViewer">useLogsViewer</a></li><li><a href="global.html#validateEnvVars">validateEnvVars</a></li><li><a href="global.html#validatePorts">validatePorts</a></li><li><a href="global.html#withTimeout">withTimeout</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-index.html">index</a></li></ul><h3>Global</h3><ul><li><a href="global.html#DB_IMAGES">DB_IMAGES</a></li><li><a href="global.html#EXIT_DELAY">EXIT_DELAY</a></li><li><a href="global.html#IMAGE_PROFILES">IMAGE_PROFILES</a></li><li><a href="global.html#LOG_LEVELS">LOG_LEVELS</a></li><li><a href="global.html#MESSAGE_TIMEOUTS">MESSAGE_TIMEOUTS</a></li><li><a href="global.html#PromptField">PromptField</a></li><li><a href="global.html#PromptMessage">PromptMessage</a></li><li><a href="global.html#REFRESH_INTERVALS">REFRESH_INTERVALS</a></li><li><a href="global.html#SuggestionPanel">SuggestionPanel</a></li><li><a href="global.html#TIMEOUTS">TIMEOUTS</a></li><li><a href="global.html#VERSION">VERSION</a></li><li><a href="global.html#buildContainerOptions">buildContainerOptions</a></li><li><a href="global.html#colorize">colorize</a></li><li><a href="global.html#createContainer">createContainer</a></li><li><a href="global.html#docker">docker</a></li><li><a href="global.html#exitWithMessage">exitWithMessage</a></li><li><a href="global.html#getContainers">getContainers</a></li><li><a href="global.html#getLogsStream">getLogsStream</a></li><li><a href="global.html#getStats">getStats</a></li><li><a href="global.html#imageExists">imageExists</a></li><li><a href="global.html#logger">logger</a></li><li><a href="global.html#makeBar">makeBar</a></li><li><a href="global.html#normalizeContainerName">normalizeContainerName</a></li><li><a href="global.html#normalizeImageName">normalizeImageName</a></li><li><a href="global.html#pullImage">pullImage</a></li><li><a href="global.html#removeContainer">removeContainer</a></li><li><a href="global.html#restartContainer">restartContainer</a></li><li><a href="global.html#safeCall">safeCall</a></li><li><a href="global.html#startContainer">startContainer</a></li><li><a href="global.html#stopContainer">stopContainer</a></li><li><a href="global.html#useContainerActions">useContainerActions</a></li><li><a href="global.html#useContainerCommandRouter">useContainerCommandRouter</a></li><li><a href="global.html#useContainerCreation">useContainerCreation</a></li><li><a href="global.html#useControls">useControls</a></li><li><a href="global.html#useEraseConfirmation">useEraseConfirmation</a></li><li><a href="global.html#useExitHandler">useExitHandler</a></li><li><a href="global.html#useLogsViewer">useLogsViewer</a></li><li><a href="global.html#validateEnvVars">validateEnvVars</a></li><li><a href="global.html#validatePorts">validatePorts</a></li><li><a href="global.html#withTimeout">withTimeout</a></li></ul>
 </nav>
 
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Sat Apr 25 2026 18:05:07 GMT+0000 (Coordinated Universal Time)
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Mon Apr 27 2026 20:37:48 GMT+0000 (Coordinated Universal Time)
 </footer>
 
 <script> prettyPrint(); </script>

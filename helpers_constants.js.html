@@ -56,6 +56,47 @@ export const TIMEOUTS = {
   CONTAINER_OP: 30000,
   PULL_IMAGE: 300000,
 };
+
+/**
+ * List of well-known database image names (without tags or registry prefixes).
+ */
+export const DB_IMAGES = [
+  'mysql',
+  'mariadb',
+  'postgres',
+  'mongo',
+  'mssql',
+  'redis',
+];
+
+/**
+ * Per-image profiles with required env vars, default exposed port, and suggested env vars.
+ * Keys are normalized image names (no tag, no registry prefix).
+ *
+ * @type {Record&lt;string, { requiredEnv: string[], defaultPort: string, suggestedEnv: string[] }>}
+ */
+export const IMAGE_PROFILES = {
+  nginx:         { requiredEnv: [], defaultPort: '80',    suggestedEnv: [] },
+  httpd:         { requiredEnv: [], defaultPort: '80',    suggestedEnv: [] },
+  caddy:         { requiredEnv: [], defaultPort: '80',    suggestedEnv: [] },
+  node:          { requiredEnv: [], defaultPort: '3000',  suggestedEnv: ['NODE_ENV=production'] },
+  python:        { requiredEnv: [], defaultPort: '8000',  suggestedEnv: ['PYTHONUNBUFFERED=1'] },
+  openjdk:       { requiredEnv: [], defaultPort: '8080',  suggestedEnv: ['JAVA_OPTS=-Xms256m -Xmx512m'] },
+  golang:        { requiredEnv: [], defaultPort: '8080',  suggestedEnv: ['GOMAXPROCS=2'] },
+  redis:         { requiredEnv: [], defaultPort: '6379',  suggestedEnv: ['REDIS_PASSWORD=change-me'] },
+  memcached:     { requiredEnv: [], defaultPort: '11211', suggestedEnv: [] },
+  postgres:      { requiredEnv: ['POSTGRES_PASSWORD'], defaultPort: '5432', suggestedEnv: ['POSTGRES_USER=postgres', 'POSTGRES_DB=app'] },
+  mysql:         { requiredEnv: ['MYSQL_ROOT_PASSWORD'], defaultPort: '3306', suggestedEnv: ['MYSQL_DATABASE=app', 'MYSQL_USER=app', 'MYSQL_PASSWORD=app123'] },
+  mariadb:       { requiredEnv: ['MARIADB_ROOT_PASSWORD'], defaultPort: '3306', suggestedEnv: ['MARIADB_DATABASE=app', 'MARIADB_USER=app', 'MARIADB_PASSWORD=app123'] },
+  mongo:         { requiredEnv: [], defaultPort: '27017', suggestedEnv: ['MONGO_INITDB_ROOT_USERNAME=admin', 'MONGO_INITDB_ROOT_PASSWORD=secret'] },
+  mssql:         { requiredEnv: ['ACCEPT_EULA', 'SA_PASSWORD'], defaultPort: '1433', suggestedEnv: ['ACCEPT_EULA=Y', 'MSSQL_PID=Developer'] },
+  rabbitmq:      { requiredEnv: [], defaultPort: '5672',  suggestedEnv: ['RABBITMQ_DEFAULT_USER=guest', 'RABBITMQ_DEFAULT_PASS=guest'] },
+  kafka:         { requiredEnv: [], defaultPort: '9092',  suggestedEnv: ['KAFKA_CFG_LISTENERS=PLAINTEXT://:9092', 'KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://localhost:9092'] },
+  zookeeper:     { requiredEnv: [], defaultPort: '2181',  suggestedEnv: ['ALLOW_ANONYMOUS_LOGIN=yes'] },
+  elasticsearch: { requiredEnv: [], defaultPort: '9200',  suggestedEnv: ['discovery.type=single-node', 'xpack.security.enabled=false'] },
+  minio:         { requiredEnv: ['MINIO_ROOT_USER', 'MINIO_ROOT_PASSWORD'], defaultPort: '9000', suggestedEnv: ['MINIO_CONSOLE_ADDRESS=:9001'] },
+  wordpress:     { requiredEnv: ['WORDPRESS_DB_HOST', 'WORDPRESS_DB_USER', 'WORDPRESS_DB_PASSWORD', 'WORDPRESS_DB_NAME'], defaultPort: '8080', suggestedEnv: ['WORDPRESS_TABLE_PREFIX=wp_'] },
+};
 </code></pre>
         </article>
     </section>
@@ -66,13 +107,13 @@ export const TIMEOUTS = {
 </div>
 
 <nav>
-    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-index.html">index</a></li></ul><h3>Global</h3><ul><li><a href="global.html#EXIT_DELAY">EXIT_DELAY</a></li><li><a href="global.html#LOG_LEVELS">LOG_LEVELS</a></li><li><a href="global.html#MESSAGE_TIMEOUTS">MESSAGE_TIMEOUTS</a></li><li><a href="global.html#PromptField">PromptField</a></li><li><a href="global.html#PromptMessage">PromptMessage</a></li><li><a href="global.html#REFRESH_INTERVALS">REFRESH_INTERVALS</a></li><li><a href="global.html#TIMEOUTS">TIMEOUTS</a></li><li><a href="global.html#VERSION">VERSION</a></li><li><a href="global.html#buildContainerOptions">buildContainerOptions</a></li><li><a href="global.html#colorize">colorize</a></li><li><a href="global.html#createContainer">createContainer</a></li><li><a href="global.html#docker">docker</a></li><li><a href="global.html#exitWithMessage">exitWithMessage</a></li><li><a href="global.html#getContainers">getContainers</a></li><li><a href="global.html#getLogsStream">getLogsStream</a></li><li><a href="global.html#getStats">getStats</a></li><li><a href="global.html#imageExists">imageExists</a></li><li><a href="global.html#logger">logger</a></li><li><a href="global.html#makeBar">makeBar</a></li><li><a href="global.html#normalizeContainerName">normalizeContainerName</a></li><li><a href="global.html#pullImage">pullImage</a></li><li><a href="global.html#removeContainer">removeContainer</a></li><li><a href="global.html#restartContainer">restartContainer</a></li><li><a href="global.html#safeCall">safeCall</a></li><li><a href="global.html#startContainer">startContainer</a></li><li><a href="global.html#stopContainer">stopContainer</a></li><li><a href="global.html#useContainerActions">useContainerActions</a></li><li><a href="global.html#useContainerCommandRouter">useContainerCommandRouter</a></li><li><a href="global.html#useContainerCreation">useContainerCreation</a></li><li><a href="global.html#useControls">useControls</a></li><li><a href="global.html#useEraseConfirmation">useEraseConfirmation</a></li><li><a href="global.html#useExitHandler">useExitHandler</a></li><li><a href="global.html#useLogsViewer">useLogsViewer</a></li><li><a href="global.html#validateEnvVars">validateEnvVars</a></li><li><a href="global.html#validatePorts">validatePorts</a></li><li><a href="global.html#withTimeout">withTimeout</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-index.html">index</a></li></ul><h3>Global</h3><ul><li><a href="global.html#DB_IMAGES">DB_IMAGES</a></li><li><a href="global.html#EXIT_DELAY">EXIT_DELAY</a></li><li><a href="global.html#IMAGE_PROFILES">IMAGE_PROFILES</a></li><li><a href="global.html#LOG_LEVELS">LOG_LEVELS</a></li><li><a href="global.html#MESSAGE_TIMEOUTS">MESSAGE_TIMEOUTS</a></li><li><a href="global.html#PromptField">PromptField</a></li><li><a href="global.html#PromptMessage">PromptMessage</a></li><li><a href="global.html#REFRESH_INTERVALS">REFRESH_INTERVALS</a></li><li><a href="global.html#SuggestionPanel">SuggestionPanel</a></li><li><a href="global.html#TIMEOUTS">TIMEOUTS</a></li><li><a href="global.html#VERSION">VERSION</a></li><li><a href="global.html#buildContainerOptions">buildContainerOptions</a></li><li><a href="global.html#colorize">colorize</a></li><li><a href="global.html#createContainer">createContainer</a></li><li><a href="global.html#docker">docker</a></li><li><a href="global.html#exitWithMessage">exitWithMessage</a></li><li><a href="global.html#getContainers">getContainers</a></li><li><a href="global.html#getLogsStream">getLogsStream</a></li><li><a href="global.html#getStats">getStats</a></li><li><a href="global.html#imageExists">imageExists</a></li><li><a href="global.html#logger">logger</a></li><li><a href="global.html#makeBar">makeBar</a></li><li><a href="global.html#normalizeContainerName">normalizeContainerName</a></li><li><a href="global.html#normalizeImageName">normalizeImageName</a></li><li><a href="global.html#pullImage">pullImage</a></li><li><a href="global.html#removeContainer">removeContainer</a></li><li><a href="global.html#restartContainer">restartContainer</a></li><li><a href="global.html#safeCall">safeCall</a></li><li><a href="global.html#startContainer">startContainer</a></li><li><a href="global.html#stopContainer">stopContainer</a></li><li><a href="global.html#useContainerActions">useContainerActions</a></li><li><a href="global.html#useContainerCommandRouter">useContainerCommandRouter</a></li><li><a href="global.html#useContainerCreation">useContainerCreation</a></li><li><a href="global.html#useControls">useControls</a></li><li><a href="global.html#useEraseConfirmation">useEraseConfirmation</a></li><li><a href="global.html#useExitHandler">useExitHandler</a></li><li><a href="global.html#useLogsViewer">useLogsViewer</a></li><li><a href="global.html#validateEnvVars">validateEnvVars</a></li><li><a href="global.html#validatePorts">validatePorts</a></li><li><a href="global.html#withTimeout">withTimeout</a></li></ul>
 </nav>
 
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Sat Apr 25 2026 18:05:07 GMT+0000 (Coordinated Universal Time)
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Mon Apr 27 2026 20:37:48 GMT+0000 (Coordinated Universal Time)
 </footer>
 
 <script> prettyPrint(); </script>

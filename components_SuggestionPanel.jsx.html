@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>JSDoc: Source: helpers/containerOptionsBuilder.js</title>
+    <title>JSDoc: Source: components/SuggestionPanel.jsx</title>
 
     <script src="scripts/prettify/prettify.js"> </script>
     <script src="scripts/prettify/lang-css.js"> </script>
@@ -17,7 +17,7 @@
 
 <div id="main">
 
-    <h1 class="page-title">Source: helpers/containerOptionsBuilder.js</h1>
+    <h1 class="page-title">Source: components/SuggestionPanel.jsx</h1>
 
     
 
@@ -26,59 +26,59 @@
     
     <section>
         <article>
-            <pre class="prettyprint source linenums"><code>/**
- * Builds Docker container creation options from raw user inputs.
+            <pre class="prettyprint source linenums"><code>import React from 'react';
+import { Box, Text } from 'ink';
+import PropTypes from 'prop-types';
+
+/**
+ * Renders an autocomplete suggestion panel as a boxed list below the image input.
+ * Displays a window of `maxVisible` items starting at `visibleOffset`.
+ * The focused row (selectedIndex) is highlighted cyan with a › prefix.
  *
- * This is a pure function — it has no side effects and calls no services.
- * It mirrors exactly the option-building logic in useControls.js onCreate callback.
- *
- * @param {object} params
- * @param {string} params.imageName          - Docker image name (e.g. "nginx:alpine")
- * @param {string} [params.containerName]    - Optional container name
- * @param {string} [params.portInput]        - Comma-separated host:container port pairs
- *                                            (e.g. "8080:80,3000:3000")
- * @param {string} [params.envInput]         - Comma-separated KEY=VALUE pairs
- *                                            (e.g. "NODE_ENV=production,PORT=3000")
- * @returns {object} Docker container options ready to pass to createContainer
+ * @param {Object} props
+ * @param {string[]} props.items - Full list of suggestion strings
+ * @param {number} props.selectedIndex - Currently focused index (-1 = none)
+ * @param {number} props.visibleOffset - First item index of the visible window
+ * @param {number} [props.maxVisible=6] - Maximum number of items visible at once
+ * @returns {JSX.Element|null}
  */
-export function buildContainerOptions({
-  imageName: _imageName,
-  containerName,
-  portInput,
-  envInput,
+export function SuggestionPanel({
+  items,
+  selectedIndex,
+  visibleOffset,
+  maxVisible = 6,
 }) {
-  const env = (envInput || '')
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean);
-  const ports = (portInput || '')
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean);
+  if (!items || items.length === 0) return null;
 
-  const ExposedPorts = {};
-  const PortBindings = {};
+  const visible = items.slice(visibleOffset, visibleOffset + maxVisible);
 
-  ports.forEach((pair) => {
-    const [host, cont] = pair.split(':');
-    if (!host || !cont) return;
-    const key = `${cont}/tcp`;
-    ExposedPorts[key] = {};
-    PortBindings[key] = PortBindings[key] || [];
-    PortBindings[key].push({ HostPort: `${host}` });
-  });
-
-  const options = {
-    Tty: true,
-  };
-
-  if (Object.keys(ExposedPorts).length) options.ExposedPorts = ExposedPorts;
-  if (Object.keys(PortBindings).length) options.HostConfig = { PortBindings };
-  if (env.length) options.Env = env;
-  if (containerName) options.name = containerName;
-
-  return options;
+  return (
+    &lt;Box
+      flexDirection="column"
+      borderStyle="single"
+      borderColor="cyan"
+      paddingX={1}
+      data-testid="suggestion-panel"
+    >
+      {visible.map((item, localIdx) => {
+        const globalIdx = visibleOffset + localIdx;
+        const isFocused = globalIdx === selectedIndex;
+        return (
+          &lt;Text key={item} color={isFocused ? 'cyan' : undefined} dimColor={!isFocused}>
+            {isFocused ? `› ${item}` : `  ${item}`}
+          &lt;/Text>
+        );
+      })}
+    &lt;/Box>
+  );
 }
+
+SuggestionPanel.propTypes = {
+  items: PropTypes.arrayOf(PropTypes.string).isRequired,
+  selectedIndex: PropTypes.number.isRequired,
+  visibleOffset: PropTypes.number.isRequired,
+  maxVisible: PropTypes.number,
+};
 </code></pre>
         </article>
     </section>

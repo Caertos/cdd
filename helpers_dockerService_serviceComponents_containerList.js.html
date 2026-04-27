@@ -26,10 +26,10 @@
     
     <section>
         <article>
-            <pre class="prettyprint source linenums"><code>import { docker } from "../dockerService.js";
-import { logger } from "../../logger.js";
+            <pre class="prettyprint source linenums"><code>import { docker } from '../dockerService.js';
+import { logger } from '../../logger.js';
 
-const DEFAULT_CONTAINER_NAME = "Unknown";
+const DEFAULT_CONTAINER_NAME = 'Unknown';
 
 /**
  * Produce a safe, display-friendly container name from the raw Docker payload.
@@ -41,21 +41,28 @@ function normalizeContainerName(container) {
   const names = container?.Names;
 
   let rawName;
-  if (Array.isArray(names) &amp;&amp; names.length > 0 &amp;&amp; typeof names[0] === "string") {
+  if (
+    Array.isArray(names) &amp;&amp;
+    names.length > 0 &amp;&amp;
+    typeof names[0] === 'string'
+  ) {
     rawName = names[0];
-  } else if (typeof names === "string" &amp;&amp; names.trim().length > 0) {
+  } else if (typeof names === 'string' &amp;&amp; names.trim().length > 0) {
     rawName = names;
-  } else if (typeof container?.Name === "string" &amp;&amp; container.Name.trim().length > 0) {
+  } else if (
+    typeof container?.Name === 'string' &amp;&amp;
+    container.Name.trim().length > 0
+  ) {
     rawName = container.Name;
   } else {
     rawName = DEFAULT_CONTAINER_NAME;
   }
 
-  if (typeof rawName !== "string") {
+  if (typeof rawName !== 'string') {
     return DEFAULT_CONTAINER_NAME;
   }
 
-  const cleanedName = rawName.replace(/^\/+/u, "").trim();
+  const cleanedName = rawName.replace(/^\/+/u, '').trim();
   return cleanedName.length > 0 ? cleanedName : DEFAULT_CONTAINER_NAME;
 }
 
@@ -64,33 +71,32 @@ function normalizeContainerName(container) {
  * @returns {Promise&lt;Array&lt;Object>>}
  */
 export async function getContainers() {
-  logger.debug("Listing containers");
+  logger.debug('Listing containers');
   try {
     const containers = await docker.listContainers({ all: true });
-    logger.debug("Retrieved %d containers", containers.length);
+    logger.debug('Retrieved %d containers', containers.length);
     return containers.map((container) => ({
       id: container.Id,
       name: normalizeContainerName(container),
       image: container.Image,
       state: container.State,
       status: container.Status,
-      ports:
-        (() => {
-          const publicPorts = container.Ports.filter((port) => port.PublicPort).map(
-            (port) => `${port.PublicPort}:${port.PrivatePort}`
-          );
-          if (publicPorts.length > 0) {
-            return [...new Set(publicPorts)];
-          }
-          // Fall back to exposed private ports when there are no bindings.
-          const privatePorts = container.Ports.filter((port) => port.PrivatePort).map(
-            (port) => `${port.PrivatePort}`
-          );
-          return [...new Set(privatePorts)];
-        })()
+      ports: (() => {
+        const publicPorts = container.Ports.filter(
+          (port) => port.PublicPort
+        ).map((port) => `${port.PublicPort}:${port.PrivatePort}`);
+        if (publicPorts.length > 0) {
+          return [...new Set(publicPorts)];
+        }
+        // Fall back to exposed private ports when there are no bindings.
+        const privatePorts = container.Ports.filter(
+          (port) => port.PrivatePort
+        ).map((port) => `${port.PrivatePort}`);
+        return [...new Set(privatePorts)];
+      })(),
     }));
   } catch (err) {
-    logger.error("Failed to list containers", err);
+    logger.error('Failed to list containers', err);
     throw err;
   }
 }
@@ -104,13 +110,13 @@ export async function getContainers() {
 </div>
 
 <nav>
-    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-index.html">index</a></li></ul><h3>Global</h3><ul><li><a href="global.html#EXIT_DELAY">EXIT_DELAY</a></li><li><a href="global.html#LOG_LEVELS">LOG_LEVELS</a></li><li><a href="global.html#MESSAGE_TIMEOUTS">MESSAGE_TIMEOUTS</a></li><li><a href="global.html#PromptField">PromptField</a></li><li><a href="global.html#PromptMessage">PromptMessage</a></li><li><a href="global.html#REFRESH_INTERVALS">REFRESH_INTERVALS</a></li><li><a href="global.html#TIMEOUTS">TIMEOUTS</a></li><li><a href="global.html#VERSION">VERSION</a></li><li><a href="global.html#buildContainerOptions">buildContainerOptions</a></li><li><a href="global.html#colorize">colorize</a></li><li><a href="global.html#createContainer">createContainer</a></li><li><a href="global.html#docker">docker</a></li><li><a href="global.html#exitWithMessage">exitWithMessage</a></li><li><a href="global.html#getContainers">getContainers</a></li><li><a href="global.html#getLogsStream">getLogsStream</a></li><li><a href="global.html#getStats">getStats</a></li><li><a href="global.html#imageExists">imageExists</a></li><li><a href="global.html#logger">logger</a></li><li><a href="global.html#makeBar">makeBar</a></li><li><a href="global.html#normalizeContainerName">normalizeContainerName</a></li><li><a href="global.html#pullImage">pullImage</a></li><li><a href="global.html#removeContainer">removeContainer</a></li><li><a href="global.html#restartContainer">restartContainer</a></li><li><a href="global.html#safeCall">safeCall</a></li><li><a href="global.html#startContainer">startContainer</a></li><li><a href="global.html#stopContainer">stopContainer</a></li><li><a href="global.html#useContainerActions">useContainerActions</a></li><li><a href="global.html#useContainerCommandRouter">useContainerCommandRouter</a></li><li><a href="global.html#useContainerCreation">useContainerCreation</a></li><li><a href="global.html#useControls">useControls</a></li><li><a href="global.html#useEraseConfirmation">useEraseConfirmation</a></li><li><a href="global.html#useExitHandler">useExitHandler</a></li><li><a href="global.html#useLogsViewer">useLogsViewer</a></li><li><a href="global.html#validateEnvVars">validateEnvVars</a></li><li><a href="global.html#validatePorts">validatePorts</a></li><li><a href="global.html#withTimeout">withTimeout</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-index.html">index</a></li></ul><h3>Global</h3><ul><li><a href="global.html#DB_IMAGES">DB_IMAGES</a></li><li><a href="global.html#EXIT_DELAY">EXIT_DELAY</a></li><li><a href="global.html#IMAGE_PROFILES">IMAGE_PROFILES</a></li><li><a href="global.html#LOG_LEVELS">LOG_LEVELS</a></li><li><a href="global.html#MESSAGE_TIMEOUTS">MESSAGE_TIMEOUTS</a></li><li><a href="global.html#PromptField">PromptField</a></li><li><a href="global.html#PromptMessage">PromptMessage</a></li><li><a href="global.html#REFRESH_INTERVALS">REFRESH_INTERVALS</a></li><li><a href="global.html#SuggestionPanel">SuggestionPanel</a></li><li><a href="global.html#TIMEOUTS">TIMEOUTS</a></li><li><a href="global.html#VERSION">VERSION</a></li><li><a href="global.html#buildContainerOptions">buildContainerOptions</a></li><li><a href="global.html#colorize">colorize</a></li><li><a href="global.html#createContainer">createContainer</a></li><li><a href="global.html#docker">docker</a></li><li><a href="global.html#exitWithMessage">exitWithMessage</a></li><li><a href="global.html#getContainers">getContainers</a></li><li><a href="global.html#getLogsStream">getLogsStream</a></li><li><a href="global.html#getStats">getStats</a></li><li><a href="global.html#imageExists">imageExists</a></li><li><a href="global.html#logger">logger</a></li><li><a href="global.html#makeBar">makeBar</a></li><li><a href="global.html#normalizeContainerName">normalizeContainerName</a></li><li><a href="global.html#normalizeImageName">normalizeImageName</a></li><li><a href="global.html#pullImage">pullImage</a></li><li><a href="global.html#removeContainer">removeContainer</a></li><li><a href="global.html#restartContainer">restartContainer</a></li><li><a href="global.html#safeCall">safeCall</a></li><li><a href="global.html#startContainer">startContainer</a></li><li><a href="global.html#stopContainer">stopContainer</a></li><li><a href="global.html#useContainerActions">useContainerActions</a></li><li><a href="global.html#useContainerCommandRouter">useContainerCommandRouter</a></li><li><a href="global.html#useContainerCreation">useContainerCreation</a></li><li><a href="global.html#useControls">useControls</a></li><li><a href="global.html#useEraseConfirmation">useEraseConfirmation</a></li><li><a href="global.html#useExitHandler">useExitHandler</a></li><li><a href="global.html#useLogsViewer">useLogsViewer</a></li><li><a href="global.html#validateEnvVars">validateEnvVars</a></li><li><a href="global.html#validatePorts">validatePorts</a></li><li><a href="global.html#withTimeout">withTimeout</a></li></ul>
 </nav>
 
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Sat Apr 25 2026 18:05:07 GMT+0000 (Coordinated Universal Time)
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Mon Apr 27 2026 20:37:48 GMT+0000 (Coordinated Universal Time)
 </footer>
 
 <script> prettyPrint(); </script>

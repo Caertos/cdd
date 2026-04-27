@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>JSDoc: Source: helpers/containerOptionsBuilder.js</title>
+    <title>JSDoc: Source: helpers/imageNameUtils.js</title>
 
     <script src="scripts/prettify/prettify.js"> </script>
     <script src="scripts/prettify/lang-css.js"> </script>
@@ -17,7 +17,7 @@
 
 <div id="main">
 
-    <h1 class="page-title">Source: helpers/containerOptionsBuilder.js</h1>
+    <h1 class="page-title">Source: helpers/imageNameUtils.js</h1>
 
     
 
@@ -27,57 +27,36 @@
     <section>
         <article>
             <pre class="prettyprint source linenums"><code>/**
- * Builds Docker container creation options from raw user inputs.
- *
- * This is a pure function — it has no side effects and calls no services.
- * It mirrors exactly the option-building logic in useControls.js onCreate callback.
- *
- * @param {object} params
- * @param {string} params.imageName          - Docker image name (e.g. "nginx:alpine")
- * @param {string} [params.containerName]    - Optional container name
- * @param {string} [params.portInput]        - Comma-separated host:container port pairs
- *                                            (e.g. "8080:80,3000:3000")
- * @param {string} [params.envInput]         - Comma-separated KEY=VALUE pairs
- *                                            (e.g. "NODE_ENV=production,PORT=3000")
- * @returns {object} Docker container options ready to pass to createContainer
+ * Utility for normalizing Docker image names.
+ * Extracted from validationHelpers.js and containerActions.js — both had
+ * identical implementations; consolidated here to avoid duplication.
  */
-export function buildContainerOptions({
-  imageName: _imageName,
-  containerName,
-  portInput,
-  envInput,
-}) {
-  const env = (envInput || '')
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean);
-  const ports = (portInput || '')
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean);
 
-  const ExposedPorts = {};
-  const PortBindings = {};
-
-  ports.forEach((pair) => {
-    const [host, cont] = pair.split(':');
-    if (!host || !cont) return;
-    const key = `${cont}/tcp`;
-    ExposedPorts[key] = {};
-    PortBindings[key] = PortBindings[key] || [];
-    PortBindings[key].push({ HostPort: `${host}` });
-  });
-
-  const options = {
-    Tty: true,
-  };
-
-  if (Object.keys(ExposedPorts).length) options.ExposedPorts = ExposedPorts;
-  if (Object.keys(PortBindings).length) options.HostConfig = { PortBindings };
-  if (env.length) options.Env = env;
-  if (containerName) options.name = containerName;
-
-  return options;
+/**
+ * Normalize an image name to its base name (strips registry prefix and tag).
+ *
+ * Examples:
+ *   "docker.io/library/postgres:16-alpine" → "postgres"
+ *   "nginx:alpine"                         → "nginx"
+ *   "myregistry.io/myorg/myapp:latest"     → "myapp"
+ *
+ * @param {string} imageName - Raw image name (from user input or Docker API)
+ * @returns {string} Base image name in lowercase, empty string if input is falsy
+ */
+export function normalizeImageName(imageName) {
+  if (!imageName) return '';
+  // Remove registry prefix (everything up to and including the last '/')
+  let name = imageName;
+  const slashIdx = name.lastIndexOf('/');
+  if (slashIdx !== -1) {
+    name = name.slice(slashIdx + 1);
+  }
+  // Remove tag (everything from the first ':' onward)
+  const colonIdx = name.indexOf(':');
+  if (colonIdx !== -1) {
+    name = name.slice(0, colonIdx);
+  }
+  return name.toLowerCase();
 }
 </code></pre>
         </article>

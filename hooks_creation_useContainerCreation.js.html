@@ -26,9 +26,15 @@
     
     <section>
         <article>
-            <pre class="prettyprint source linenums"><code>import { useState } from "react";
-import { validatePorts } from "../../helpers/validationHelpers.js";
-import { safeCall } from "../../helpers/safeCall.js";
+            <pre class="prettyprint source linenums"><code>import { useState } from 'react';
+import {
+  validatePorts,
+  validateEnvVars,
+} from '../../helpers/validationHelpers.js';
+import { IMAGE_PROFILES } from '../../helpers/constants.js';
+import { safeCall } from '../../helpers/safeCall.js';
+
+const MAX_VISIBLE = 6;
 
 /**
  * Custom hook to manage the container creation flow, step by step.
@@ -37,17 +43,82 @@ import { safeCall } from "../../helpers/safeCall.js";
  * @param {Object} params
  * @param {Function} params.onCreate - Callback when creation is confirmed
  * @param {Function} params.onCancel - Callback when creation is cancelled
- * @param {Array&lt;string>} params.dbImages - List of DB image names for env var warning
+ * @param {Array&lt;string>} params.dbImages - List of DB image names for env var warning (legacy)
+ * @param {Object} [params.imageProfiles] - Image profiles map for contextual validation
  * @returns {Object} Creation state, setters, and helpers
  */
-export function useContainerCreation({ onCreate, onCancel, dbImages = [] }) {
+export function useContainerCreation({
+  onCreate,
+  onCancel,
+  dbImages = [],
+  imageProfiles = IMAGE_PROFILES,
+}) {
   const [step, setStep] = useState(0); // 0: image, 1: name, 2: ports, 3: env
-  const [imageName, setImageName] = useState("");
-  const [containerName, setContainerName] = useState("");
-  const [portInput, setPortInput] = useState("");
-  const [envInput, setEnvInput] = useState("");
-  const [message, setMessage] = useState("");
-  const [messageColor, setMessageColor] = useState("yellow");
+  const [imageName, setImageName] = useState('');
+  const [containerName, setContainerName] = useState('');
+  const [portInput, setPortInput] = useState('');
+  const [envInput, setEnvInput] = useState('');
+  const [message, setMessage] = useState('');
+  const [messageColor, setMessageColor] = useState('yellow');
+
+  // Autocomplete state
+  const [suggestions, setSuggestions] = useState([]);
+  const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
+  const [visibleOffset, setVisibleOffset] = useState(0);
+
+  /**
+   * Updates the image name input and recalculates autocomplete suggestions.
+   * Resets selectedSuggestionIndex to -1 on every keystroke.
+   *
+   * @param {string} value - New raw image name typed by user
+   */
+  function updateImageInput(value) {
+    setImageName(value);
+    setSelectedSuggestionIndex(-1);
+    setVisibleOffset(0);
+    if (!value.trim()) {
+      setSuggestions([]);
+      return;
+    }
+    const lower = value.toLowerCase();
+    const matches = Object.keys(imageProfiles).filter((key) =>
+      key.includes(lower)
+    );
+    setSuggestions(matches);
+  }
+
+  /**
+   * Moves the suggestion selection up (-1) or down (+1).
+   * Clamps index to [-1, suggestions.length - 1].
+   * Adjusts visibleOffset to keep selected item in the visible window.
+   *
+   * @param {number} direction - -1 (up) or 1 (down)
+   */
+  function moveSuggestionSelection(direction) {
+    setSelectedSuggestionIndex((prev) => {
+      const next = Math.max(-1, Math.min(suggestions.length - 1, prev + direction));
+      // Adjust visibleOffset to keep selected in view
+      setVisibleOffset((offset) => {
+        if (next &lt; offset) return Math.max(0, next);
+        if (next >= offset + MAX_VISIBLE) return next - MAX_VISIBLE + 1;
+        return offset;
+      });
+      return next;
+    });
+  }
+
+  /**
+   * Applies the currently focused suggestion to imageName.
+   * Does NOT advance the step. Clears suggestions after applying.
+   */
+  function applyFocusedSuggestion() {
+    if (selectedSuggestionIndex &lt; 0 || selectedSuggestionIndex >= suggestions.length) return;
+    const chosen = suggestions[selectedSuggestionIndex];
+    setImageName(chosen);
+    setSuggestions([]);
+    setSelectedSuggestionIndex(-1);
+    setVisibleOffset(0);
+  }
 
   /**
    * Advances to the next step, with validation and feedback.
@@ -55,40 +126,81 @@ export function useContainerCreation({ onCreate, onCancel, dbImages = [] }) {
   function nextStep() {
     if (step === 0) {
       if (!imageName.trim()) {
-        setMessage("Image name cannot be empty.");
-        setMessageColor("red");
+        setMessage('Image name cannot be empty.');
+        setMessageColor('red');
         return;
       }
       setStep(1);
-      setMessage("Optional: Enter container name or leave empty and press Enter");
-      setMessageColor("yellow");
+      setMessage(
+        'Optional: Enter container name or leave empty and press Enter'
+      );
+      setMessageColor('yellow');
       return;
     }
     if (step === 1) {
       setStep(2);
-      setMessage("Optional: Enter ports (format 8080:80,443:443) or leave empty and press Enter");
-      setMessageColor("yellow");
+      setMessage(
+        'Optional: Enter ports (format 8080:80,443:443) or leave empty and press Enter'
+      );
+      setMessageColor('yellow');
       return;
     }
     if (step === 2) {
       // Ports are now optional - only validate if provided
       if (portInput.trim() &amp;&amp; !validatePorts(portInput)) {
-        setMessage("Port format must be host:container and both must be numbers (e.g. 8080:80)");
-        setMessageColor("red");
+        setMessage(
+          'Port format must be host:container and both must be numbers (e.g. 8080:80)'
+        );
+        setMessageColor('red');
         return;
       }
       setStep(3);
-      const isDb = dbImages.some(db => imageName.trim().toLowerCase().includes(db));
-      if (isDb) {
-        setMessage("Warning: This image usually requires environment variables (e.g. MYSQL_ROOT_PASSWORD=my-secret-pw for MySQL, POSTGRES_PASSWORD=yourpassword for Postgres). Enter them as VAR=val,VAR2=val2 or leave empty and press Enter.");
-        setMessageColor("yellow");
+      const isDb = dbImages.some((db) =>
+        imageName.trim().toLowerCase().includes(db)
+      );
+      // Check if the image has a profile with required env vars
+      const baseName = imageName
+        .trim()
+        .toLowerCase()
+        .split(':')[0]
+        .split('/')
+        .pop();
+      const profile = imageProfiles[baseName];
+      if (profile &amp;&amp; profile.requiredEnv &amp;&amp; profile.requiredEnv.length) {
+        const suggestedPart =
+          profile.suggestedEnv &amp;&amp; profile.suggestedEnv.length
+            ? ` | Suggested: ${profile.suggestedEnv.join(', ')}`
+            : '';
+        setMessage(
+          `Required env vars for ${baseName}: ${profile.requiredEnv.join(', ')}. Enter as VAR=val,VAR2=val2${suggestedPart}`
+        );
+        setMessageColor('yellow');
+      } else if (profile &amp;&amp; profile.suggestedEnv &amp;&amp; profile.suggestedEnv.length) {
+        setMessage(
+          `Suggested env vars for ${baseName}: ${profile.suggestedEnv.join(', ')}. Enter as VAR=val,VAR2=val2 or leave empty.`
+        );
+        setMessageColor('yellow');
+      } else if (isDb) {
+        setMessage(
+          'Warning: This image usually requires environment variables (e.g. MYSQL_ROOT_PASSWORD=my-secret-pw for MySQL, POSTGRES_PASSWORD=yourpassword for Postgres). Enter them as VAR=val,VAR2=val2 or leave empty and press Enter.'
+        );
+        setMessageColor('yellow');
       } else {
-        setMessage("Optional: Enter environment variables (format VAR1=val1,VAR2=val2) or leave empty and press Enter");
-        setMessageColor("yellow");
+        setMessage(
+          'Optional: Enter environment variables (format VAR1=val1,VAR2=val2) or leave empty and press Enter'
+        );
+        setMessageColor('yellow');
       }
       return;
     }
     if (step === 3) {
+      // Contextual env validation using image profiles
+      const result = validateEnvVars(envInput, imageName, imageProfiles);
+      if (!result.valid) {
+        setMessage(result.errors.join(' | '));
+        setMessageColor('red');
+        return;
+      }
       // Final step: call onCreate with all data (safely)
       safeCall(onCreate, { imageName, containerName, portInput, envInput });
     }
@@ -99,12 +211,15 @@ export function useContainerCreation({ onCreate, onCancel, dbImages = [] }) {
    */
   function cancelCreation() {
     setStep(0);
-    setImageName("");
-    setContainerName("");
-    setPortInput("");
-    setEnvInput("");
-    setMessage("");
-    setMessageColor("yellow");
+    setImageName('');
+    setContainerName('');
+    setPortInput('');
+    setEnvInput('');
+    setMessage('');
+    setMessageColor('yellow');
+    setSuggestions([]);
+    setSelectedSuggestionIndex(-1);
+    setVisibleOffset(0);
     safeCall(onCancel);
   }
 
@@ -114,12 +229,15 @@ export function useContainerCreation({ onCreate, onCancel, dbImages = [] }) {
    */
   function resetCreation() {
     setStep(0);
-    setImageName("");
-    setContainerName("");
-    setPortInput("");
-    setEnvInput("");
-    setMessage("Insert the name of the image to create: ");
-    setMessageColor("yellow");
+    setImageName('');
+    setContainerName('');
+    setPortInput('');
+    setEnvInput('');
+    setMessage('Insert the name of the image to create: ');
+    setMessageColor('yellow');
+    setSuggestions([]);
+    setSelectedSuggestionIndex(-1);
+    setVisibleOffset(0);
   }
 
   return {
@@ -137,6 +255,12 @@ export function useContainerCreation({ onCreate, onCancel, dbImages = [] }) {
     setMessage,
     messageColor,
     setMessageColor,
+    suggestions,
+    selectedSuggestionIndex,
+    visibleOffset,
+    updateImageInput,
+    moveSuggestionSelection,
+    applyFocusedSuggestion,
     nextStep,
     cancelCreation,
     resetCreation,
@@ -152,13 +276,13 @@ export function useContainerCreation({ onCreate, onCancel, dbImages = [] }) {
 </div>
 
 <nav>
-    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-index.html">index</a></li></ul><h3>Global</h3><ul><li><a href="global.html#EXIT_DELAY">EXIT_DELAY</a></li><li><a href="global.html#LOG_LEVELS">LOG_LEVELS</a></li><li><a href="global.html#MESSAGE_TIMEOUTS">MESSAGE_TIMEOUTS</a></li><li><a href="global.html#PromptField">PromptField</a></li><li><a href="global.html#PromptMessage">PromptMessage</a></li><li><a href="global.html#REFRESH_INTERVALS">REFRESH_INTERVALS</a></li><li><a href="global.html#TIMEOUTS">TIMEOUTS</a></li><li><a href="global.html#VERSION">VERSION</a></li><li><a href="global.html#buildContainerOptions">buildContainerOptions</a></li><li><a href="global.html#colorize">colorize</a></li><li><a href="global.html#createContainer">createContainer</a></li><li><a href="global.html#docker">docker</a></li><li><a href="global.html#exitWithMessage">exitWithMessage</a></li><li><a href="global.html#getContainers">getContainers</a></li><li><a href="global.html#getLogsStream">getLogsStream</a></li><li><a href="global.html#getStats">getStats</a></li><li><a href="global.html#imageExists">imageExists</a></li><li><a href="global.html#logger">logger</a></li><li><a href="global.html#makeBar">makeBar</a></li><li><a href="global.html#normalizeContainerName">normalizeContainerName</a></li><li><a href="global.html#pullImage">pullImage</a></li><li><a href="global.html#removeContainer">removeContainer</a></li><li><a href="global.html#restartContainer">restartContainer</a></li><li><a href="global.html#safeCall">safeCall</a></li><li><a href="global.html#startContainer">startContainer</a></li><li><a href="global.html#stopContainer">stopContainer</a></li><li><a href="global.html#useContainerActions">useContainerActions</a></li><li><a href="global.html#useContainerCommandRouter">useContainerCommandRouter</a></li><li><a href="global.html#useContainerCreation">useContainerCreation</a></li><li><a href="global.html#useControls">useControls</a></li><li><a href="global.html#useEraseConfirmation">useEraseConfirmation</a></li><li><a href="global.html#useExitHandler">useExitHandler</a></li><li><a href="global.html#useLogsViewer">useLogsViewer</a></li><li><a href="global.html#validateEnvVars">validateEnvVars</a></li><li><a href="global.html#validatePorts">validatePorts</a></li><li><a href="global.html#withTimeout">withTimeout</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-index.html">index</a></li></ul><h3>Global</h3><ul><li><a href="global.html#DB_IMAGES">DB_IMAGES</a></li><li><a href="global.html#EXIT_DELAY">EXIT_DELAY</a></li><li><a href="global.html#IMAGE_PROFILES">IMAGE_PROFILES</a></li><li><a href="global.html#LOG_LEVELS">LOG_LEVELS</a></li><li><a href="global.html#MESSAGE_TIMEOUTS">MESSAGE_TIMEOUTS</a></li><li><a href="global.html#PromptField">PromptField</a></li><li><a href="global.html#PromptMessage">PromptMessage</a></li><li><a href="global.html#REFRESH_INTERVALS">REFRESH_INTERVALS</a></li><li><a href="global.html#SuggestionPanel">SuggestionPanel</a></li><li><a href="global.html#TIMEOUTS">TIMEOUTS</a></li><li><a href="global.html#VERSION">VERSION</a></li><li><a href="global.html#buildContainerOptions">buildContainerOptions</a></li><li><a href="global.html#colorize">colorize</a></li><li><a href="global.html#createContainer">createContainer</a></li><li><a href="global.html#docker">docker</a></li><li><a href="global.html#exitWithMessage">exitWithMessage</a></li><li><a href="global.html#getContainers">getContainers</a></li><li><a href="global.html#getLogsStream">getLogsStream</a></li><li><a href="global.html#getStats">getStats</a></li><li><a href="global.html#imageExists">imageExists</a></li><li><a href="global.html#logger">logger</a></li><li><a href="global.html#makeBar">makeBar</a></li><li><a href="global.html#normalizeContainerName">normalizeContainerName</a></li><li><a href="global.html#normalizeImageName">normalizeImageName</a></li><li><a href="global.html#pullImage">pullImage</a></li><li><a href="global.html#removeContainer">removeContainer</a></li><li><a href="global.html#restartContainer">restartContainer</a></li><li><a href="global.html#safeCall">safeCall</a></li><li><a href="global.html#startContainer">startContainer</a></li><li><a href="global.html#stopContainer">stopContainer</a></li><li><a href="global.html#useContainerActions">useContainerActions</a></li><li><a href="global.html#useContainerCommandRouter">useContainerCommandRouter</a></li><li><a href="global.html#useContainerCreation">useContainerCreation</a></li><li><a href="global.html#useControls">useControls</a></li><li><a href="global.html#useEraseConfirmation">useEraseConfirmation</a></li><li><a href="global.html#useExitHandler">useExitHandler</a></li><li><a href="global.html#useLogsViewer">useLogsViewer</a></li><li><a href="global.html#validateEnvVars">validateEnvVars</a></li><li><a href="global.html#validatePorts">validatePorts</a></li><li><a href="global.html#withTimeout">withTimeout</a></li></ul>
 </nav>
 
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Sat Apr 25 2026 18:05:07 GMT+0000 (Coordinated Universal Time)
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Mon Apr 27 2026 20:37:48 GMT+0000 (Coordinated Universal Time)
 </footer>
 
 <script> prettyPrint(); </script>

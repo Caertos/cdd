@@ -27,6 +27,7 @@
     <section>
         <article>
             <pre class="prettyprint source linenums"><code>// Reusable validations for ports and environment variables
+import { normalizeImageName } from './imageNameUtils.js';
 
 /**
  * Validate a comma-separated list of port mappings in the form "host:container".
@@ -38,10 +39,13 @@
 export function validatePorts(portInput) {
   // Empty or whitespace-only input is considered valid (ports are optional)
   if (!portInput || !portInput.trim()) return true;
-  const ports = portInput.split(",").map(p => p.trim()).filter(Boolean);
+  const ports = portInput
+    .split(',')
+    .map((p) => p.trim())
+    .filter(Boolean);
   if (ports.length === 0) return true;
-  const invalid = ports.find(pair => {
-    const [host, cont] = pair.split(":");
+  const invalid = ports.find((pair) => {
+    const [host, cont] = pair.split(':');
     return !host || !cont || isNaN(Number(host)) || isNaN(Number(cont));
   });
   return !invalid;
@@ -49,28 +53,65 @@ export function validatePorts(portInput) {
 
 /**
  * Validate environment variable input as comma-separated VAR=value pairs.
- * Empty or whitespace-only input is considered valid (no env vars).
- * Variable names must start with a letter or underscore and contain only
- * alphanumeric characters and underscores.
+ *
+ * When called with 3 arguments (envInput, imageName, imageProfiles), performs
+ * contextual validation: checks that all required env vars for the given image
+ * are present and non-empty. Returns an object { valid, errors, parsedEnv }.
+ *
+ * When called with 1 argument (legacy), returns a boolean for backward compatibility.
  *
  * @param {string} envInput - Comma-separated environment variable assignments
- * @returns {boolean} True when all env var assignments are valid, false otherwise
+ * @param {string} [imageName] - Optional Docker image name for contextual validation
+ * @param {Object} [imageProfiles] - Optional map of image profiles (from constants.js)
+ * @returns {boolean|{valid: boolean, errors: string[], parsedEnv: Record&lt;string,string>}}
  */
-export function validateEnvVars(envInput) {
-  if (!envInput || !envInput.trim()) return true; // Empty is valid
+export function validateEnvVars(envInput, imageName, imageProfiles) {
+  const contextual = imageName !== undefined &amp;&amp; imageProfiles !== undefined;
 
-  const vars = envInput.split(",").map(v => v.trim()).filter(Boolean);
-  const invalid = vars.find(v => {
-    const parts = v.split("=");
-    // Must have at least VAR=value format
-    if (parts.length &lt; 2) return true;
-    const varName = parts[0].trim();
-    // Variable names should be alphanumeric with underscores
-    if (!/^[A-Z_][A-Z0-9_]*$/i.test(varName)) return true;
-    return false;
-  });
+  // Parse: split on FIRST '=' only
+  const parsedEnv = {};
+  const syntaxErrors = [];
 
-  return !invalid;
+  if (envInput &amp;&amp; envInput.trim()) {
+    const vars = envInput
+      .split(',')
+      .map((v) => v.trim())
+      .filter(Boolean);
+    for (const v of vars) {
+      const eqIdx = v.indexOf('=');
+      if (eqIdx === -1) {
+        syntaxErrors.push(`"${v}" is missing an '=' sign`);
+        continue;
+      }
+      const varName = v.slice(0, eqIdx).trim();
+      const varValue = v.slice(eqIdx + 1);
+      if (!/^[A-Z_][A-Z0-9_]*$/i.test(varName)) {
+        syntaxErrors.push(`"${varName}" is not a valid variable name`);
+        continue;
+      }
+      parsedEnv[varName] = varValue;
+    }
+  }
+
+  if (!contextual) {
+    // Legacy: return boolean
+    return syntaxErrors.length === 0;
+  }
+
+  // Contextual: also check required env vars from the profile
+  const errors = [...syntaxErrors];
+  const baseName = normalizeImageName(imageName);
+  const profile = imageProfiles[baseName];
+
+  if (profile &amp;&amp; profile.requiredEnv &amp;&amp; profile.requiredEnv.length) {
+    for (const required of profile.requiredEnv) {
+      if (!parsedEnv[required] || parsedEnv[required].trim() === '') {
+        errors.push(`Missing required env var: ${required}`);
+      }
+    }
+  }
+
+  return { valid: errors.length === 0, errors, parsedEnv };
 }
 </code></pre>
         </article>
@@ -82,13 +123,13 @@ export function validateEnvVars(envInput) {
 </div>
 
 <nav>
-    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-index.html">index</a></li></ul><h3>Global</h3><ul><li><a href="global.html#EXIT_DELAY">EXIT_DELAY</a></li><li><a href="global.html#LOG_LEVELS">LOG_LEVELS</a></li><li><a href="global.html#MESSAGE_TIMEOUTS">MESSAGE_TIMEOUTS</a></li><li><a href="global.html#PromptField">PromptField</a></li><li><a href="global.html#PromptMessage">PromptMessage</a></li><li><a href="global.html#REFRESH_INTERVALS">REFRESH_INTERVALS</a></li><li><a href="global.html#TIMEOUTS">TIMEOUTS</a></li><li><a href="global.html#VERSION">VERSION</a></li><li><a href="global.html#buildContainerOptions">buildContainerOptions</a></li><li><a href="global.html#colorize">colorize</a></li><li><a href="global.html#createContainer">createContainer</a></li><li><a href="global.html#docker">docker</a></li><li><a href="global.html#exitWithMessage">exitWithMessage</a></li><li><a href="global.html#getContainers">getContainers</a></li><li><a href="global.html#getLogsStream">getLogsStream</a></li><li><a href="global.html#getStats">getStats</a></li><li><a href="global.html#imageExists">imageExists</a></li><li><a href="global.html#logger">logger</a></li><li><a href="global.html#makeBar">makeBar</a></li><li><a href="global.html#normalizeContainerName">normalizeContainerName</a></li><li><a href="global.html#pullImage">pullImage</a></li><li><a href="global.html#removeContainer">removeContainer</a></li><li><a href="global.html#restartContainer">restartContainer</a></li><li><a href="global.html#safeCall">safeCall</a></li><li><a href="global.html#startContainer">startContainer</a></li><li><a href="global.html#stopContainer">stopContainer</a></li><li><a href="global.html#useContainerActions">useContainerActions</a></li><li><a href="global.html#useContainerCommandRouter">useContainerCommandRouter</a></li><li><a href="global.html#useContainerCreation">useContainerCreation</a></li><li><a href="global.html#useControls">useControls</a></li><li><a href="global.html#useEraseConfirmation">useEraseConfirmation</a></li><li><a href="global.html#useExitHandler">useExitHandler</a></li><li><a href="global.html#useLogsViewer">useLogsViewer</a></li><li><a href="global.html#validateEnvVars">validateEnvVars</a></li><li><a href="global.html#validatePorts">validatePorts</a></li><li><a href="global.html#withTimeout">withTimeout</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-index.html">index</a></li></ul><h3>Global</h3><ul><li><a href="global.html#DB_IMAGES">DB_IMAGES</a></li><li><a href="global.html#EXIT_DELAY">EXIT_DELAY</a></li><li><a href="global.html#IMAGE_PROFILES">IMAGE_PROFILES</a></li><li><a href="global.html#LOG_LEVELS">LOG_LEVELS</a></li><li><a href="global.html#MESSAGE_TIMEOUTS">MESSAGE_TIMEOUTS</a></li><li><a href="global.html#PromptField">PromptField</a></li><li><a href="global.html#PromptMessage">PromptMessage</a></li><li><a href="global.html#REFRESH_INTERVALS">REFRESH_INTERVALS</a></li><li><a href="global.html#SuggestionPanel">SuggestionPanel</a></li><li><a href="global.html#TIMEOUTS">TIMEOUTS</a></li><li><a href="global.html#VERSION">VERSION</a></li><li><a href="global.html#buildContainerOptions">buildContainerOptions</a></li><li><a href="global.html#colorize">colorize</a></li><li><a href="global.html#createContainer">createContainer</a></li><li><a href="global.html#docker">docker</a></li><li><a href="global.html#exitWithMessage">exitWithMessage</a></li><li><a href="global.html#getContainers">getContainers</a></li><li><a href="global.html#getLogsStream">getLogsStream</a></li><li><a href="global.html#getStats">getStats</a></li><li><a href="global.html#imageExists">imageExists</a></li><li><a href="global.html#logger">logger</a></li><li><a href="global.html#makeBar">makeBar</a></li><li><a href="global.html#normalizeContainerName">normalizeContainerName</a></li><li><a href="global.html#normalizeImageName">normalizeImageName</a></li><li><a href="global.html#pullImage">pullImage</a></li><li><a href="global.html#removeContainer">removeContainer</a></li><li><a href="global.html#restartContainer">restartContainer</a></li><li><a href="global.html#safeCall">safeCall</a></li><li><a href="global.html#startContainer">startContainer</a></li><li><a href="global.html#stopContainer">stopContainer</a></li><li><a href="global.html#useContainerActions">useContainerActions</a></li><li><a href="global.html#useContainerCommandRouter">useContainerCommandRouter</a></li><li><a href="global.html#useContainerCreation">useContainerCreation</a></li><li><a href="global.html#useControls">useControls</a></li><li><a href="global.html#useEraseConfirmation">useEraseConfirmation</a></li><li><a href="global.html#useExitHandler">useExitHandler</a></li><li><a href="global.html#useLogsViewer">useLogsViewer</a></li><li><a href="global.html#validateEnvVars">validateEnvVars</a></li><li><a href="global.html#validatePorts">validatePorts</a></li><li><a href="global.html#withTimeout">withTimeout</a></li></ul>
 </nav>
 
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Sat Apr 25 2026 18:05:07 GMT+0000 (Coordinated Universal Time)
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Mon Apr 27 2026 20:37:48 GMT+0000 (Coordinated Universal Time)
 </footer>
 
 <script> prettyPrint(); </script>

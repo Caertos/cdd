@@ -34,7 +34,7 @@ const LOG_LEVELS = {
   error: 0,
   warn: 1,
   info: 2,
-  debug: 3
+  debug: 3,
 };
 
 /**
@@ -52,7 +52,7 @@ const LOG_LEVELS = {
  */
 
 function parseLevel(value) {
-  if (typeof value !== "string") {
+  if (typeof value !== 'string') {
     return null;
   }
   const normalized = value.trim().toLowerCase();
@@ -67,13 +67,13 @@ const envLevel =
   parseLevel(process.env.LOG_LEVEL) ??
   LOG_LEVELS.info;
 
-const currentLevel = typeof envLevel === "number" ? envLevel : LOG_LEVELS.info;
+const currentLevel = typeof envLevel === 'number' ? envLevel : LOG_LEVELS.info;
 
 const listeners = new Set();
 
 function shouldLog(level) {
   const target = LOG_LEVELS[level];
-  return typeof target === "number" &amp;&amp; target &lt;= currentLevel;
+  return typeof target === 'number' &amp;&amp; target &lt;= currentLevel;
 }
 
 function log(level, message, ...args) {
@@ -87,11 +87,11 @@ function log(level, message, ...args) {
   const entry = { level, message, args, timestamp, formatted };
 
   const shouldWriteToConsole =
-    listeners.size === 0 || level === "error" || level === "warn";
+    listeners.size === 0 || level === 'error' || level === 'warn';
 
   if (shouldWriteToConsole) {
-    const method = level === "debug" ? "log" : level;
-    if (typeof console[method] === "function") {
+    const method = level === 'debug' ? 'log' : level;
+    if (typeof console[method] === 'function') {
       console[method](formatted, ...args);
     } else {
       console.log(formatted, ...args);
@@ -114,30 +114,30 @@ function log(level, message, ...args) {
  */
 export const logger = {
   debug(message, ...args) {
-    log("debug", message, ...args);
+    log('debug', message, ...args);
   },
   info(message, ...args) {
-    log("info", message, ...args);
+    log('info', message, ...args);
   },
   warn(message, ...args) {
-    log("warn", message, ...args);
+    log('warn', message, ...args);
   },
   error(message, ...args) {
-    log("error", message, ...args);
+    log('error', message, ...args);
   },
   /**
    * Subscribe to log events.
    *
-  * @param {LogListener} listener Listener invoked for every log entry that passes the current level filter.
-  * @returns {function(): void} Cleanup function that removes the listener when called.
+   * @param {LogListener} listener Listener invoked for every log entry that passes the current level filter.
+   * @returns {function(): void} Cleanup function that removes the listener when called.
    */
   subscribe(listener) {
-    if (typeof listener !== "function") {
+    if (typeof listener !== 'function') {
       return () => {};
     }
     listeners.add(listener);
     return () => listeners.delete(listener);
-  }
+  },
 };
 </code></pre>
         </article>
@@ -149,13 +149,13 @@ export const logger = {
 </div>
 
 <nav>
-    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-index.html">index</a></li></ul><h3>Global</h3><ul><li><a href="global.html#EXIT_DELAY">EXIT_DELAY</a></li><li><a href="global.html#LOG_LEVELS">LOG_LEVELS</a></li><li><a href="global.html#MESSAGE_TIMEOUTS">MESSAGE_TIMEOUTS</a></li><li><a href="global.html#PromptField">PromptField</a></li><li><a href="global.html#PromptMessage">PromptMessage</a></li><li><a href="global.html#REFRESH_INTERVALS">REFRESH_INTERVALS</a></li><li><a href="global.html#TIMEOUTS">TIMEOUTS</a></li><li><a href="global.html#VERSION">VERSION</a></li><li><a href="global.html#buildContainerOptions">buildContainerOptions</a></li><li><a href="global.html#colorize">colorize</a></li><li><a href="global.html#createContainer">createContainer</a></li><li><a href="global.html#docker">docker</a></li><li><a href="global.html#exitWithMessage">exitWithMessage</a></li><li><a href="global.html#getContainers">getContainers</a></li><li><a href="global.html#getLogsStream">getLogsStream</a></li><li><a href="global.html#getStats">getStats</a></li><li><a href="global.html#imageExists">imageExists</a></li><li><a href="global.html#logger">logger</a></li><li><a href="global.html#makeBar">makeBar</a></li><li><a href="global.html#normalizeContainerName">normalizeContainerName</a></li><li><a href="global.html#pullImage">pullImage</a></li><li><a href="global.html#removeContainer">removeContainer</a></li><li><a href="global.html#restartContainer">restartContainer</a></li><li><a href="global.html#safeCall">safeCall</a></li><li><a href="global.html#startContainer">startContainer</a></li><li><a href="global.html#stopContainer">stopContainer</a></li><li><a href="global.html#useContainerActions">useContainerActions</a></li><li><a href="global.html#useContainerCommandRouter">useContainerCommandRouter</a></li><li><a href="global.html#useContainerCreation">useContainerCreation</a></li><li><a href="global.html#useControls">useControls</a></li><li><a href="global.html#useEraseConfirmation">useEraseConfirmation</a></li><li><a href="global.html#useExitHandler">useExitHandler</a></li><li><a href="global.html#useLogsViewer">useLogsViewer</a></li><li><a href="global.html#validateEnvVars">validateEnvVars</a></li><li><a href="global.html#validatePorts">validatePorts</a></li><li><a href="global.html#withTimeout">withTimeout</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-index.html">index</a></li></ul><h3>Global</h3><ul><li><a href="global.html#DB_IMAGES">DB_IMAGES</a></li><li><a href="global.html#EXIT_DELAY">EXIT_DELAY</a></li><li><a href="global.html#IMAGE_PROFILES">IMAGE_PROFILES</a></li><li><a href="global.html#LOG_LEVELS">LOG_LEVELS</a></li><li><a href="global.html#MESSAGE_TIMEOUTS">MESSAGE_TIMEOUTS</a></li><li><a href="global.html#PromptField">PromptField</a></li><li><a href="global.html#PromptMessage">PromptMessage</a></li><li><a href="global.html#REFRESH_INTERVALS">REFRESH_INTERVALS</a></li><li><a href="global.html#SuggestionPanel">SuggestionPanel</a></li><li><a href="global.html#TIMEOUTS">TIMEOUTS</a></li><li><a href="global.html#VERSION">VERSION</a></li><li><a href="global.html#buildContainerOptions">buildContainerOptions</a></li><li><a href="global.html#colorize">colorize</a></li><li><a href="global.html#createContainer">createContainer</a></li><li><a href="global.html#docker">docker</a></li><li><a href="global.html#exitWithMessage">exitWithMessage</a></li><li><a href="global.html#getContainers">getContainers</a></li><li><a href="global.html#getLogsStream">getLogsStream</a></li><li><a href="global.html#getStats">getStats</a></li><li><a href="global.html#imageExists">imageExists</a></li><li><a href="global.html#logger">logger</a></li><li><a href="global.html#makeBar">makeBar</a></li><li><a href="global.html#normalizeContainerName">normalizeContainerName</a></li><li><a href="global.html#normalizeImageName">normalizeImageName</a></li><li><a href="global.html#pullImage">pullImage</a></li><li><a href="global.html#removeContainer">removeContainer</a></li><li><a href="global.html#restartContainer">restartContainer</a></li><li><a href="global.html#safeCall">safeCall</a></li><li><a href="global.html#startContainer">startContainer</a></li><li><a href="global.html#stopContainer">stopContainer</a></li><li><a href="global.html#useContainerActions">useContainerActions</a></li><li><a href="global.html#useContainerCommandRouter">useContainerCommandRouter</a></li><li><a href="global.html#useContainerCreation">useContainerCreation</a></li><li><a href="global.html#useControls">useControls</a></li><li><a href="global.html#useEraseConfirmation">useEraseConfirmation</a></li><li><a href="global.html#useExitHandler">useExitHandler</a></li><li><a href="global.html#useLogsViewer">useLogsViewer</a></li><li><a href="global.html#validateEnvVars">validateEnvVars</a></li><li><a href="global.html#validatePorts">validatePorts</a></li><li><a href="global.html#withTimeout">withTimeout</a></li></ul>
 </nav>
 
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Sat Apr 25 2026 18:05:07 GMT+0000 (Coordinated Universal Time)
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Mon Apr 27 2026 20:37:48 GMT+0000 (Coordinated Universal Time)
 </footer>
 
 <script> prettyPrint(); </script>

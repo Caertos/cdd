@@ -26,17 +26,17 @@
     
     <section>
         <article>
-            <pre class="prettyprint source linenums"><code>import React from "react";
-import { Box, Text } from "ink";
-import StatsBar from "./StatsBar.jsx";
+            <pre class="prettyprint source linenums"><code>import React from 'react';
+import { Box, Text } from 'ink';
+import StatsBar from './StatsBar.jsx';
 import PropTypes from 'prop-types';
 import { useContainerStats } from '../hooks/useContainerStats.js';
 
 const stateText = (state) => {
-  if (state === "running") return { text: "🟢 RUNNING", color: "green" };
-  if (state === "exited") return { text: "🔴 EXITED", color: "red" };
-  if (state === "paused") return { text: "🟠 PAUSED", color: "yellow" };
-  return { text: state.toUpperCase(), color: "gray" };
+  if (state === 'running') return { text: '🟢 RUNNING', color: 'green' };
+  if (state === 'exited') return { text: '🔴 EXITED', color: 'red' };
+  if (state === 'paused') return { text: '🟠 PAUSED', color: 'yellow' };
+  return { text: state.toUpperCase(), color: 'gray' };
 };
 
 /**
@@ -52,17 +52,17 @@ export default function ContainerRow({ container, isSelected = false }) {
 
   // Format ports for display (no leading space to avoid layout shifts)
   const formatPorts = (ports) => {
-    if (!ports || ports.length === 0) return "";
+    if (!ports || ports.length === 0) return '';
     if (Array.isArray(ports)) {
-      return ports.map((p, _i) => `🔗 ${p}`).join("  ");
+      return ports.map((p, _i) => `🔗 ${p}`).join('  ');
     }
     return `🔗 ${ports}`;
   };
 
   // Helper to truncate long strings to a max length without adding trailing spaces
   const truncate = (s, max = 20) => {
-    if (!s) return "";
-    return s.length > max ? s.slice(0, max - 1) + "…" : s;
+    if (!s) return '';
+    return s.length > max ? s.slice(0, max - 1) + '…' : s;
   };
 
   const stateInfo = stateText(state);
@@ -70,8 +70,8 @@ export default function ContainerRow({ container, isSelected = false }) {
     &lt;Box flexDirection="column" marginBottom={1}>
       &lt;Box flexDirection="row" alignItems="center">
         &lt;Box width={2} minWidth={2} justifyContent="flex-end" paddingRight={1}>
-          &lt;Text color={isSelected ? "green" : undefined}>
-            {isSelected ? "➤" : "  "}
+          &lt;Text color={isSelected ? 'green' : undefined}>
+            {isSelected ? '➤' : '  '}
           &lt;/Text>
         &lt;/Box>
         &lt;Box width={18} flexShrink={1} paddingRight={1}>
@@ -87,8 +87,11 @@ export default function ContainerRow({ container, isSelected = false }) {
           &lt;Text color="yellow">{formatPorts(container.ports)}&lt;/Text>
         &lt;/Box>
         &lt;Box flexShrink={0} paddingLeft={1}>
-          {state === "running" ? (
-            &lt;StatsBar cpu={parseFloat(stats.cpuPercent)} mem={parseFloat(stats.memPercent)} />
+          {state === 'running' ? (
+            &lt;StatsBar
+              cpu={parseFloat(stats.cpuPercent)}
+              mem={parseFloat(stats.memPercent)}
+            />
           ) : null}
         &lt;/Box>
       &lt;/Box>
@@ -103,7 +106,7 @@ ContainerRow.propTypes = {
     name: PropTypes.string.isRequired,
     image: PropTypes.string,
     state: PropTypes.string,
-    ports: PropTypes.oneOfType([PropTypes.array, PropTypes.string])
+    ports: PropTypes.oneOfType([PropTypes.array, PropTypes.string]),
   }).isRequired,
   isSelected: PropTypes.bool,
 };
@@ -117,13 +120,13 @@ ContainerRow.propTypes = {
 </div>
 
 <nav>
-    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-index.html">index</a></li></ul><h3>Global</h3><ul><li><a href="global.html#EXIT_DELAY">EXIT_DELAY</a></li><li><a href="global.html#LOG_LEVELS">LOG_LEVELS</a></li><li><a href="global.html#MESSAGE_TIMEOUTS">MESSAGE_TIMEOUTS</a></li><li><a href="global.html#PromptField">PromptField</a></li><li><a href="global.html#PromptMessage">PromptMessage</a></li><li><a href="global.html#REFRESH_INTERVALS">REFRESH_INTERVALS</a></li><li><a href="global.html#TIMEOUTS">TIMEOUTS</a></li><li><a href="global.html#VERSION">VERSION</a></li><li><a href="global.html#buildContainerOptions">buildContainerOptions</a></li><li><a href="global.html#colorize">colorize</a></li><li><a href="global.html#createContainer">createContainer</a></li><li><a href="global.html#docker">docker</a></li><li><a href="global.html#exitWithMessage">exitWithMessage</a></li><li><a href="global.html#getContainers">getContainers</a></li><li><a href="global.html#getLogsStream">getLogsStream</a></li><li><a href="global.html#getStats">getStats</a></li><li><a href="global.html#imageExists">imageExists</a></li><li><a href="global.html#logger">logger</a></li><li><a href="global.html#makeBar">makeBar</a></li><li><a href="global.html#normalizeContainerName">normalizeContainerName</a></li><li><a href="global.html#pullImage">pullImage</a></li><li><a href="global.html#removeContainer">removeContainer</a></li><li><a href="global.html#restartContainer">restartContainer</a></li><li><a href="global.html#safeCall">safeCall</a></li><li><a href="global.html#startContainer">startContainer</a></li><li><a href="global.html#stopContainer">stopContainer</a></li><li><a href="global.html#useContainerActions">useContainerActions</a></li><li><a href="global.html#useContainerCommandRouter">useContainerCommandRouter</a></li><li><a href="global.html#useContainerCreation">useContainerCreation</a></li><li><a href="global.html#useControls">useControls</a></li><li><a href="global.html#useEraseConfirmation">useEraseConfirmation</a></li><li><a href="global.html#useExitHandler">useExitHandler</a></li><li><a href="global.html#useLogsViewer">useLogsViewer</a></li><li><a href="global.html#validateEnvVars">validateEnvVars</a></li><li><a href="global.html#validatePorts">validatePorts</a></li><li><a href="global.html#withTimeout">withTimeout</a></li></ul>
+    <h2><a href="index.html">Home</a></h2><h3>Modules</h3><ul><li><a href="module-index.html">index</a></li></ul><h3>Global</h3><ul><li><a href="global.html#DB_IMAGES">DB_IMAGES</a></li><li><a href="global.html#EXIT_DELAY">EXIT_DELAY</a></li><li><a href="global.html#IMAGE_PROFILES">IMAGE_PROFILES</a></li><li><a href="global.html#LOG_LEVELS">LOG_LEVELS</a></li><li><a href="global.html#MESSAGE_TIMEOUTS">MESSAGE_TIMEOUTS</a></li><li><a href="global.html#PromptField">PromptField</a></li><li><a href="global.html#PromptMessage">PromptMessage</a></li><li><a href="global.html#REFRESH_INTERVALS">REFRESH_INTERVALS</a></li><li><a href="global.html#SuggestionPanel">SuggestionPanel</a></li><li><a href="global.html#TIMEOUTS">TIMEOUTS</a></li><li><a href="global.html#VERSION">VERSION</a></li><li><a href="global.html#buildContainerOptions">buildContainerOptions</a></li><li><a href="global.html#colorize">colorize</a></li><li><a href="global.html#createContainer">createContainer</a></li><li><a href="global.html#docker">docker</a></li><li><a href="global.html#exitWithMessage">exitWithMessage</a></li><li><a href="global.html#getContainers">getContainers</a></li><li><a href="global.html#getLogsStream">getLogsStream</a></li><li><a href="global.html#getStats">getStats</a></li><li><a href="global.html#imageExists">imageExists</a></li><li><a href="global.html#logger">logger</a></li><li><a href="global.html#makeBar">makeBar</a></li><li><a href="global.html#normalizeContainerName">normalizeContainerName</a></li><li><a href="global.html#normalizeImageName">normalizeImageName</a></li><li><a href="global.html#pullImage">pullImage</a></li><li><a href="global.html#removeContainer">removeContainer</a></li><li><a href="global.html#restartContainer">restartContainer</a></li><li><a href="global.html#safeCall">safeCall</a></li><li><a href="global.html#startContainer">startContainer</a></li><li><a href="global.html#stopContainer">stopContainer</a></li><li><a href="global.html#useContainerActions">useContainerActions</a></li><li><a href="global.html#useContainerCommandRouter">useContainerCommandRouter</a></li><li><a href="global.html#useContainerCreation">useContainerCreation</a></li><li><a href="global.html#useControls">useControls</a></li><li><a href="global.html#useEraseConfirmation">useEraseConfirmation</a></li><li><a href="global.html#useExitHandler">useExitHandler</a></li><li><a href="global.html#useLogsViewer">useLogsViewer</a></li><li><a href="global.html#validateEnvVars">validateEnvVars</a></li><li><a href="global.html#validatePorts">validatePorts</a></li><li><a href="global.html#withTimeout">withTimeout</a></li></ul>
 </nav>
 
 <br class="clear">
 
 <footer>
-    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Sat Apr 25 2026 18:05:07 GMT+0000 (Coordinated Universal Time)
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Mon Apr 27 2026 20:37:48 GMT+0000 (Coordinated Universal Time)
 </footer>
 
 <script> prettyPrint(); </script>
