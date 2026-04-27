@@ -65,4 +65,104 @@ describe('ContainerCreationPrompt — SuggestionPanel wiring', () => {
     const nginxEls = getAllByText(/nginx/);
     expect(nginxEls.length).toBeGreaterThan(0);
   });
+
+  // FR8 — hubResults wiring
+  test('when hubResults is provided, activeItems = hubResults (replaces suggestions)', () => {
+    const { getByText, queryByText } = render(
+      <ContainerCreationPrompt
+        step={0}
+        imageName="ng"
+        containerName=""
+        portInput=""
+        envInput=""
+        message=""
+        messageColor="yellow"
+        suggestions={['nginx', 'golang']}
+        hubResults={['hub-nginx', 'hub-node']}
+        selectedSuggestionIndex={-1}
+        visibleOffset={0}
+      />
+    );
+    expect(getByText(/hub-nginx/)).toBeTruthy();
+    expect(queryByText(/golang/)).toBeNull();
+  });
+
+  test('when hubResults is null, falls back to suggestions', () => {
+    const { getByText } = render(
+      <ContainerCreationPrompt
+        step={0}
+        imageName="ng"
+        containerName=""
+        portInput=""
+        envInput=""
+        message=""
+        messageColor="yellow"
+        suggestions={['nginx', 'golang']}
+        hubResults={null}
+        selectedSuggestionIndex={-1}
+        visibleOffset={0}
+      />
+    );
+    expect(getByText(/golang/)).toBeTruthy();
+  });
+
+  test('when step===0 and isSearchingHub=true, SuggestionPanel is shown even if activeItems is empty', () => {
+    const { getByText } = render(
+      <ContainerCreationPrompt
+        step={0}
+        imageName="ng"
+        containerName=""
+        portInput=""
+        envInput=""
+        message=""
+        messageColor="yellow"
+        suggestions={[]}
+        hubResults={null}
+        isSearchingHub={true}
+        selectedSuggestionIndex={-1}
+        visibleOffset={0}
+      />
+    );
+    expect(getByText(/searching Docker Hub/)).toBeTruthy();
+  });
+
+  test('when step===0 and isSearchingHub=false and activeItems is empty, SuggestionPanel is NOT shown', () => {
+    const { queryByTestId } = render(
+      <ContainerCreationPrompt
+        step={0}
+        imageName="ng"
+        containerName=""
+        portInput=""
+        envInput=""
+        message=""
+        messageColor="yellow"
+        suggestions={[]}
+        hubResults={null}
+        isSearchingHub={false}
+        selectedSuggestionIndex={-1}
+        visibleOffset={0}
+      />
+    );
+    expect(queryByTestId('suggestion-panel')).toBeNull();
+  });
+
+  test('isLoading prop is passed down to SuggestionPanel when isSearchingHub=true', () => {
+    const { getByText } = render(
+      <ContainerCreationPrompt
+        step={0}
+        imageName="ng"
+        containerName=""
+        portInput=""
+        envInput=""
+        message=""
+        messageColor="yellow"
+        suggestions={['nginx']}
+        hubResults={null}
+        isSearchingHub={true}
+        selectedSuggestionIndex={-1}
+        visibleOffset={0}
+      />
+    );
+    expect(getByText(/searching Docker Hub/)).toBeTruthy();
+  });
 });

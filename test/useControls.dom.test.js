@@ -38,8 +38,8 @@ await jest.unstable_mockModule(
 
 const { useControls } = await import('../src/hooks/useControls.js');
 
-function HookTester({ containers, expose }) {
-  const hook = useControls(containers);
+function HookTester({ containers, expose, overrides }) {
+  const hook = useControls(containers, overrides);
   useEffect(() => {
     if (expose) expose.current = hook;
   });
@@ -309,5 +309,75 @@ describe('useControls — FR4/FR5/FR6 keyboard routing via processCreationInput'
     // imageName should be unchanged — applyFocusedSuggestion was NOT called
     expect(expose.current.creation.imageName).toBe(nameBefore);
     expect(expose.current.creation.step).toBe(1);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FR7 — Tab on step 0 triggers Hub search
+// ─────────────────────────────────────────────────────────────────────────────
+describe('useControls — FR7 Tab triggers hub search on step 0', () => {
+  beforeEach(() => {
+    _inputHandler = null;
+    mockSvcCreateContainer.mockReset();
+  });
+
+  /** Helper: render in creation mode with a triggerHubSearch mock override */
+  function renderCreationWithSearch({ isSearchingHub = false, imageName: initialImageName = '' } = {}) {
+    const mockTriggerHubSearch = jest.fn();
+    const expose = { current: null };
+
+    render(
+      <HookTester
+        containers={[]}
+        expose={expose}
+        overrides={{ triggerHubSearch: mockTriggerHubSearch, isSearchingHub }}
+      />
+    );
+    // Enter creation mode
+    act(() => { triggerInput('c', {}); });
+    // Set imageName if provided
+    if (initialImageName) {
+      act(() => { expose.current.creation.setImageName(initialImageName); });
+    }
+    return { expose, mockTriggerHubSearch };
+  }
+
+  test('FR7 — Tab on step 0 calls triggerHubSearch()', () => {
+    const { mockTriggerHubSearch } = renderCreationWithSearch({ imageName: 'nginx' });
+
+    act(() => { triggerInput('', { tab: true }); });
+
+    expect(mockTriggerHubSearch).toHaveBeenCalledTimes(1);
+  });
+
+  test('FR7 — Tab on step 0 when isSearchingHub=true does NOT call triggerHubSearch (guard)', () => {
+    const { mockTriggerHubSearch } = renderCreationWithSearch({
+      isSearchingHub: true,
+      imageName: 'nginx',
+    });
+
+    act(() => { triggerInput('', { tab: true }); });
+
+    expect(mockTriggerHubSearch).not.toHaveBeenCalled();
+  });
+
+  test('FR7 — Tab on step 0 when imageName is empty string does NOT call triggerHubSearch (guard)', () => {
+    const { mockTriggerHubSearch } = renderCreationWithSearch({ imageName: '' });
+
+    act(() => { triggerInput('', { tab: true }); });
+
+    expect(mockTriggerHubSearch).not.toHaveBeenCalled();
+  });
+
+  test('FR7 — Tab on step > 0 does NOT call triggerHubSearch (only active on step 0)', () => {
+    const { expose, mockTriggerHubSearch } = renderCreationWithSearch({ imageName: 'nginx' });
+
+    // Advance to step 1
+    act(() => { triggerInput('\r', {}); });
+    expect(expose.current.creation.step).toBe(1);
+
+    act(() => { triggerInput('', { tab: true }); });
+
+    expect(mockTriggerHubSearch).not.toHaveBeenCalled();
   });
 });

@@ -21,7 +21,7 @@ import { DB_IMAGES } from '../helpers/constants.js';
  * @param {Array<Object>} containers - Current list of Docker containers
  * @returns {Object} controls - API for the App component
  */
-export function useControls(containers = []) {
+export function useControls(containers = [], overrides = {}) {
   const [creatingContainer, setCreatingContainer] = React.useState(false);
 
   // — Modular hooks —
@@ -63,6 +63,10 @@ export function useControls(containers = []) {
   const logsViewer = useLogsViewer();
   const selection = useContainerSelection(containers.length);
   const debugLogs = useDebugLogs();
+
+  // Allow overrides for testability (e.g. injecting a mock triggerHubSearch)
+  const triggerHubSearch = overrides.triggerHubSearch ?? creation.triggerHubSearch;
+  const isSearchingHub = overrides.isSearchingHub ?? creation.isSearchingHub;
 
   const eraseConfirmation = useEraseConfirmation({
     onConfirm: () => {
@@ -154,6 +158,16 @@ export function useControls(containers = []) {
         return;
       }
 
+      // Tab on step 0: trigger Docker Hub search (with guards)
+      if (key.tab) {
+        if (step === 0) {
+          if (!isSearchingHub && (creation.imageName || '').trim() !== '') {
+            triggerHubSearch();
+          }
+        }
+        return;
+      }
+
       // Arrow keys on step 0: navigate suggestion list
       if (step === 0 && creation.suggestions.length > 0) {
         if (key.upArrow) {
@@ -189,7 +203,7 @@ export function useControls(containers = []) {
           appendChar(creation.setEnvInput, creation.envInput, input);
       }
     },
-    [creation, setCreatingContainer]
+    [creation, setCreatingContainer, triggerHubSearch, isSearchingHub]
   );
 
   // Single keyboard entry point

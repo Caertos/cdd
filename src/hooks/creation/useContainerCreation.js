@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import {
   validatePorts,
   validateEnvVars,
 } from '../../helpers/validationHelpers.js';
 import { IMAGE_PROFILES } from '../../helpers/constants.js';
 import { safeCall } from '../../helpers/safeCall.js';
+import { searchDockerHub, formatHubResult } from '../../helpers/dockerHubService.js';
 
 const MAX_VISIBLE = 6;
 
@@ -38,13 +39,26 @@ export function useContainerCreation({
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
   const [visibleOffset, setVisibleOffset] = useState(0);
 
+  // Docker Hub search state
+  const [isSearchingHub, setIsSearchingHub] = useState(false);
+  const [hubResults, setHubResults] = useState(null);
+  // Tracks active request: { controller: AbortController|null, requestId: number }
+  const activeHubRequestRef = useRef({ controller: null, requestId: 0 });
+
   /**
    * Updates the image name input and recalculates autocomplete suggestions.
    * Resets selectedSuggestionIndex to -1 on every keystroke.
+   * Also aborts any in-flight Hub search and clears Hub results.
    *
    * @param {string} value - New raw image name typed by user
    */
   function updateImageInput(value) {
+    // Abort any in-flight Hub search and clear its state
+    activeHubRequestRef.current.controller?.abort();
+    activeHubRequestRef.current.requestId += 1;
+    setIsSearchingHub(false);
+    setHubResults(null);
+
     setImageName(value);
     setSelectedSuggestionIndex(-1);
     setVisibleOffset(0);
@@ -57,6 +71,46 @@ export function useContainerCreation({
       key.includes(lower)
     );
     setSuggestions(matches);
+  }
+
+  /**
+   * Triggers a Docker Hub search for the current imageName.
+   * Guards: imageName must be non-empty; no concurrent search allowed.
+   * Uses AbortController + requestId to handle race conditions.
+   */
+  async function triggerHubSearch() {
+    const query = imageName.trim();
+    if (!query) return;
+    if (isSearchingHub) return;
+
+    // Abort previous request (should already be aborted from updateImageInput,
+    // but guard here too)
+    activeHubRequestRef.current.controller?.abort();
+
+    const requestId = activeHubRequestRef.current.requestId + 1;
+    activeHubRequestRef.current.requestId = requestId;
+
+    const controller = new AbortController();
+    activeHubRequestRef.current.controller = controller;
+
+    setIsSearchingHub(true);
+    setSelectedSuggestionIndex(-1);
+    setVisibleOffset(0);
+
+    try {
+      const results = await searchDockerHub(query, { signal: controller.signal });
+      // Ignore stale responses
+      if (activeHubRequestRef.current.requestId !== requestId) return;
+      setHubResults(results.map(formatHubResult));
+    } catch (err) {
+      if (activeHubRequestRef.current.requestId !== requestId) return;
+      // Silence AbortError; for all other errors fall back to static suggestions
+      setHubResults(null);
+    } finally {
+      if (activeHubRequestRef.current.requestId === requestId) {
+        setIsSearchingHub(false);
+      }
+    }
   }
 
   /**
@@ -230,7 +284,10 @@ export function useContainerCreation({
     suggestions,
     selectedSuggestionIndex,
     visibleOffset,
+    isSearchingHub,
+    hubResults,
     updateImageInput,
+    triggerHubSearch,
     moveSuggestionSelection,
     applyFocusedSuggestion,
     nextStep,

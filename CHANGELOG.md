@@ -7,6 +7,15 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 - Nothing yet.
 
+## [3.2.3] - 2026-04-27
+
+### Added
+- Docker Hub live search: pressing Tab on image name field searches Docker Hub in real time
+- `searchDockerHub()` helper with AbortSignal.timeout(5000), race-condition guard (AbortController + requestId)
+- `formatHubResult()` formatter: `nginx [★ official] [1B+ pulls]`
+- `isSearchingHub` loading state with `[searching Docker Hub...]` indicator in SuggestionPanel
+- Hub results replace static suggestions; typing reverts immediately to static list
+
 ## [3.2.2] - 2026-04-27
 
 ### Added

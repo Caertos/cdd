@@ -34,6 +34,8 @@ export default function ContainerCreationPrompt(props) {
     suggestions = [],
     selectedSuggestionIndex = -1,
     visibleOffset = 0,
+    hubResults = null,
+    isSearchingHub = false,
   } = props;
   const prompts = [
     {
@@ -58,7 +60,8 @@ export default function ContainerCreationPrompt(props) {
     },
   ];
   const { label, value, required } = prompts[step] || {};
-  const showSuggestions = step === 0 && suggestions.length > 0;
+  const activeItems = hubResults ?? suggestions;
+  const showSuggestions = step === 0 && (isSearchingHub || activeItems.length > 0);
   return (
     <Box
       flexDirection="column"
@@ -69,9 +72,10 @@ export default function ContainerCreationPrompt(props) {
       <PromptField label={label} value={value} required={required} />
       {showSuggestions && (
         <SuggestionPanel
-          items={suggestions}
+          items={activeItems}
           selectedIndex={selectedSuggestionIndex}
           visibleOffset={visibleOffset}
+          isLoading={isSearchingHub}
         />
       )}
       <PromptMessage message={message} color={messageColor} />
@@ -91,6 +95,8 @@ ContainerCreationPrompt.propTypes = {
   suggestions: PropTypes.arrayOf(PropTypes.string),
   selectedSuggestionIndex: PropTypes.number,
   visibleOffset: PropTypes.number,
+  hubResults: PropTypes.arrayOf(PropTypes.string),
+  isSearchingHub: PropTypes.bool,
 };
 
 // Named export for test compatibility with jest ESM interop

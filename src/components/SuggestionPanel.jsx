@@ -19,10 +19,12 @@ export function SuggestionPanel({
   selectedIndex,
   visibleOffset,
   maxVisible = 6,
+  isLoading = false,
 }) {
-  if (!items || items.length === 0) return null;
+  const hasItems = items && items.length > 0;
+  if (!hasItems && !isLoading) return null;
 
-  const visible = items.slice(visibleOffset, visibleOffset + maxVisible);
+  const visible = hasItems ? items.slice(visibleOffset, visibleOffset + maxVisible) : [];
 
   return (
     <Box
@@ -41,6 +43,11 @@ export function SuggestionPanel({
           </Text>
         );
       })}
+      {isLoading && (
+        <Text dimColor color="gray">
+          {'  [searching Docker Hub...]'}
+        </Text>
+      )}
     </Box>
   );
 }
@@ -50,4 +57,5 @@ SuggestionPanel.propTypes = {
   selectedIndex: PropTypes.number.isRequired,
   visibleOffset: PropTypes.number.isRequired,
   maxVisible: PropTypes.number,
+  isLoading: PropTypes.bool,
 };

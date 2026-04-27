@@ -3,8 +3,18 @@
  */
 import React, { useEffect } from 'react';
 import { render, act } from '@testing-library/react';
-import { useContainerCreation } from '../src/hooks/creation/useContainerCreation.js';
 import { IMAGE_PROFILES } from '../src/helpers/constants.js';
+import { jest } from '@jest/globals';
+
+// Mock dockerHubService BEFORE any other import that might pull it in
+jest.unstable_mockModule('../src/helpers/dockerHubService.js', () => ({
+  searchDockerHub: jest.fn(),
+  formatHubResult: jest.fn((r) => r.name), // identity-like stub: returns name string
+}));
+
+// Dynamic import resolves AFTER jest.unstable_mockModule is registered
+const { useContainerCreation } = await import('../src/hooks/creation/useContainerCreation.js');
+const { searchDockerHub } = await import('../src/helpers/dockerHubService.js');
 
 function HookTester({ onCreate, onCancel, dbImages, imageProfiles, expose }) {
   const hook = useContainerCreation({ onCreate, onCancel, dbImages, imageProfiles });
@@ -260,5 +270,119 @@ describe('useContainerCreation — moveSuggestionSelection() & applyFocusedSugge
     act(() => { expose.current.applyFocusedSuggestion(); });
 
     expect(expose.current.suggestions).toHaveLength(0);
+  });
+});
+
+describe('useContainerCreation — triggerHubSearch()', () => {
+  beforeEach(() => {
+    searchDockerHub.mockReset();
+  });
+
+  test('triggerHubSearch is exposed from the hook', () => {
+    const expose = { current: null };
+    render(<HookTester onCreate={() => {}} onCancel={() => {}} dbImages={[]} imageProfiles={IMAGE_PROFILES} expose={expose} />);
+
+    expect(typeof expose.current.triggerHubSearch).toBe('function');
+  });
+
+  test('calling triggerHubSearch() sets isSearchingHub=true while searching, then false after resolve', async () => {
+    let resolveSearch;
+    searchDockerHub.mockImplementation(
+      () => new Promise((resolve) => { resolveSearch = resolve; })
+    );
+
+    const expose = { current: null };
+    render(<HookTester onCreate={() => {}} onCancel={() => {}} dbImages={[]} imageProfiles={IMAGE_PROFILES} expose={expose} />);
+
+    act(() => { expose.current.updateImageInput('nginx'); });
+
+    // Trigger search (async, don't await yet)
+    act(() => { expose.current.triggerHubSearch(); });
+
+    expect(expose.current.isSearchingHub).toBe(true);
+
+    // Resolve the mock search
+    const results = [{ name: 'nginx', isOfficial: true, pullCount: 1000, description: 'nginx' }];
+    await act(async () => { resolveSearch(results); });
+
+    expect(expose.current.isSearchingHub).toBe(false);
+    // hubResults is string[] after formatHubResult mapping (mock returns r.name)
+    expect(expose.current.hubResults).toEqual(['nginx']);
+  });
+
+  test('after search resolves, hubResults is set and isSearchingHub is false', async () => {
+    const results = [{ name: 'nginx', isOfficial: true, pullCount: 500, description: '' }];
+    searchDockerHub.mockResolvedValue(results);
+
+    const expose = { current: null };
+    render(<HookTester onCreate={() => {}} onCancel={() => {}} dbImages={[]} imageProfiles={IMAGE_PROFILES} expose={expose} />);
+
+    act(() => { expose.current.updateImageInput('nginx'); });
+
+    await act(async () => { await expose.current.triggerHubSearch(); });
+
+    // hubResults is string[] after formatHubResult mapping (mock returns r.name)
+    expect(expose.current.hubResults).toEqual(['nginx']);
+    expect(expose.current.isSearchingHub).toBe(false);
+  });
+
+  test('calling triggerHubSearch() when isSearchingHub===true is a no-op (concurrent guard)', async () => {
+    let resolveFirst;
+    searchDockerHub.mockImplementation(
+      () => new Promise((resolve) => { resolveFirst = resolve; })
+    );
+
+    const expose = { current: null };
+    render(<HookTester onCreate={() => {}} onCancel={() => {}} dbImages={[]} imageProfiles={IMAGE_PROFILES} expose={expose} />);
+
+    act(() => { expose.current.updateImageInput('nginx'); });
+    act(() => { expose.current.triggerHubSearch(); }); // first call
+
+    expect(expose.current.isSearchingHub).toBe(true);
+    expect(searchDockerHub).toHaveBeenCalledTimes(1);
+
+    // Second call while still searching should be a no-op
+    act(() => { expose.current.triggerHubSearch(); });
+
+    expect(searchDockerHub).toHaveBeenCalledTimes(1); // still only once
+
+    // Cleanup
+    await act(async () => { resolveFirst([]); });
+  });
+
+  test('calling triggerHubSearch() with empty imageName is a no-op', async () => {
+    const expose = { current: null };
+    render(<HookTester onCreate={() => {}} onCancel={() => {}} dbImages={[]} imageProfiles={IMAGE_PROFILES} expose={expose} />);
+
+    // imageName is empty by default
+    await act(async () => { await expose.current.triggerHubSearch(); });
+
+    expect(searchDockerHub).not.toHaveBeenCalled();
+    expect(expose.current.isSearchingHub).toBe(false);
+  });
+
+  test('typing into imageName (updateImageInput) aborts ongoing search and clears hubResults', async () => {
+    let resolveSearch;
+    searchDockerHub.mockImplementation(
+      () => new Promise((resolve) => { resolveSearch = resolve; })
+    );
+
+    const expose = { current: null };
+    render(<HookTester onCreate={() => {}} onCancel={() => {}} dbImages={[]} imageProfiles={IMAGE_PROFILES} expose={expose} />);
+
+    act(() => { expose.current.updateImageInput('nginx'); });
+    act(() => { expose.current.triggerHubSearch(); }); // in-flight
+
+    expect(expose.current.isSearchingHub).toBe(true);
+
+    // User types more — should abort search and clear results
+    await act(async () => {
+      expose.current.updateImageInput('ngin');
+      // Resolve the (now stale) promise — it should be ignored
+      resolveSearch([{ name: 'nginx', isOfficial: true, pullCount: 100, description: '' }]);
+    });
+
+    expect(expose.current.isSearchingHub).toBe(false);
+    expect(expose.current.hubResults).toBeNull();
   });
 });

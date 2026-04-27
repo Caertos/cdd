@@ -50,4 +50,34 @@ describe('SuggestionPanel', () => {
     const el = getByText(/caddy/);
     expect(el.textContent).not.toMatch(/›/);
   });
+
+  // FR8 — isLoading prop
+  test('renders [searching Docker Hub...] row when isLoading=true', () => {
+    const { getByText } = render(
+      <SuggestionPanel items={[]} selectedIndex={-1} visibleOffset={0} isLoading={true} />
+    );
+    expect(getByText(/searching Docker Hub/)).toBeTruthy();
+  });
+
+  test('loading row is NOT selectable — no › prefix on loading row', () => {
+    const { getByText } = render(
+      <SuggestionPanel items={items} selectedIndex={-1} visibleOffset={0} maxVisible={5} isLoading={true} />
+    );
+    const loadingEl = getByText(/searching Docker Hub/);
+    expect(loadingEl.textContent).not.toMatch(/›/);
+  });
+
+  test('does NOT render loading row when isLoading=false', () => {
+    const { queryByText } = render(
+      <SuggestionPanel items={items} selectedIndex={-1} visibleOffset={0} maxVisible={5} isLoading={false} />
+    );
+    expect(queryByText(/searching Docker Hub/)).toBeNull();
+  });
+
+  test('renders panel even when items is empty but isLoading=true', () => {
+    const { getByText } = render(
+      <SuggestionPanel items={[]} selectedIndex={-1} visibleOffset={0} isLoading={true} />
+    );
+    expect(getByText(/searching Docker Hub/)).toBeTruthy();
+  });
 });
