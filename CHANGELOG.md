@@ -7,6 +7,15 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 - Nothing yet.
 
+## [3.2.5] - 2026-04-27
+
+### Added
+- Context-sensitive controls HUD in the creation wizard: shows available keys per step
+- Step 0: `[Tab] Search Hub · [↑↓] Browse · [Enter] Confirm · [Esc] Cancel`
+- Step 0 with suggestions: `[↑↓] Navigate · [Enter] Select · [Esc] Cancel`
+- Steps 1–3: `[Enter] Continue · [Esc] Cancel`
+- `ControlsHUD` component with pure `getHints(step, hasSuggestions, isSearchingHub)` function
+
 ## [3.2.4] - 2026-04-27
 
 ### Fixed
