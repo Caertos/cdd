@@ -40,6 +40,7 @@ export default function App() {
         visibleOffset={controls.creation.visibleOffset}
         isSearchingHub={controls.creation.isSearchingHub}
         hubResults={controls.creation.hubResults}
+        hasSuggestedEnv={controls.creation.hasSuggestedEnv}
       />
     );
   }

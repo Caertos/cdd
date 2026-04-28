@@ -67,6 +67,9 @@ export function useControls(containers = [], overrides = {}) {
   // Allow overrides for testability (e.g. injecting a mock triggerHubSearch)
   const triggerHubSearch = overrides.triggerHubSearch ?? creation.triggerHubSearch;
   const isSearchingHub = overrides.isSearchingHub ?? creation.isSearchingHub;
+  const insertNextSuggestedEnv = overrides.insertNextSuggestedEnv !== undefined
+    ? overrides.insertNextSuggestedEnv
+    : creation.insertNextSuggestedEnv;
 
   const eraseConfirmation = useEraseConfirmation({
     onConfirm: () => {
@@ -164,6 +167,8 @@ export function useControls(containers = [], overrides = {}) {
           if (!isSearchingHub && (creation.imageName || '').trim() !== '') {
             triggerHubSearch();
           }
+        } else if (step === 3) {
+          insertNextSuggestedEnv?.();
         }
         return;
       }
@@ -203,7 +208,7 @@ export function useControls(containers = [], overrides = {}) {
           appendChar(creation.setEnvInput, creation.envInput, input);
       }
     },
-    [creation, setCreatingContainer, triggerHubSearch, isSearchingHub]
+    [creation, setCreatingContainer, triggerHubSearch, isSearchingHub, insertNextSuggestedEnv]
   );
 
   // Single keyboard entry point

@@ -271,4 +271,43 @@ describe('ContainerCreationPrompt — ControlsHUD wiring', () => {
     expect(getByText('[Enter]')).toBeTruthy();
     expect(getByText('[Esc]')).toBeTruthy();
   });
+
+  test('step=3, hasSuggestedEnv=true: renders [Tab] in HUD', () => {
+    const { getByText } = render(
+      <ContainerCreationPrompt
+        step={3}
+        imageName="postgres:17-alpine"
+        containerName=""
+        portInput=""
+        envInput=""
+        message=""
+        messageColor="yellow"
+        suggestions={[]}
+        selectedSuggestionIndex={-1}
+        visibleOffset={0}
+        hasSuggestedEnv={true}
+      />
+    );
+    expect(getByText('[Tab]')).toBeTruthy();
+    expect(getByText(/Insert next env/)).toBeTruthy();
+  });
+
+  test('step=3, hasSuggestedEnv=false: does NOT render [Tab] in HUD', () => {
+    const { queryByText } = render(
+      <ContainerCreationPrompt
+        step={3}
+        imageName="nginx:1.27-alpine"
+        containerName=""
+        portInput=""
+        envInput=""
+        message=""
+        messageColor="yellow"
+        suggestions={[]}
+        selectedSuggestionIndex={-1}
+        visibleOffset={0}
+        hasSuggestedEnv={false}
+      />
+    );
+    expect(queryByText('[Tab]')).toBeNull();
+  });
 });

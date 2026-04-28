@@ -37,6 +37,7 @@ export default function ContainerCreationPrompt(props) {
     visibleOffset = 0,
     hubResults = null,
     isSearchingHub = false,
+    hasSuggestedEnv = false,
   } = props;
   const prompts = [
     {
@@ -81,7 +82,7 @@ export default function ContainerCreationPrompt(props) {
         />
       )}
       <PromptMessage message={message} color={messageColor} />
-      <ControlsHUD step={step} hasSuggestions={hasSuggestions} isSearchingHub={isSearchingHub} />
+      <ControlsHUD step={step} hasSuggestions={hasSuggestions} isSearchingHub={isSearchingHub} hasSuggestedEnv={hasSuggestedEnv} />
     </Box>
   );
 }
@@ -99,6 +100,7 @@ ContainerCreationPrompt.propTypes = {
   visibleOffset: PropTypes.number,
   hubResults: PropTypes.arrayOf(PropTypes.string),
   isSearchingHub: PropTypes.bool,
+  hasSuggestedEnv: PropTypes.bool,
 };
 
 // Named export for test compatibility with jest ESM interop

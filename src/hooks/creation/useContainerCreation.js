@@ -268,6 +268,28 @@ export function useContainerCreation({
     setVisibleOffset(0);
   }
 
+  /**
+   * Inserts the next pending suggested env var into envInput.
+   * Derives "next" by comparing keys already in envInput against suggestedEnv.
+   * When all suggestions are already present, sets a feedback message.
+   */
+  function insertNextSuggestedEnv() {
+    const baseName = imageName.trim().toLowerCase().split(':')[0].split('/').pop();
+    const profile = imageProfiles[baseName];
+    const suggested = profile?.suggestedEnv ?? [];
+    if (!suggested.length) return;
+    const addedKeys = envInput.split(',').map(s => s.split('=')[0].trim()).filter(Boolean);
+    const next = suggested.find(s => !addedKeys.includes(s.split('=')[0]));
+    if (!next) { setMessage('All suggested env vars added'); return; }
+    setEnvInput(prev => prev ? `${prev},${next}` : next);
+  }
+
+  /**
+   * True when the current image profile has at least one suggestedEnv entry.
+   */
+  const baseName = imageName.trim().toLowerCase().split(':')[0].split('/').pop();
+  const hasSuggestedEnv = (imageProfiles[baseName]?.suggestedEnv?.length ?? 0) > 0;
+
   return {
     step,
     setStep,
@@ -295,5 +317,7 @@ export function useContainerCreation({
     nextStep,
     cancelCreation,
     resetCreation,
+    insertNextSuggestedEnv,
+    hasSuggestedEnv,
   };
 }

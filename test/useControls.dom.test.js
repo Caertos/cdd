@@ -313,8 +313,59 @@ describe('useControls — FR4/FR5/FR6 keyboard routing via processCreationInput'
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// FR7 — Tab on step 0 triggers Hub search
+// Tab on step 3 → insertNextSuggestedEnv
 // ─────────────────────────────────────────────────────────────────────────────
+describe('useControls — Tab on step 3 calls insertNextSuggestedEnv', () => {
+  beforeEach(() => {
+    _inputHandler = null;
+    mockSvcCreateContainer.mockReset();
+  });
+
+  test('Tab on step 3 calls insertNextSuggestedEnv()', () => {
+    const mockInsertNextSuggestedEnv = jest.fn();
+    const expose = { current: null };
+    render(
+      <HookTester
+        containers={[]}
+        expose={expose}
+        overrides={{ insertNextSuggestedEnv: mockInsertNextSuggestedEnv }}
+      />
+    );
+    // Enter creation mode
+    act(() => { triggerInput('c', {}); });
+    // Advance to step 3
+    act(() => { expose.current.creation.setImageName('postgres'); });
+    act(() => { triggerInput('\r', {}); }); // step 0 → 1
+    act(() => { triggerInput('\r', {}); }); // step 1 → 2
+    act(() => { triggerInput('\r', {}); }); // step 2 → 3
+    expect(expose.current.creation.step).toBe(3);
+
+    act(() => { triggerInput('', { tab: true }); });
+
+    expect(mockInsertNextSuggestedEnv).toHaveBeenCalledTimes(1);
+  });
+
+  test('Tab on step 3 when insertNextSuggestedEnv is undefined → no-op (safe guard)', () => {
+    const expose = { current: null };
+    render(
+      <HookTester
+        containers={[]}
+        expose={expose}
+        overrides={{ insertNextSuggestedEnv: undefined }}
+      />
+    );
+    act(() => { triggerInput('c', {}); });
+    act(() => { expose.current.creation.setImageName('nginx'); });
+    act(() => { triggerInput('\r', {}); });
+    act(() => { triggerInput('\r', {}); });
+    act(() => { triggerInput('\r', {}); });
+
+    // Should not throw
+    expect(() => {
+      act(() => { triggerInput('', { tab: true }); });
+    }).not.toThrow();
+  });
+});
 describe('useControls — FR7 Tab triggers hub search on step 0', () => {
   beforeEach(() => {
     _inputHandler = null;

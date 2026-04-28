@@ -59,6 +59,27 @@ describe('getHints — pure function', () => {
     expect(keys).not.toContain('Tab');
     expect(keys).not.toContain('↑↓');
   });
+
+  test('getHints(3, false, false, true) includes Tab=Insert next env', () => {
+    const hints = getHints(3, false, false, true);
+    const keys = hints.map(h => h.key);
+    expect(keys).toContain('Tab');
+    const tabHint = hints.find(h => h.key === 'Tab');
+    expect(tabHint.label).toBe('Insert next env');
+  });
+
+  test('getHints(3, false, false, false) does NOT include Tab hint', () => {
+    const hints = getHints(3, false, false, false);
+    const keys = hints.map(h => h.key);
+    expect(keys).not.toContain('Tab');
+  });
+
+  test('getHints(3, false, false, true) also includes Enter and Esc', () => {
+    const hints = getHints(3, false, false, true);
+    const keys = hints.map(h => h.key);
+    expect(keys).toContain('Enter');
+    expect(keys).toContain('Esc');
+  });
 });
 
 describe('ControlsHUD — component rendering', () => {
@@ -84,6 +105,21 @@ describe('ControlsHUD — component rendering', () => {
     );
     expect(getByText('[Enter]')).toBeTruthy();
     expect(getByText('[Esc]')).toBeTruthy();
+    expect(queryByText('[Tab]')).toBeNull();
+  });
+
+  test('step=3, hasSuggestedEnv=true: renders [Tab] and "Insert next env"', () => {
+    const { getByText } = render(
+      <ControlsHUD step={3} hasSuggestions={false} isSearchingHub={false} hasSuggestedEnv={true} />
+    );
+    expect(getByText('[Tab]')).toBeTruthy();
+    expect(getByText(/Insert next env/)).toBeTruthy();
+  });
+
+  test('step=3, hasSuggestedEnv=false: does NOT render [Tab]', () => {
+    const { queryByText } = render(
+      <ControlsHUD step={3} hasSuggestions={false} isSearchingHub={false} hasSuggestedEnv={false} />
+    );
     expect(queryByText('[Tab]')).toBeNull();
   });
 });
