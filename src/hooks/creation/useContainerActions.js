@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { safeCall } from '../../helpers/safeCall.js';
 import {
   startContainer as svcStartContainer,
@@ -19,6 +19,19 @@ import {
 export function useContainerActions({ containers, onAction }) {
   const [message, setMessage] = useState('');
   const [messageColor, setMessageColor] = useState('yellow');
+
+  const messageTimerRef = useRef(null);
+
+  function setTimedMessage(msg, color = 'yellow', ms = 4000) {
+    clearTimeout(messageTimerRef.current);
+    setMessage(msg);
+    if (color !== undefined) setMessageColor(color);
+    if (msg) {
+      messageTimerRef.current = setTimeout(() => setMessage(''), ms);
+    }
+  }
+
+  useEffect(() => () => clearTimeout(messageTimerRef.current), []);
 
   /**
    * Handles a generic container action and sets feedback.
@@ -56,6 +69,7 @@ export function useContainerActions({ containers, onAction }) {
   return {
     message,
     setMessage,
+    setTimedMessage,
     messageColor,
     setMessageColor,
     handleAction,

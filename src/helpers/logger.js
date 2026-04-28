@@ -58,8 +58,7 @@ function log(level, message, ...args) {
   const formatted = `[${timestamp}] [${upperLevel}] ${message}`;
   const entry = { level, message, args, timestamp, formatted };
 
-  const shouldWriteToConsole =
-    listeners.size === 0 || level === 'error' || level === 'warn';
+  const shouldWriteToConsole = listeners.size === 0;
 
   if (shouldWriteToConsole) {
     const method = level === 'debug' ? 'log' : level;

@@ -35,8 +35,7 @@ export function useControls(containers = [], overrides = {}) {
         portInput,
         envInput,
       });
-      actions.setMessage(`Creating container ${imageName}...`);
-      actions.setMessageColor('yellow');
+      actions.setTimedMessage(`Creating container ${imageName}...`, 'yellow');
       try {
         const { id, ports } = await svcCreateContainer(imageName, options);
         let portMsg = '';
@@ -47,11 +46,9 @@ export function useControls(containers = [], overrides = {}) {
               .map((p) => `${p.hostPort}→${p.containerPort}/${p.protocol}`)
               .join(', ');
         }
-        actions.setMessage(`Created container ${id}${portMsg}`);
-        actions.setMessageColor('green');
+        actions.setTimedMessage(`Created container ${id}${portMsg}`, 'green');
       } catch (err) {
-        actions.setMessage(`Error creating container: ${err.message}`);
-        actions.setMessageColor('red');
+        actions.setTimedMessage(`Error creating container: ${err.message}`, 'red');
       } finally {
         setCreatingContainer(false);
       }

@@ -94,8 +94,8 @@ export function useContainerCommandRouter({
       }
 
       if (input === 'c') {
-        onStartCreate();
         creation.resetCreation();
+        onStartCreate();
         return true;
       }
 

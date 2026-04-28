@@ -420,7 +420,7 @@ describe('useControls — FR7 Tab triggers hub search on step 0', () => {
     expect(mockTriggerHubSearch).not.toHaveBeenCalled();
   });
 
-  test('FR7 — Tab on step > 0 does NOT call triggerHubSearch (only active on step 0)', () => {
+    test('FR7 — Tab on step > 0 does NOT call triggerHubSearch (only active on step 0)', () => {
     const { expose, mockTriggerHubSearch } = renderCreationWithSearch({ imageName: 'nginx' });
 
     // Advance to step 1
@@ -430,5 +430,90 @@ describe('useControls — FR7 Tab triggers hub search on step 0', () => {
     act(() => { triggerInput('', { tab: true }); });
 
     expect(mockTriggerHubSearch).not.toHaveBeenCalled();
+  });
+});
+
+describe('useControls — success/error message clears after 4000ms', () => {
+
+  test('success message from container creation is scheduled to clear (setTimedMessage called)', async () => {
+    const timeoutSpy = jest.spyOn(global, 'setTimeout');
+    mockSvcCreateContainer.mockResolvedValue({ id: 'cid-timer', ports: [] });
+
+    const expose = { current: null };
+    render(<HookTester containers={[]} expose={expose} />);
+
+    await act(async () => {
+      await completeCreationWizard(expose, 'nginx');
+    });
+
+    // setTimedMessage must have scheduled a timeout to clear the message
+    const clearCallArgs = timeoutSpy.mock.calls.find(
+      ([fn, delay]) => delay === 4000
+    );
+    expect(clearCallArgs).toBeDefined();
+    timeoutSpy.mockRestore();
+  });
+
+  test('error message from container creation is scheduled to clear (setTimedMessage called)', async () => {
+    const timeoutSpy = jest.spyOn(global, 'setTimeout');
+    mockSvcCreateContainer.mockRejectedValue(new Error('not found'));
+
+    const expose = { current: null };
+    render(<HookTester containers={[]} expose={expose} />);
+
+    await act(async () => {
+      await completeCreationWizard(expose, 'badimage');
+    });
+
+    const clearCallArgs = timeoutSpy.mock.calls.find(
+      ([fn, delay]) => delay === 4000
+    );
+    expect(clearCallArgs).toBeDefined();
+    timeoutSpy.mockRestore();
+  });
+});
+
+describe('useControls — pressing C calls resetCreation BEFORE onStartCreate', () => {
+  beforeEach(() => {
+    _inputHandler = null;
+    mockSvcCreateContainer.mockReset();
+  });
+
+  test('pressing C resets creation state before entering creation mode', () => {
+    const callOrder = [];
+    const expose = { current: null };
+
+    // We render with no overrides, but we can spy on the internal calls
+    // by checking that imageName is reset (empty) when creatingContainer becomes true.
+    // Strategy: set imageName to something, then press C, verify state is reset in same render.
+    render(<HookTester containers={[]} expose={expose} />);
+
+    // Give the hook an existing state to verify it gets reset
+    act(() => { triggerInput('c', {}); }); // enter creation mode
+    act(() => { expose.current.creation.setImageName('dirty-state'); });
+
+    // Exit creation mode and re-enter via C to test reset order
+    act(() => {
+      // Press escape to cancel creation
+      if (_inputHandler) _inputHandler('', { escape: true });
+    });
+
+    // Now press C again — this should reset THEN show creation mode
+    act(() => { triggerInput('c', {}); });
+
+    // After pressing C: creatingContainer should be true AND imageName should be reset to ''
+    expect(expose.current.creatingContainer).toBe(true);
+    // imageName is '' (from resetCreation), NOT 'dirty-state'
+    expect(expose.current.creation.imageName).toBe('');
+  });
+
+  test('after pressing C, creation.message is set to the wizard prompt (resetCreation ran)', () => {
+    const expose = { current: null };
+    render(<HookTester containers={[]} expose={expose} />);
+
+    act(() => { triggerInput('c', {}); });
+
+    expect(expose.current.creatingContainer).toBe(true);
+    expect(expose.current.creation.message).toBe('Insert the name of the image to create: ');
   });
 });

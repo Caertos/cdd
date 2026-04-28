@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useReducer, useState, useRef, useEffect } from 'react';
 import {
   validatePorts,
   validateEnvVars,
@@ -8,6 +8,28 @@ import { safeCall } from '../../helpers/safeCall.js';
 import { searchDockerHub, formatHubResult } from '../../helpers/dockerHubService.js';
 
 const MAX_VISIBLE = 6;
+
+const INITIAL_FORM = {
+  step: 0,
+  imageName: '',
+  containerName: '',
+  portInput: '',
+  envInput: '',
+  message: '',
+  messageColor: 'yellow',
+  suggestions: [],
+  selectedSuggestionIndex: -1,
+  visibleOffset: 0,
+};
+
+function formReducer(state, action) {
+  switch (action.type) {
+    case 'RESET': return { ...INITIAL_FORM };
+    case 'RESET_WIZARD': return { ...INITIAL_FORM, message: 'Insert the name of the image to create: ', messageColor: 'yellow' };
+    case 'SET': return { ...state, ...action.payload };
+    default: return state;
+  }
+}
 
 /**
  * Custom hook to manage the container creation flow, step by step.
@@ -26,24 +48,64 @@ export function useContainerCreation({
   dbImages = [],
   imageProfiles = IMAGE_PROFILES,
 }) {
-  const [step, setStep] = useState(0); // 0: image, 1: name, 2: ports, 3: env
-  const [imageName, setImageName] = useState('');
-  const [containerName, setContainerName] = useState('');
-  const [portInput, setPortInput] = useState('');
-  const [envInput, setEnvInput] = useState('');
-  const [message, setMessage] = useState('');
-  const [messageColor, setMessageColor] = useState('yellow');
+  const [form, dispatch] = useReducer(formReducer, INITIAL_FORM);
+  const {
+    step,
+    imageName,
+    containerName,
+    portInput,
+    envInput,
+    message,
+    messageColor,
+    suggestions,
+    selectedSuggestionIndex,
+    visibleOffset,
+  } = form;
 
-  // Autocomplete state
-  const [suggestions, setSuggestions] = useState([]);
-  const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(-1);
-  const [visibleOffset, setVisibleOffset] = useState(0);
+  // Convenience setters that mirror the old useState API
+  const setStep = (v) => dispatch({ type: 'SET', payload: { step: v } });
+  const setImageName = (v) => dispatch({ type: 'SET', payload: { imageName: v } });
+  const setContainerName = (v) => dispatch({ type: 'SET', payload: { containerName: v } });
+  const setPortInput = (v) => dispatch({ type: 'SET', payload: { portInput: v } });
+  const setEnvInput = (v) =>
+    dispatch({ type: 'SET', payload: { envInput: typeof v === 'function' ? v(form.envInput) : v } });
+  const setMessage = (v) => dispatch({ type: 'SET', payload: { message: v } });
+  const setMessageColor = (v) => dispatch({ type: 'SET', payload: { messageColor: v } });
+  const setSuggestions = (v) => dispatch({ type: 'SET', payload: { suggestions: v } });
+  const setSelectedSuggestionIndex = (fn) => {
+    // Support both direct value and updater function
+    if (typeof fn === 'function') {
+      dispatch({ type: 'SET', payload: { selectedSuggestionIndex: fn(form.selectedSuggestionIndex) } });
+    } else {
+      dispatch({ type: 'SET', payload: { selectedSuggestionIndex: fn } });
+    }
+  };
+  const setVisibleOffset = (fn) => {
+    if (typeof fn === 'function') {
+      dispatch({ type: 'SET', payload: { visibleOffset: fn(form.visibleOffset) } });
+    } else {
+      dispatch({ type: 'SET', payload: { visibleOffset: fn } });
+    }
+  };
 
-  // Docker Hub search state
+  // Docker Hub search state (kept as useState because they are independent of form)
   const [isSearchingHub, setIsSearchingHub] = useState(false);
   const [hubResults, setHubResults] = useState(null);
   // Tracks active request: { controller: AbortController|null, requestId: number }
   const activeHubRequestRef = useRef({ controller: null, requestId: 0 });
+
+  // Timer for auto-clearing messages
+  const messageTimerRef = useRef(null);
+
+  function setTimedMessage(msg, color = 'yellow', ms = 4000) {
+    clearTimeout(messageTimerRef.current);
+    dispatch({ type: 'SET', payload: { message: msg, messageColor: color } });
+    if (msg) {
+      messageTimerRef.current = setTimeout(() => dispatch({ type: 'SET', payload: { message: '' } }), ms);
+    }
+  }
+
+  useEffect(() => () => clearTimeout(messageTimerRef.current), []);
 
   /**
    * Updates the image name input and recalculates autocomplete suggestions.
@@ -59,18 +121,20 @@ export function useContainerCreation({
     setIsSearchingHub(false);
     setHubResults(null);
 
-    setImageName(value);
-    setSelectedSuggestionIndex(-1);
-    setVisibleOffset(0);
-    if (!value.trim()) {
-      setSuggestions([]);
-      return;
-    }
     const lower = value.toLowerCase();
-    const matches = Object.keys(imageProfiles).filter((key) =>
-      key.includes(lower)
-    );
-    setSuggestions(matches);
+    const matches = value.trim()
+      ? Object.keys(imageProfiles).filter((key) => key.includes(lower))
+      : [];
+
+    dispatch({
+      type: 'SET',
+      payload: {
+        imageName: value,
+        selectedSuggestionIndex: -1,
+        visibleOffset: 0,
+        suggestions: matches,
+      },
+    });
   }
 
   /**
@@ -94,8 +158,7 @@ export function useContainerCreation({
     activeHubRequestRef.current.controller = controller;
 
     setIsSearchingHub(true);
-    setSelectedSuggestionIndex(-1);
-    setVisibleOffset(0);
+    dispatch({ type: 'SET', payload: { selectedSuggestionIndex: -1, visibleOffset: 0 } });
 
     try {
       const results = await searchDockerHub(query, { signal: controller.signal });
@@ -121,16 +184,11 @@ export function useContainerCreation({
    * @param {number} direction - -1 (up) or 1 (down)
    */
   function moveSuggestionSelection(direction) {
-    setSelectedSuggestionIndex((prev) => {
-      const next = Math.max(-1, Math.min(suggestions.length - 1, prev + direction));
-      // Adjust visibleOffset to keep selected in view
-      setVisibleOffset((offset) => {
-        if (next < offset) return Math.max(0, next);
-        if (next >= offset + MAX_VISIBLE) return next - MAX_VISIBLE + 1;
-        return offset;
-      });
-      return next;
-    });
+    const next = Math.max(-1, Math.min(suggestions.length - 1, selectedSuggestionIndex + direction));
+    let newOffset = visibleOffset;
+    if (next < visibleOffset) newOffset = Math.max(0, next);
+    else if (next >= visibleOffset + MAX_VISIBLE) newOffset = next - MAX_VISIBLE + 1;
+    dispatch({ type: 'SET', payload: { selectedSuggestionIndex: next, visibleOffset: newOffset } });
   }
 
   /**
@@ -140,10 +198,15 @@ export function useContainerCreation({
   function applyFocusedSuggestion() {
     if (selectedSuggestionIndex < 0 || selectedSuggestionIndex >= suggestions.length) return;
     const chosen = suggestions[selectedSuggestionIndex];
-    setImageName(resolveImageTag(chosen, imageProfiles));
-    setSuggestions([]);
-    setSelectedSuggestionIndex(-1);
-    setVisibleOffset(0);
+    dispatch({
+      type: 'SET',
+      payload: {
+        imageName: resolveImageTag(chosen, imageProfiles),
+        suggestions: [],
+        selectedSuggestionIndex: -1,
+        visibleOffset: 0,
+      },
+    });
   }
 
   /**
@@ -152,37 +215,35 @@ export function useContainerCreation({
   function nextStep() {
     if (step === 0) {
       if (!imageName.trim()) {
-        setMessage('Image name cannot be empty.');
-        setMessageColor('red');
+        setTimedMessage('Image name cannot be empty.', 'red');
         return;
       }
       const resolved = resolveImageTag(imageName, imageProfiles);
-      setImageName(resolved);
-      setStep(1);
-      setMessage(
-        'Optional: Enter container name or leave empty and press Enter'
+      dispatch({ type: 'SET', payload: { imageName: resolved, step: 1 } });
+      setTimedMessage(
+        'Optional: Enter container name or leave empty and press Enter',
+        'yellow'
       );
-      setMessageColor('yellow');
       return;
     }
     if (step === 1) {
-      setStep(2);
-      setMessage(
-        'Optional: Enter ports (format 8080:80,443:443) or leave empty and press Enter'
+      dispatch({ type: 'SET', payload: { step: 2 } });
+      setTimedMessage(
+        'Optional: Enter ports (format 8080:80,443:443) or leave empty and press Enter',
+        'yellow'
       );
-      setMessageColor('yellow');
       return;
     }
     if (step === 2) {
       // Ports are now optional - only validate if provided
       if (portInput.trim() && !validatePorts(portInput)) {
-        setMessage(
-          'Port format must be host:container and both must be numbers (e.g. 8080:80)'
+        setTimedMessage(
+          'Port format must be host:container and both must be numbers (e.g. 8080:80)',
+          'red'
         );
-        setMessageColor('red');
         return;
       }
-      setStep(3);
+      dispatch({ type: 'SET', payload: { step: 3 } });
       const isDb = dbImages.some((db) =>
         imageName.trim().toLowerCase().includes(db)
       );
@@ -199,25 +260,25 @@ export function useContainerCreation({
           profile.suggestedEnv && profile.suggestedEnv.length
             ? ` | Suggested: ${profile.suggestedEnv.join(', ')}`
             : '';
-        setMessage(
-          `Required env vars for ${baseName}: ${profile.requiredEnv.join(', ')}. Enter as VAR=val,VAR2=val2${suggestedPart}`
+        setTimedMessage(
+          `Required env vars for ${baseName}: ${profile.requiredEnv.join(', ')}. Enter as VAR=val,VAR2=val2${suggestedPart}`,
+          'yellow'
         );
-        setMessageColor('yellow');
       } else if (profile && profile.suggestedEnv && profile.suggestedEnv.length) {
-        setMessage(
-          `Suggested env vars for ${baseName}: ${profile.suggestedEnv.join(', ')}. Enter as VAR=val,VAR2=val2 or leave empty.`
+        setTimedMessage(
+          `Suggested env vars for ${baseName}: ${profile.suggestedEnv.join(', ')}. Enter as VAR=val,VAR2=val2 or leave empty.`,
+          'yellow'
         );
-        setMessageColor('yellow');
       } else if (isDb) {
-        setMessage(
-          'Warning: This image usually requires environment variables (e.g. MYSQL_ROOT_PASSWORD=my-secret-pw for MySQL, POSTGRES_PASSWORD=yourpassword for Postgres). Enter them as VAR=val,VAR2=val2 or leave empty and press Enter.'
+        setTimedMessage(
+          'Warning: This image usually requires environment variables (e.g. MYSQL_ROOT_PASSWORD=my-secret-pw for MySQL, POSTGRES_PASSWORD=yourpassword for Postgres). Enter them as VAR=val,VAR2=val2 or leave empty and press Enter.',
+          'yellow'
         );
-        setMessageColor('yellow');
       } else {
-        setMessage(
-          'Optional: Enter environment variables (format VAR1=val1,VAR2=val2) or leave empty and press Enter'
+        setTimedMessage(
+          'Optional: Enter environment variables (format VAR1=val1,VAR2=val2) or leave empty and press Enter',
+          'yellow'
         );
-        setMessageColor('yellow');
       }
       return;
     }
@@ -225,8 +286,7 @@ export function useContainerCreation({
       // Contextual env validation using image profiles
       const result = validateEnvVars(envInput, imageName, imageProfiles);
       if (!result.valid) {
-        setMessage(result.errors.join(' | '));
-        setMessageColor('red');
+        setTimedMessage(result.errors.join(' | '), 'red');
         return;
       }
       // Final step: call onCreate with all data (safely)
@@ -238,16 +298,7 @@ export function useContainerCreation({
    * Cancels the creation process and resets state.
    */
   function cancelCreation() {
-    setStep(0);
-    setImageName('');
-    setContainerName('');
-    setPortInput('');
-    setEnvInput('');
-    setMessage('');
-    setMessageColor('yellow');
-    setSuggestions([]);
-    setSelectedSuggestionIndex(-1);
-    setVisibleOffset(0);
+    dispatch({ type: 'RESET' });
     safeCall(onCancel);
   }
 
@@ -256,16 +307,7 @@ export function useContainerCreation({
    * Used by the command router when the user presses 'c' to open the creation wizard.
    */
   function resetCreation() {
-    setStep(0);
-    setImageName('');
-    setContainerName('');
-    setPortInput('');
-    setEnvInput('');
-    setMessage('Insert the name of the image to create: ');
-    setMessageColor('yellow');
-    setSuggestions([]);
-    setSelectedSuggestionIndex(-1);
-    setVisibleOffset(0);
+    dispatch({ type: 'RESET_WIZARD' });
   }
 
   /**
@@ -280,8 +322,9 @@ export function useContainerCreation({
     if (!suggested.length) return;
     const addedKeys = envInput.split(',').map(s => s.split('=')[0].trim()).filter(Boolean);
     const next = suggested.find(s => !addedKeys.includes(s.split('=')[0]));
-    if (!next) { setMessage('All suggested env vars added'); return; }
-    setEnvInput(prev => prev ? `${prev},${next}` : next);
+    if (!next) { setTimedMessage('All suggested env vars added', 'yellow'); return; }
+    const newEnvInput = envInput ? `${envInput},${next}` : next;
+    dispatch({ type: 'SET', payload: { envInput: newEnvInput } });
   }
 
   /**

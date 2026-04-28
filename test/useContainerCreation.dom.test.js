@@ -512,3 +512,56 @@ describe('useContainerCreation — triggerHubSearch()', () => {
     expect(expose.current.hubResults).toBeNull();
   });
 });
+
+describe('useContainerCreation — message auto-clear after timeout', () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.runOnlyPendingTimers();
+    jest.useRealTimers();
+  });
+
+  test('error message set on nextStep clears after 4000ms', () => {
+    const expose = { current: null };
+    render(<HookTester onCreate={() => {}} onCancel={() => {}} dbImages={[]} expose={expose} />);
+
+    // Trigger validation error (empty imageName)
+    act(() => {
+      expose.current.nextStep();
+    });
+
+    expect(expose.current.message).toBe('Image name cannot be empty.');
+
+    // Advance timers by 4000ms
+    act(() => {
+      jest.advanceTimersByTime(4000);
+    });
+
+    expect(expose.current.message).toBe('');
+  });
+
+  test('success message from insertNextSuggestedEnv clears after 4000ms', () => {
+    const expose = { current: null };
+    render(<HookTester onCreate={() => {}} onCancel={() => {}} dbImages={[]} imageProfiles={IMAGE_PROFILES} expose={expose} />);
+
+    act(() => { expose.current.setImageName('postgres'); });
+    act(() => { expose.current.nextStep(); }); // step 0 → 1
+    act(() => { expose.current.nextStep(); }); // step 1 → 2
+    act(() => { expose.current.nextStep(); }); // step 2 → 3
+
+    // Exhaust all suggested envs then call insertNextSuggestedEnv once more to get 'All suggested' message
+    const profile = IMAGE_PROFILES['postgres'];
+    act(() => { expose.current.setEnvInput(profile.suggestedEnv.join(',')); });
+    act(() => { expose.current.insertNextSuggestedEnv(); });
+
+    expect(expose.current.message).toBe('All suggested env vars added');
+
+    act(() => {
+      jest.advanceTimersByTime(4000);
+    });
+
+    expect(expose.current.message).toBe('');
+  });
+});
