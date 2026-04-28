@@ -57,17 +57,17 @@ export const IMAGE_PROFILES = {
   golang:        { requiredEnv: [], defaultPort: '8080',  suggestedEnv: ['GOMAXPROCS=2'],                                                                                                     defaultTag: '1.22-alpine' },
   redis:         { requiredEnv: [], defaultPort: '6379',  suggestedEnv: ['REDIS_PASSWORD=change-me'],                                                                                         defaultTag: '7-alpine' },
   memcached:     { requiredEnv: [], defaultPort: '11211', suggestedEnv: [],                                                                                                                  defaultTag: '1.6-alpine' },
-  postgres:      { requiredEnv: ['POSTGRES_PASSWORD'], defaultPort: '5432', suggestedEnv: ['POSTGRES_USER=postgres', 'POSTGRES_DB=app'],                                                     defaultTag: '17-alpine' },
-  mysql:         { requiredEnv: ['MYSQL_ROOT_PASSWORD'], defaultPort: '3306', suggestedEnv: ['MYSQL_DATABASE=app', 'MYSQL_USER=app', 'MYSQL_PASSWORD=app123'],                               defaultTag: '8.0' },
-  mariadb:       { requiredEnv: ['MARIADB_ROOT_PASSWORD'], defaultPort: '3306', suggestedEnv: ['MARIADB_DATABASE=app', 'MARIADB_USER=app', 'MARIADB_PASSWORD=app123'],                       defaultTag: '11-alpine' },
+  postgres:      { requiredEnv: ['POSTGRES_PASSWORD'], defaultPort: '5432', suggestedEnv: ['POSTGRES_PASSWORD=secret', 'POSTGRES_USER=postgres', 'POSTGRES_DB=app'],                        defaultTag: '17-alpine' },
+  mysql:         { requiredEnv: ['MYSQL_ROOT_PASSWORD'], defaultPort: '3306', suggestedEnv: ['MYSQL_ROOT_PASSWORD=secret', 'MYSQL_DATABASE=app', 'MYSQL_USER=app', 'MYSQL_PASSWORD=app123'], defaultTag: '8.0' },
+  mariadb:       { requiredEnv: ['MARIADB_ROOT_PASSWORD'], defaultPort: '3306', suggestedEnv: ['MARIADB_ROOT_PASSWORD=secret', 'MARIADB_DATABASE=app', 'MARIADB_USER=app', 'MARIADB_PASSWORD=app123'], defaultTag: '11-alpine' },
   mongo:         { requiredEnv: [], defaultPort: '27017', suggestedEnv: ['MONGO_INITDB_ROOT_USERNAME=admin', 'MONGO_INITDB_ROOT_PASSWORD=secret'],                                           defaultTag: '7.0' },
-  mssql:         { requiredEnv: ['ACCEPT_EULA', 'SA_PASSWORD'], defaultPort: '1433', suggestedEnv: ['ACCEPT_EULA=Y', 'MSSQL_PID=Developer'],                                                 defaultTag: '2022-latest' },
+  mssql:         { requiredEnv: ['ACCEPT_EULA', 'SA_PASSWORD'], defaultPort: '1433', suggestedEnv: ['ACCEPT_EULA=Y', 'SA_PASSWORD=Strong!Passw0rd', 'MSSQL_PID=Developer'],                  defaultTag: '2022-latest' },
   rabbitmq:      { requiredEnv: [], defaultPort: '5672',  suggestedEnv: ['RABBITMQ_DEFAULT_USER=guest', 'RABBITMQ_DEFAULT_PASS=guest'],                                                      defaultTag: '3-management-alpine' },
   kafka:         { requiredEnv: [], defaultPort: '9092',  suggestedEnv: ['KAFKA_CFG_LISTENERS=PLAINTEXT://:9092', 'KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://localhost:9092'],              defaultTag: '3.7' },
   zookeeper:     { requiredEnv: [], defaultPort: '2181',  suggestedEnv: ['ALLOW_ANONYMOUS_LOGIN=yes'],                                                                                        defaultTag: '3.9' },
   elasticsearch: { requiredEnv: [], defaultPort: '9200',  suggestedEnv: ['discovery.type=single-node', 'xpack.security.enabled=false'],                                                      defaultTag: '8.13.0' },
-  minio:         { requiredEnv: ['MINIO_ROOT_USER', 'MINIO_ROOT_PASSWORD'], defaultPort: '9000', suggestedEnv: ['MINIO_CONSOLE_ADDRESS=:9001'],                                              defaultTag: 'latest' },
-  wordpress:     { requiredEnv: ['WORDPRESS_DB_HOST', 'WORDPRESS_DB_USER', 'WORDPRESS_DB_PASSWORD', 'WORDPRESS_DB_NAME'], defaultPort: '8080', suggestedEnv: ['WORDPRESS_TABLE_PREFIX=wp_'], defaultTag: '6.5-apache' },
+  minio:         { requiredEnv: ['MINIO_ROOT_USER', 'MINIO_ROOT_PASSWORD'], defaultPort: '9000', suggestedEnv: ['MINIO_ROOT_USER=admin', 'MINIO_ROOT_PASSWORD=secret', 'MINIO_CONSOLE_ADDRESS=:9001'], defaultTag: 'latest' },
+  wordpress:     { requiredEnv: ['WORDPRESS_DB_HOST', 'WORDPRESS_DB_USER', 'WORDPRESS_DB_PASSWORD', 'WORDPRESS_DB_NAME'], defaultPort: '8080', suggestedEnv: ['WORDPRESS_DB_HOST=db', 'WORDPRESS_DB_USER=wp', 'WORDPRESS_DB_PASSWORD=secret', 'WORDPRESS_DB_NAME=wordpress', 'WORDPRESS_TABLE_PREFIX=wp_'], defaultTag: '6.5-apache' },
 };
 
 /**

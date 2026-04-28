@@ -315,6 +315,90 @@ describe('useContainerCreation — resolveImageTag on nextStep & applyFocusedSug
   });
 });
 
+describe('useContainerCreation — insertNextSuggestedEnv() & hasSuggestedEnv', () => {
+  test('insertNextSuggestedEnv is exposed from hook', () => {
+    const expose = { current: null };
+    render(<HookTester onCreate={() => {}} onCancel={() => {}} dbImages={[]} imageProfiles={IMAGE_PROFILES} expose={expose} />);
+    expect(typeof expose.current.insertNextSuggestedEnv).toBe('function');
+  });
+
+  test('hasSuggestedEnv is true when profile has suggestedEnv entries (postgres)', () => {
+    const expose = { current: null };
+    render(<HookTester onCreate={() => {}} onCancel={() => {}} dbImages={[]} imageProfiles={IMAGE_PROFILES} expose={expose} />);
+    act(() => { expose.current.setImageName('postgres:17-alpine'); });
+    expect(expose.current.hasSuggestedEnv).toBe(true);
+  });
+
+  test('hasSuggestedEnv is false when image has no suggestedEnv (nginx)', () => {
+    const expose = { current: null };
+    render(<HookTester onCreate={() => {}} onCancel={() => {}} dbImages={[]} imageProfiles={IMAGE_PROFILES} expose={expose} />);
+    act(() => { expose.current.setImageName('nginx:1.27-alpine'); });
+    expect(expose.current.hasSuggestedEnv).toBe(false);
+  });
+
+  test('calling insertNextSuggestedEnv with postgres image inserts first suggested env', () => {
+    const expose = { current: null };
+    render(<HookTester onCreate={() => {}} onCancel={() => {}} dbImages={[]} imageProfiles={IMAGE_PROFILES} expose={expose} />);
+    // advance to step 3 with postgres
+    act(() => { expose.current.setImageName('postgres'); });
+    act(() => { expose.current.nextStep(); }); // → step 1 (resolves tag)
+    act(() => { expose.current.nextStep(); }); // → step 2
+    act(() => { expose.current.nextStep(); }); // → step 3
+
+    act(() => { expose.current.insertNextSuggestedEnv(); });
+    // envInput should contain the first suggestedEnv for postgres (required var first)
+    expect(expose.current.envInput).toBe('POSTGRES_PASSWORD=secret');
+  });
+
+  test('calling insertNextSuggestedEnv again inserts the next pending suggestion', () => {
+    const expose = { current: null };
+    render(<HookTester onCreate={() => {}} onCancel={() => {}} dbImages={[]} imageProfiles={IMAGE_PROFILES} expose={expose} />);
+    act(() => { expose.current.setImageName('postgres'); });
+    act(() => { expose.current.nextStep(); });
+    act(() => { expose.current.nextStep(); });
+    act(() => { expose.current.nextStep(); });
+
+    act(() => { expose.current.insertNextSuggestedEnv(); }); // inserts first
+    act(() => { expose.current.insertNextSuggestedEnv(); }); // inserts second
+    expect(expose.current.envInput).toBe('POSTGRES_PASSWORD=secret,POSTGRES_USER=postgres');
+  });
+
+  test('calling insertNextSuggestedEnv when all already added sets feedback message', () => {
+    const expose = { current: null };
+    render(<HookTester onCreate={() => {}} onCancel={() => {}} dbImages={[]} imageProfiles={IMAGE_PROFILES} expose={expose} />);
+    act(() => { expose.current.setImageName('postgres'); });
+    act(() => { expose.current.nextStep(); });
+    act(() => { expose.current.nextStep(); });
+    act(() => { expose.current.nextStep(); });
+
+    // manually set all suggested envs
+    const profile = IMAGE_PROFILES['postgres'];
+    act(() => { expose.current.setEnvInput(profile.suggestedEnv.join(',')); });
+
+    act(() => { expose.current.insertNextSuggestedEnv(); });
+    expect(expose.current.message).toBe('All suggested env vars added');
+    // envInput unchanged
+    expect(expose.current.envInput).toBe(profile.suggestedEnv.join(','));
+  });
+
+  test('if user manually typed a key matching a suggestion, Tab skips that key', () => {
+    const expose = { current: null };
+    render(<HookTester onCreate={() => {}} onCancel={() => {}} dbImages={[]} imageProfiles={IMAGE_PROFILES} expose={expose} />);
+    act(() => { expose.current.setImageName('postgres'); });
+    act(() => { expose.current.nextStep(); });
+    act(() => { expose.current.nextStep(); });
+    act(() => { expose.current.nextStep(); });
+
+    // user manually typed first suggestion key with different value
+    act(() => { expose.current.setEnvInput('POSTGRES_PASSWORD=mypass'); });
+
+    act(() => { expose.current.insertNextSuggestedEnv(); });
+    // should skip POSTGRES_PASSWORD and insert the next one (POSTGRES_USER)
+    expect(expose.current.envInput).toContain('POSTGRES_USER=postgres');
+    expect(expose.current.envInput).not.toContain('POSTGRES_PASSWORD=secret');
+  });
+});
+
 describe('useContainerCreation — triggerHubSearch()', () => {
   beforeEach(() => {
     searchDockerHub.mockReset();
