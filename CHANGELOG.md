@@ -7,6 +7,57 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 - Nothing yet.
 
+## [4.0.0] - 2026-04-28
+
+### 🎉 Major release — Guided creation wizard
+
+This release transforms CDD from a monitoring dashboard into a fully guided container creation experience. The wizard now knows what images need, searches Docker Hub live, and automates the tedious parts.
+
+### Added
+- **Interactive creation wizard** (`C` to open):
+  - 20 curated image profiles with offline autocomplete (↑↓ to navigate, Enter to select)
+  - `[Tab]` on image field searches Docker Hub live — race-condition safe (AbortController + requestId)
+  - `[searching Docker Hub...]` loading indicator in suggestion panel
+  - Hub results replace static suggestions; typing reverts to local list instantly
+  - `[Tab]` on env vars field inserts next suggested `KEY=VALUE` from the image profile
+  - Context-sensitive controls HUD — shows available keys at every step
+- **Smart default tags** — no more `:latest` failures:
+  - `postgres:17-alpine`, `redis:7-alpine`, `nginx:1.27-alpine`, `mysql:8.0`, and 16 more
+  - `resolveImageTag()` pure helper — preserves explicit user tags, applies profile default otherwise
+- **Required env vars included in suggestions** — `MYSQL_ROOT_PASSWORD`, `POSTGRES_PASSWORD`, `SA_PASSWORD`, etc. are now the first entries Tab inserts, so required fields are never missed
+- **Bilingual README** — English (`README.md`) and Spanish (`README.es.md`)
+
+### Fixed
+- Images like `postgres`, `mysql`, `mariadb` no longer fail with 404 due to missing `:latest` tag
+- Required env vars were never suggested by Tab autocomplete — now always appear first
+
+## [3.2.5] - 2026-04-27
+
+### Added
+- Context-sensitive controls HUD in the creation wizard: shows available keys per step
+- Step 0: `[Tab] Search Hub · [↑↓] Browse · [Enter] Confirm · [Esc] Cancel`
+- Step 0 with suggestions: `[↑↓] Navigate · [Enter] Select · [Esc] Cancel`
+- Steps 1–3: `[Enter] Continue · [Esc] Cancel`
+- `ControlsHUD` component with pure `getHints(step, hasSuggestions, isSearchingHub)` function
+
+## [3.2.4] - 2026-04-27
+
+### Fixed
+- Images no longer default to `:latest` — each profile now ships a correct stable tag (e.g. `postgres:17-alpine`, `redis:7-alpine`, `nginx:1.27-alpine`)
+- Selecting an image suggestion or confirming step 0 auto-appends the correct tag when none is typed
+
+### Added  
+- `resolveImageTag(imageName)` pure helper — preserves explicit user tags, appends profile default otherwise
+
+## [3.2.3] - 2026-04-27
+
+### Added
+- Docker Hub live search: pressing Tab on image name field searches Docker Hub in real time
+- `searchDockerHub()` helper with AbortSignal.timeout(5000), race-condition guard (AbortController + requestId)
+- `formatHubResult()` formatter: `nginx [★ official] [1B+ pulls]`
+- `isSearchingHub` loading state with `[searching Docker Hub...]` indicator in SuggestionPanel
+- Hub results replace static suggestions; typing reverts immediately to static list
+
 ## [3.2.2] - 2026-04-27
 
 ### Added

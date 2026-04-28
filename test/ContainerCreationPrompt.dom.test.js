@@ -65,4 +65,249 @@ describe('ContainerCreationPrompt — SuggestionPanel wiring', () => {
     const nginxEls = getAllByText(/nginx/);
     expect(nginxEls.length).toBeGreaterThan(0);
   });
+
+  // FR8 — hubResults wiring
+  test('when hubResults is provided, activeItems = hubResults (replaces suggestions)', () => {
+    const { getByText, queryByText } = render(
+      <ContainerCreationPrompt
+        step={0}
+        imageName="ng"
+        containerName=""
+        portInput=""
+        envInput=""
+        message=""
+        messageColor="yellow"
+        suggestions={['nginx', 'golang']}
+        hubResults={['hub-nginx', 'hub-node']}
+        selectedSuggestionIndex={-1}
+        visibleOffset={0}
+      />
+    );
+    expect(getByText(/hub-nginx/)).toBeTruthy();
+    expect(queryByText(/golang/)).toBeNull();
+  });
+
+  test('when hubResults is null, falls back to suggestions', () => {
+    const { getByText } = render(
+      <ContainerCreationPrompt
+        step={0}
+        imageName="ng"
+        containerName=""
+        portInput=""
+        envInput=""
+        message=""
+        messageColor="yellow"
+        suggestions={['nginx', 'golang']}
+        hubResults={null}
+        selectedSuggestionIndex={-1}
+        visibleOffset={0}
+      />
+    );
+    expect(getByText(/golang/)).toBeTruthy();
+  });
+
+  test('when step===0 and isSearchingHub=true, SuggestionPanel is shown even if activeItems is empty', () => {
+    const { getByText } = render(
+      <ContainerCreationPrompt
+        step={0}
+        imageName="ng"
+        containerName=""
+        portInput=""
+        envInput=""
+        message=""
+        messageColor="yellow"
+        suggestions={[]}
+        hubResults={null}
+        isSearchingHub={true}
+        selectedSuggestionIndex={-1}
+        visibleOffset={0}
+      />
+    );
+    expect(getByText(/searching Docker Hub/)).toBeTruthy();
+  });
+
+  test('when step===0 and isSearchingHub=false and activeItems is empty, SuggestionPanel is NOT shown', () => {
+    const { queryByTestId } = render(
+      <ContainerCreationPrompt
+        step={0}
+        imageName="ng"
+        containerName=""
+        portInput=""
+        envInput=""
+        message=""
+        messageColor="yellow"
+        suggestions={[]}
+        hubResults={null}
+        isSearchingHub={false}
+        selectedSuggestionIndex={-1}
+        visibleOffset={0}
+      />
+    );
+    expect(queryByTestId('suggestion-panel')).toBeNull();
+  });
+
+  test('isLoading prop is passed down to SuggestionPanel when isSearchingHub=true', () => {
+    const { getByText } = render(
+      <ContainerCreationPrompt
+        step={0}
+        imageName="ng"
+        containerName=""
+        portInput=""
+        envInput=""
+        message=""
+        messageColor="yellow"
+        suggestions={['nginx']}
+        hubResults={null}
+        isSearchingHub={true}
+        selectedSuggestionIndex={-1}
+        visibleOffset={0}
+      />
+    );
+    expect(getByText(/searching Docker Hub/)).toBeTruthy();
+  });
+});
+
+describe('ContainerCreationPrompt — ControlsHUD wiring', () => {
+  test('step=0, no suggestions: renders ControlsHUD with [Tab] and Search Hub', () => {
+    const { getByText } = render(
+      <ContainerCreationPrompt
+        step={0}
+        imageName=""
+        containerName=""
+        portInput=""
+        envInput=""
+        message=""
+        messageColor="yellow"
+        suggestions={[]}
+        hubResults={null}
+        isSearchingHub={false}
+        selectedSuggestionIndex={-1}
+        visibleOffset={0}
+      />
+    );
+    expect(getByText('[Tab]')).toBeTruthy();
+    expect(getByText(/Search Hub/)).toBeTruthy();
+  });
+
+  test('does NOT render old static text "Press Enter to continue, Escape to cancel"', () => {
+    const { queryByText } = render(
+      <ContainerCreationPrompt
+        step={0}
+        imageName=""
+        containerName=""
+        portInput=""
+        envInput=""
+        message=""
+        messageColor="yellow"
+        suggestions={[]}
+        hubResults={null}
+        isSearchingHub={false}
+        selectedSuggestionIndex={-1}
+        visibleOffset={0}
+      />
+    );
+    expect(queryByText(/Press Enter to continue, Escape to cancel/)).toBeNull();
+  });
+
+  test('step=0, hasSuggestions=true: renders [↑↓] not [Tab]', () => {
+    const { getByText, queryByText } = render(
+      <ContainerCreationPrompt
+        step={0}
+        imageName="ng"
+        containerName=""
+        portInput=""
+        envInput=""
+        message=""
+        messageColor="yellow"
+        suggestions={['nginx', 'golang']}
+        hubResults={null}
+        isSearchingHub={false}
+        selectedSuggestionIndex={-1}
+        visibleOffset={0}
+      />
+    );
+    expect(getByText('[↑↓]')).toBeTruthy();
+    expect(queryByText('[Tab]')).toBeNull();
+  });
+
+  test('step=0, isSearchingHub=true, no suggestions: ControlsHUD does NOT render [Tab] or Navigate, DOES render [Enter] and [Esc]', () => {
+    const { queryByText, getByText } = render(
+      <ContainerCreationPrompt
+        step={0}
+        imageName="ng"
+        containerName=""
+        portInput=""
+        envInput=""
+        message=""
+        messageColor="yellow"
+        suggestions={[]}
+        hubResults={null}
+        isSearchingHub={true}
+        selectedSuggestionIndex={-1}
+        visibleOffset={0}
+      />
+    );
+    expect(queryByText('[Tab]')).toBeNull();
+    expect(queryByText(/Navigate/)).toBeNull();
+    expect(getByText('[Enter]')).toBeTruthy();
+    expect(getByText('[Esc]')).toBeTruthy();
+  });
+
+  test('step=1: renders [Enter] and [Esc]', () => {
+    const { getByText } = render(
+      <ContainerCreationPrompt
+        step={1}
+        imageName="nginx"
+        containerName=""
+        portInput=""
+        envInput=""
+        message=""
+        messageColor="yellow"
+        suggestions={[]}
+        selectedSuggestionIndex={-1}
+        visibleOffset={0}
+      />
+    );
+    expect(getByText('[Enter]')).toBeTruthy();
+    expect(getByText('[Esc]')).toBeTruthy();
+  });
+
+  test('step=3, hasSuggestedEnv=true: renders [Tab] in HUD', () => {
+    const { getByText } = render(
+      <ContainerCreationPrompt
+        step={3}
+        imageName="postgres:17-alpine"
+        containerName=""
+        portInput=""
+        envInput=""
+        message=""
+        messageColor="yellow"
+        suggestions={[]}
+        selectedSuggestionIndex={-1}
+        visibleOffset={0}
+        hasSuggestedEnv={true}
+      />
+    );
+    expect(getByText('[Tab]')).toBeTruthy();
+    expect(getByText(/Insert next env/)).toBeTruthy();
+  });
+
+  test('step=3, hasSuggestedEnv=false: does NOT render [Tab] in HUD', () => {
+    const { queryByText } = render(
+      <ContainerCreationPrompt
+        step={3}
+        imageName="nginx:1.27-alpine"
+        containerName=""
+        portInput=""
+        envInput=""
+        message=""
+        messageColor="yellow"
+        suggestions={[]}
+        selectedSuggestionIndex={-1}
+        visibleOffset={0}
+        hasSuggestedEnv={false}
+      />
+    );
+    expect(queryByText('[Tab]')).toBeNull();
+  });
 });

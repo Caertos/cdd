@@ -35,6 +35,12 @@ export default function App() {
         envInput={controls.envInput}
         message={controls.message}
         messageColor={controls.messageColor}
+        suggestions={controls.creation.suggestions}
+        selectedSuggestionIndex={controls.creation.selectedSuggestionIndex}
+        visibleOffset={controls.creation.visibleOffset}
+        isSearchingHub={controls.creation.isSearchingHub}
+        hubResults={controls.creation.hubResults}
+        hasSuggestedEnv={controls.creation.hasSuggestedEnv}
       />
     );
   }

@@ -1,7 +1,8 @@
 import React from 'react';
-import { Box, Text } from 'ink';
+import { Box } from 'ink';
 import { PromptField, PromptMessage } from './PromptField.jsx';
 import { SuggestionPanel } from './SuggestionPanel.jsx';
+import { ControlsHUD } from './ControlsHUD.jsx';
 import PropTypes from 'prop-types';
 
 /**
@@ -34,10 +35,13 @@ export default function ContainerCreationPrompt(props) {
     suggestions = [],
     selectedSuggestionIndex = -1,
     visibleOffset = 0,
+    hubResults = null,
+    isSearchingHub = false,
+    hasSuggestedEnv = false,
   } = props;
   const prompts = [
     {
-      label: 'Name of the image to create (e.g., nginx:latest):',
+      label: 'Name of the image to create (e.g., nginx:1.27-alpine):',
       value: imageName,
       required: true,
     },
@@ -58,7 +62,9 @@ export default function ContainerCreationPrompt(props) {
     },
   ];
   const { label, value, required } = prompts[step] || {};
-  const showSuggestions = step === 0 && suggestions.length > 0;
+  const activeItems = hubResults ?? suggestions;
+  const showSuggestions = step === 0 && (isSearchingHub || activeItems.length > 0);
+  const hasSuggestions = (suggestions?.length > 0) || (hubResults?.length > 0);
   return (
     <Box
       flexDirection="column"
@@ -69,13 +75,14 @@ export default function ContainerCreationPrompt(props) {
       <PromptField label={label} value={value} required={required} />
       {showSuggestions && (
         <SuggestionPanel
-          items={suggestions}
+          items={activeItems}
           selectedIndex={selectedSuggestionIndex}
           visibleOffset={visibleOffset}
+          isLoading={isSearchingHub}
         />
       )}
       <PromptMessage message={message} color={messageColor} />
-      <Text dimColor>Press Enter to continue, Escape to cancel</Text>
+      <ControlsHUD step={step} hasSuggestions={hasSuggestions} isSearchingHub={isSearchingHub} hasSuggestedEnv={hasSuggestedEnv} />
     </Box>
   );
 }
@@ -91,6 +98,9 @@ ContainerCreationPrompt.propTypes = {
   suggestions: PropTypes.arrayOf(PropTypes.string),
   selectedSuggestionIndex: PropTypes.number,
   visibleOffset: PropTypes.number,
+  hubResults: PropTypes.arrayOf(PropTypes.string),
+  isSearchingHub: PropTypes.bool,
+  hasSuggestedEnv: PropTypes.bool,
 };
 
 // Named export for test compatibility with jest ESM interop
