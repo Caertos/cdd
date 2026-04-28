@@ -55,14 +55,13 @@ export function useContainerActions({ containers, onAction }) {
     setMessageColor('yellow');
     try {
       await actionFn(container.id);
-      setMessage(`${actionLabel} container successful.`);
-      setMessageColor('green');
+      setTimedMessage(`${actionLabel} container successful.`, 'green');
       safeCall(onAction);
     } catch (err) {
-      setMessage(
-        `Failed to ${actionLabel.toLowerCase()} container: ${err.message}`
+      setTimedMessage(
+        `Failed to ${actionLabel.toLowerCase()} container: ${err.message}`,
+        'red'
       );
-      setMessageColor('red');
     }
   }
 

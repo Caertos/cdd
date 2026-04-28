@@ -97,6 +97,17 @@ export function useContainerCreation({
   // Timer for auto-clearing messages
   const messageTimerRef = useRef(null);
 
+  /**
+   * Sets a permanent message (e.g. step instructions). No auto-clear.
+   */
+  function setStepMessage(msg, color = 'yellow') {
+    clearTimeout(messageTimerRef.current);
+    dispatch({ type: 'SET', payload: { message: msg, messageColor: color } });
+  }
+
+  /**
+   * Sets a transient feedback message (e.g. validation errors). Auto-clears after `ms`.
+   */
   function setTimedMessage(msg, color = 'yellow', ms = 4000) {
     clearTimeout(messageTimerRef.current);
     dispatch({ type: 'SET', payload: { message: msg, messageColor: color } });
@@ -220,7 +231,7 @@ export function useContainerCreation({
       }
       const resolved = resolveImageTag(imageName, imageProfiles);
       dispatch({ type: 'SET', payload: { imageName: resolved, step: 1 } });
-      setTimedMessage(
+      setStepMessage(
         'Optional: Enter container name or leave empty and press Enter',
         'yellow'
       );
@@ -228,7 +239,7 @@ export function useContainerCreation({
     }
     if (step === 1) {
       dispatch({ type: 'SET', payload: { step: 2 } });
-      setTimedMessage(
+      setStepMessage(
         'Optional: Enter ports (format 8080:80,443:443) or leave empty and press Enter',
         'yellow'
       );
@@ -260,22 +271,22 @@ export function useContainerCreation({
           profile.suggestedEnv && profile.suggestedEnv.length
             ? ` | Suggested: ${profile.suggestedEnv.join(', ')}`
             : '';
-        setTimedMessage(
+        setStepMessage(
           `Required env vars for ${baseName}: ${profile.requiredEnv.join(', ')}. Enter as VAR=val,VAR2=val2${suggestedPart}`,
           'yellow'
         );
       } else if (profile && profile.suggestedEnv && profile.suggestedEnv.length) {
-        setTimedMessage(
+        setStepMessage(
           `Suggested env vars for ${baseName}: ${profile.suggestedEnv.join(', ')}. Enter as VAR=val,VAR2=val2 or leave empty.`,
           'yellow'
         );
       } else if (isDb) {
-        setTimedMessage(
+        setStepMessage(
           'Warning: This image usually requires environment variables (e.g. MYSQL_ROOT_PASSWORD=my-secret-pw for MySQL, POSTGRES_PASSWORD=yourpassword for Postgres). Enter them as VAR=val,VAR2=val2 or leave empty and press Enter.',
           'yellow'
         );
       } else {
-        setTimedMessage(
+        setStepMessage(
           'Optional: Enter environment variables (format VAR1=val1,VAR2=val2) or leave empty and press Enter',
           'yellow'
         );
