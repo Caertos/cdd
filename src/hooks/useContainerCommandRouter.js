@@ -12,6 +12,7 @@ import { useCallback } from 'react';
  *   l  — open logs viewer and start log stream
  *   c  — open container creation wizard (reset + activate)
  *   d  — toggle debug log panel
+ *   s  — open interactive shell in container
  *
  * @param {Object} params
  * @param {Object} params.actions       - API from useContainerActions
@@ -23,6 +24,7 @@ import { useCallback } from 'react';
  * @param {Function} params.onStartErase    - Callback: activates confirmErase state
  * @param {Function} params.onToggleDebug   - Callback: toggles showDebugLogs state
  * @param {Function} params.onStartCreate   - Callback: sets creatingContainer = true
+ * @param {Function} params.onOpenShell     - Callback: opens interactive shell
  * @returns {{ handleDockerCommands: Function }}
  */
 export function useContainerCommandRouter({
@@ -35,6 +37,7 @@ export function useContainerCommandRouter({
   onStartErase,
   onToggleDebug,
   onStartCreate,
+  onOpenShell,
 }) {
   const handleDockerCommands = useCallback(
     (input) => {
@@ -104,6 +107,14 @@ export function useContainerCommandRouter({
         return true;
       }
 
+      if (input === 's') {
+        if (!container) {
+          return true;
+        }
+        onOpenShell(container);
+        return true;
+      }
+
       return false;
     },
     [
@@ -114,6 +125,7 @@ export function useContainerCommandRouter({
       onStartCreate,
       onStartErase,
       onToggleDebug,
+      onOpenShell,
       selected,
       startLogsStream,
     ]

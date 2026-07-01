@@ -8,6 +8,7 @@ import { useDebugLogs } from './debug/useDebugLogs';
 import { useEraseConfirmation } from './useEraseConfirmation';
 import { useExitHandler } from './useExitHandler';
 import { useContainerCommandRouter } from './useContainerCommandRouter';
+import { useShellMode } from './useShellMode';
 import { getLogsStream } from '../helpers/dockerService/serviceComponents/containerLogs.js';
 import { createContainer as svcCreateContainer } from '../helpers/dockerService/serviceComponents/containerActions.js';
 import { buildContainerOptions } from '../helpers/containerOptionsBuilder.js';
@@ -26,6 +27,7 @@ export function useControls(containers = [], overrides = {}) {
 
   // — Modular hooks —
   const actions = useContainerActions({ containers });
+  const shellMode = useShellMode();
 
   const creation = useContainerCreation({
     onCreate: async ({ imageName, containerName, portInput, envInput }) => {
@@ -48,7 +50,10 @@ export function useControls(containers = [], overrides = {}) {
         }
         actions.setTimedMessage(`Created container ${id}${portMsg}`, 'green');
       } catch (err) {
-        actions.setTimedMessage(`Error creating container: ${err.message}`, 'red');
+        actions.setTimedMessage(
+          `Error creating container: ${err.message}`,
+          'red'
+        );
       } finally {
         setCreatingContainer(false);
       }
@@ -62,11 +67,13 @@ export function useControls(containers = [], overrides = {}) {
   const debugLogs = useDebugLogs();
 
   // Allow overrides for testability (e.g. injecting a mock triggerHubSearch)
-  const triggerHubSearch = overrides.triggerHubSearch ?? creation.triggerHubSearch;
+  const triggerHubSearch =
+    overrides.triggerHubSearch ?? creation.triggerHubSearch;
   const isSearchingHub = overrides.isSearchingHub ?? creation.isSearchingHub;
-  const insertNextSuggestedEnv = overrides.insertNextSuggestedEnv !== undefined
-    ? overrides.insertNextSuggestedEnv
-    : creation.insertNextSuggestedEnv;
+  const insertNextSuggestedEnv =
+    overrides.insertNextSuggestedEnv !== undefined
+      ? overrides.insertNextSuggestedEnv
+      : creation.insertNextSuggestedEnv;
 
   const eraseConfirmation = useEraseConfirmation({
     onConfirm: () => {
@@ -120,6 +127,7 @@ export function useControls(containers = [], overrides = {}) {
     },
     onToggleDebug: () => debugLogs.setShowDebugLogs((prev) => !prev),
     onStartCreate: () => setCreatingContainer(true),
+    onOpenShell: (container) => shellMode.openShell(container),
   });
 
   const exitHandler = useExitHandler({
@@ -205,7 +213,13 @@ export function useControls(containers = [], overrides = {}) {
           appendChar(creation.setEnvInput, creation.envInput, input);
       }
     },
-    [creation, setCreatingContainer, triggerHubSearch, isSearchingHub, insertNextSuggestedEnv]
+    [
+      creation,
+      setCreatingContainer,
+      triggerHubSearch,
+      isSearchingHub,
+      insertNextSuggestedEnv,
+    ]
   );
 
   // Single keyboard entry point
