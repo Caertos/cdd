@@ -7,6 +7,18 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 - Nothing yet.
 
+## [4.1.0] - 2026-07-01
+
+### Added
+- **Interactive shell mode** (`S` key): open a full `bash`/`sh` session inside any running container
+  - Auto-detects available shell (`bash` preferred, `sh` fallback)
+  - Full terminal support: run `psql`, `python3`, `node`, `redis-cli`, or any command
+  - Type `exit` or press `Ctrl+D` to return to the dashboard
+
+### Changed
+- Optimized npm package: excluded `src/`, `test/`, `coverage/`, `.atl/`, `ROADMAP.md` from published tarball (192 kB → 48 kB)
+- Added `files` field to `package.json` for explicit publish control
+
 ## [4.0.0] - 2026-04-28
 
 ### 🎉 Major release — Guided creation wizard
