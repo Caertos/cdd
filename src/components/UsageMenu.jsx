@@ -8,6 +8,7 @@ const SHORTCUTS = [
   'R to restart selected container',
   'C to create a container',
   'L to view logs of selected container',
+  'S to open shell in selected container',
   'D to toggle debug log panel',
   'E to remove selected container',
   'Q to quit',
