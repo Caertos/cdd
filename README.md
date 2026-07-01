@@ -13,9 +13,21 @@
 
 ---
 
-## 🎉 What's new in v3.2
+## 🎉 What's new in v4.1
 
-**v3.2 ships the interactive creation wizard — and it's a game changer.**
+**Open a shell inside any container with a single keystroke.**
+
+Press `S` and CDD drops you into a full interactive shell (`bash` or `sh`) inside the selected container — no `docker exec` typing needed.
+
+- **Auto-detected shell** — CDD probes the container and picks `bash` or `sh` automatically
+- **Full terminal support** — run `psql`, `python3`, `node`, `redis-cli`, or any command inside the container
+- **Clean exit** — type `exit` or press `Ctrl+D` to return to the dashboard
+
+---
+
+## Previous releases
+
+### v3.2 — Interactive creation wizard
 
 Forget `docker run` flags, forgotten env vars, and broken `:latest` tags. Press `C` and CDD guides you through creating a container in seconds:
 
@@ -81,6 +93,7 @@ Use `↑` / `↓` to navigate containers. Available keyboard shortcuts:
 | `R` | Restart selected container |
 | `C` | Open creation wizard |
 | `L` | Stream logs for selected container |
+| `S` | Open interactive shell inside selected container |
 | `E` | Erase (remove) selected container — confirmation required |
 | `D` | Toggle live debug panel |
 | `Q` | Quit |
@@ -120,6 +133,20 @@ Enter `KEY=VALUE` pairs one at a time. **Contextual hints** show recommended var
 | node / nginx / others | Common runtime vars as applicable |
 
 Press `Enter` on an empty line to finish and create the container.
+
+---
+
+## Interactive Shell
+
+Press `S` from the dashboard while a running container is selected. CDD will:
+
+1. Detect the available shell inside the container (`bash` or `sh`)
+2. Open a full interactive terminal session
+3. Drop you into the container's shell
+
+From there you can run any command — `psql` for PostgreSQL, `python3` for Python, `node` for Node.js, `redis-cli` for Redis, etc.
+
+Type `exit` or press `Ctrl+D` to leave the shell and return to the CDD dashboard.
 
 ---
 

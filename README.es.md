@@ -13,9 +13,21 @@
 
 ---
 
-## 🎉 Novedades en v3.2
+## 🎉 Novedades en v4.1
 
-**v3.2 trae el asistente de creación interactivo — y cambia las reglas del juego.**
+**Abrí un shell dentro de cualquier contenedor con una sola tecla.**
+
+Presiona `S` y CDD te lleva a un shell interactivo completo (`bash` o `sh`) dentro del contenedor seleccionado — sin necesidad de escribir `docker exec`.
+
+- **Shell auto-detectado** — CDD sondea el contenedor y elige `bash` o `sh` automáticamente
+- **Soporte de terminal completo** — ejecutá `psql`, `python3`, `node`, `redis-cli`, o cualquier comando dentro del contenedor
+- **Salida limpia** — escribí `exit` o presioná `Ctrl+D` para volver al dashboard
+
+---
+
+## Versiones anteriores
+
+### v3.2 — Asistente de creación interactivo
 
 Olvídate de los flags de `docker run`, las variables de entorno olvidadas y los tags `:latest` que fallan en silencio. Presiona `C` y CDD te guía para crear un contenedor en segundos:
 
@@ -81,6 +93,7 @@ Usa `↑` / `↓` para navegar por los contenedores. Atajos de teclado disponibl
 | `R` | Reiniciar el contenedor seleccionado |
 | `C` | Abrir el asistente de creación |
 | `L` | Ver logs del contenedor seleccionado en tiempo real |
+| `S` | Abrir shell interactivo dentro del contenedor seleccionado |
 | `E` | Eliminar el contenedor seleccionado — requiere confirmación |
 | `D` | Activar/desactivar panel de debug en vivo |
 | `Q` | Salir |
@@ -120,6 +133,20 @@ Ingresa pares `CLAVE=VALOR` de a uno. Las **sugerencias contextuales** muestran 
 | node / nginx / otros | Variables de runtime comunes según corresponda |
 
 Presiona `Enter` en una línea vacía para terminar y crear el contenedor.
+
+---
+
+## Shell Interactivo
+
+Presiona `S` desde el dashboard con un contenedor en ejecución seleccionado. CDD hará lo siguiente:
+
+1. Detectará el shell disponible dentro del contenedor (`bash` o `sh`)
+2. Abrirá una sesión de terminal interactiva completa
+3. Te dejará en el shell del contenedor
+
+Desde ahí podés ejecutar cualquier comando — `psql` para PostgreSQL, `python3` para Python, `node` para Node.js, `redis-cli` para Redis, etc.
+
+Escribí `exit` o presioná `Ctrl+D` para salir del shell y volver al dashboard de CDD.
 
 ---
 
