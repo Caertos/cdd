@@ -15,13 +15,13 @@
 
 ## 🎉 Novedades en v4.1
 
-**Abrí un shell dentro de cualquier contenedor con una sola tecla.**
+**Abre un shell dentro de cualquier contenedor con una sola tecla.**
 
 Presiona `S` y CDD te lleva a un shell interactivo completo (`bash` o `sh`) dentro del contenedor seleccionado — sin necesidad de escribir `docker exec`.
 
 - **Shell auto-detectado** — CDD sondea el contenedor y elige `bash` o `sh` automáticamente
 - **Soporte de terminal completo** — ejecutá `psql`, `python3`, `node`, `redis-cli`, o cualquier comando dentro del contenedor
-- **Salida limpia** — escribí `exit` o presioná `Ctrl+D` para volver al dashboard
+- **Salida limpia** — escribe `exit` o presiona `Ctrl+D` para volver al dashboard
 
 ---
 
