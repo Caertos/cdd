@@ -10,18 +10,16 @@
 
 ---
 
-## 🎉 What's new in v4.2
+## 🎉 What's new in v4.3
 
-**Editable text fields with visible cursor in the creation wizard.**
+**Central keymap, contextual HUD, and help system.**
 
-Text fields in the wizard now behave like a proper text input: a visible cursor that moves with arrow keys, inserts and deletes where it stands.
+CDD now has a single source of truth for all keyboard shortcuts. The bottom bar (HUD) changes dynamically based on what you're doing, and pressing `?` opens a full help panel for the current context.
 
-- **Cursor navigation** — `←` / `→` move the cursor within the field
-- **Home / End** — jump to the start or end of the text
-- **Full editing** — `Backspace` and `Delete` work at any cursor position
-- **Keyboard shortcuts** — `Ctrl+A/E/W/U/K` for fast text editing
-- **Paste support** — pasted text inserts at the cursor position
-- **Accents and emojis** — correct handling via code-point segmentation
+- **Contextual HUD** — only shows keys that are actually active right now
+- **`?` help** — press `?` to see all available keys with descriptions
+- **Docker Hub navigation fixed** — arrow keys now navigate Hub search results (D3)
+- **Central keymap** — all keybindings defined in one place, preventing contradictions
 
 ---
 
@@ -93,7 +91,9 @@ cdd
 
 ## Usage
 
-Use `↑` / `↓` to navigate containers. Available keyboard shortcuts:
+Use `↑` / `↓` to navigate containers. The **HUD** at the bottom shows available keys for the current context. Press `?` for full help.
+
+### Container List
 
 | Key       | Action                                                    |
 | --------- | --------------------------------------------------------- |
@@ -107,6 +107,34 @@ Use `↑` / `↓` to navigate containers. Available keyboard shortcuts:
 | `E`       | Erase (remove) selected container — confirmation required |
 | `D`       | Toggle live debug panel                                   |
 | `Q`       | Quit                                                      |
+| `?`       | Show help panel                                           |
+
+### Creation Wizard
+
+| Key       | Action                                    |
+| --------- | ----------------------------------------- |
+| `Enter`   | Confirm and continue to next step         |
+| `Esc`     | Cancel creation and return to list        |
+| `Tab`     | Search Docker Hub (step 0) or insert env  |
+| `↑` / `↓` | Navigate suggestions                      |
+| `?`       | Show help panel                           |
+
+### Logs Viewer
+
+| Key       | Action                    |
+| --------- | ------------------------- |
+| `↑` / `↓` | Scroll up/down            |
+| `PgUp` / `PgDn` | Page up/down        |
+| `f`       | Toggle auto-follow        |
+| `Esc` / `Q` | Close logs viewer      |
+| `?`       | Show help panel           |
+
+### Confirmation
+
+| Key | Action                |
+| --- | --------------------- |
+| `y` | Confirm the action    |
+| `n` | Cancel the action     |
 
 ---
 
