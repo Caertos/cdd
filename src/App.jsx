@@ -33,6 +33,7 @@ export default function App() {
         containerName={controls.containerNameInput}
         portInput={controls.portInput}
         envInput={controls.envInput}
+        cursors={controls.creation.cursors}
         message={controls.message}
         messageColor={controls.messageColor}
         suggestions={controls.creation.suggestions}

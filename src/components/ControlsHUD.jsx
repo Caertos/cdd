@@ -10,7 +10,12 @@ import { Box, Text } from 'ink';
  * @param {boolean} [hasSuggestedEnv=false] - Whether the image has suggestedEnv entries
  * @returns {{ key: string, label: string }[]}
  */
-function getHints(step, hasSuggestions, isSearchingHub, hasSuggestedEnv = false) {
+function getHints(
+  step,
+  hasSuggestions,
+  isSearchingHub,
+  hasSuggestedEnv = false
+) {
   if (step === 0) {
     if (hasSuggestions) {
       return [
@@ -48,7 +53,12 @@ function getHints(step, hasSuggestions, isSearchingHub, hasSuggestedEnv = false)
  * @param {boolean} [props.isSearchingHub=false] - Whether a Hub search is in progress
  * @param {boolean} [props.hasSuggestedEnv=false] - Whether the image has suggestedEnv entries
  */
-function ControlsHUD({ step, hasSuggestions = false, isSearchingHub = false, hasSuggestedEnv = false }) {
+function ControlsHUD({
+  step,
+  hasSuggestions = false,
+  isSearchingHub = false,
+  hasSuggestedEnv = false,
+}) {
   const hints = getHints(step, hasSuggestions, isSearchingHub, hasSuggestedEnv);
   return (
     <Box flexDirection="row" columnGap={2}>

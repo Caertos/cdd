@@ -146,10 +146,6 @@ export function useControls(containers = [], overrides = {}) {
     (input, key) => {
       const step = creation.step;
 
-      const removeLastChar = (setter) =>
-        setter((value) => (value || '').slice(0, -1));
-      const appendChar = (setter, current, ch) => setter((current || '') + ch);
-
       if (key.escape) {
         creation.cancelCreation();
         setCreatingContainer(false);
@@ -190,28 +186,15 @@ export function useControls(containers = [], overrides = {}) {
         }
       }
 
-      if (key.backspace || key.delete) {
-        if (step === 0) {
-          const newValue = (creation.imageName || '').slice(0, -1);
-          creation.updateImageInput(newValue);
-        }
-        if (step === 1) removeLastChar(creation.setContainerName);
-        if (step === 2) removeLastChar(creation.setPortInput);
-        if (step === 3) removeLastChar(creation.setEnvInput);
-        return;
-      }
+      // Ink v6 maps \x7f (Backspace on most terminals) to key.delete instead
+      // of key.backspace. Normalize so text editing always receives backspace.
+      const normalizedKey =
+        key.delete && !key.backspace
+          ? { ...key, delete: false, backspace: true }
+          : key;
 
-      if (input && input.length === 1 && !key.ctrl && !key.meta) {
-        if (step === 0) {
-          creation.updateImageInput((creation.imageName || '') + input);
-        }
-        if (step === 1)
-          appendChar(creation.setContainerName, creation.containerName, input);
-        if (step === 2)
-          appendChar(creation.setPortInput, creation.portInput, input);
-        if (step === 3)
-          appendChar(creation.setEnvInput, creation.envInput, input);
-      }
+      // Delegate to the text editor for all field input
+      if (creation.handleFieldKey(input, normalizedKey)) return;
     },
     [
       creation,

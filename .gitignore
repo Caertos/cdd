@@ -25,6 +25,11 @@ dist-ssr
 
 AUDIT_REPORT.md
 
-# Generated docs (deployed to gh-pages via CI, not committed)
-docs/coverage/
+# Generated docs (npm run docs — regenerable, not committed)
 docs/
+
+# Test coverage output (jest)
+coverage/
+
+# Ruta de trabajo interna (documentos de diseño, no publicables)
+ruta/

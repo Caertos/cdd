@@ -4,8 +4,7 @@
  * lives in the calling hook (useContainerCreation).
  */
 
-const DOCKER_HUB_SEARCH_URL =
-  'https://hub.docker.com/v2/search/repositories/';
+const DOCKER_HUB_SEARCH_URL = 'https://hub.docker.com/v2/search/repositories/';
 
 /**
  * Format a Docker Hub search result object into a display string.

@@ -3,9 +3,6 @@
 <p align="center">
   <img src="https://img.shields.io/npm/v/cdd-cli?color=blue&label=npm%20package" alt="npm version"/>
   <img src="https://img.shields.io/npm/dt/cdd-cli?color=green&label=downloads" alt="npm downloads"/>
-  <a href="https://github.com/caertos/cdd/actions/workflows/ci.yml">
-    <img src="https://github.com/caertos/cdd/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI status" />
-  </a>
   <a href="https://deepwiki.com/Caertos/cdd"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki"></a>
 </p>
 
@@ -13,7 +10,24 @@
 
 ---
 
-## 🎉 What's new in v4.1
+## 🎉 What's new in v4.2
+
+**Editable text fields with visible cursor in the creation wizard.**
+
+Text fields in the wizard now behave like a proper text input: a visible cursor that moves with arrow keys, inserts and deletes where it stands.
+
+- **Cursor navigation** — `←` / `→` move the cursor within the field
+- **Home / End** — jump to the start or end of the text
+- **Full editing** — `Backspace` and `Delete` work at any cursor position
+- **Keyboard shortcuts** — `Ctrl+A/E/W/U/K` for fast text editing
+- **Paste support** — pasted text inserts at the cursor position
+- **Accents and emojis** — correct handling via code-point segmentation
+
+---
+
+## Previous releases
+
+### v4.1 — Interactive shell
 
 **Open a shell inside any container with a single keystroke.**
 
@@ -22,10 +36,6 @@ Press `S` and CDD drops you into a full interactive shell (`bash` or `sh`) insid
 - **Auto-detected shell** — CDD probes the container and picks `bash` or `sh` automatically
 - **Full terminal support** — run `psql`, `python3`, `node`, `redis-cli`, or any command inside the container
 - **Clean exit** — type `exit` or press `Ctrl+D` to return to the dashboard
-
----
-
-## Previous releases
 
 ### v3.2 — Interactive creation wizard
 
@@ -85,18 +95,18 @@ cdd
 
 Use `↑` / `↓` to navigate containers. Available keyboard shortcuts:
 
-| Key | Action |
-|-----|--------|
-| `↑` / `↓` | Navigate container list |
-| `I` | Start selected container |
-| `P` | Stop selected container |
-| `R` | Restart selected container |
-| `C` | Open creation wizard |
-| `L` | Stream logs for selected container |
-| `S` | Open interactive shell inside selected container |
-| `E` | Erase (remove) selected container — confirmation required |
-| `D` | Toggle live debug panel |
-| `Q` | Quit |
+| Key       | Action                                                    |
+| --------- | --------------------------------------------------------- |
+| `↑` / `↓` | Navigate container list                                   |
+| `I`       | Start selected container                                  |
+| `P`       | Stop selected container                                   |
+| `R`       | Restart selected container                                |
+| `C`       | Open creation wizard                                      |
+| `L`       | Stream logs for selected container                        |
+| `S`       | Open interactive shell inside selected container          |
+| `E`       | Erase (remove) selected container — confirmation required |
+| `D`       | Toggle live debug panel                                   |
+| `Q`       | Quit                                                      |
 
 ---
 
@@ -124,13 +134,13 @@ Enter a port mapping in `HOST:CONTAINER` format, e.g. `8080:80`, `5432:5432`. Le
 
 Enter `KEY=VALUE` pairs one at a time. **Contextual hints** show recommended variables for the selected image:
 
-| Image | Suggested vars |
-|-------|---------------|
-| postgres | `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` |
-| mysql | `MYSQL_ROOT_PASSWORD`, `MYSQL_DATABASE` |
-| redis | *(no required vars)* |
-| mongo | `MONGO_INITDB_ROOT_USERNAME`, `MONGO_INITDB_ROOT_PASSWORD` |
-| node / nginx / others | Common runtime vars as applicable |
+| Image                 | Suggested vars                                             |
+| --------------------- | ---------------------------------------------------------- |
+| postgres              | `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`        |
+| mysql                 | `MYSQL_ROOT_PASSWORD`, `MYSQL_DATABASE`                    |
+| redis                 | _(no required vars)_                                       |
+| mongo                 | `MONGO_INITDB_ROOT_USERNAME`, `MONGO_INITDB_ROOT_PASSWORD` |
+| node / nginx / others | Common runtime vars as applicable                          |
 
 Press `Enter` on an empty line to finish and create the container.
 

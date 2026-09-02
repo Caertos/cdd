@@ -3,9 +3,6 @@
 <p align="center">
   <img src="https://img.shields.io/npm/v/cdd-cli?color=blue&label=npm%20package" alt="npm version"/>
   <img src="https://img.shields.io/npm/dt/cdd-cli?color=green&label=downloads" alt="npm downloads"/>
-  <a href="https://github.com/caertos/cdd/actions/workflows/ci.yml">
-    <img src="https://github.com/caertos/cdd/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI status" />
-  </a>
   <a href="https://deepwiki.com/Caertos/cdd"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki"></a>
 </p>
 
@@ -13,19 +10,32 @@
 
 ---
 
-## 🎉 Novedades en v4.1
+## 🎉 Novedades en v4.2
+
+**Campos de texto editables con cursor visible en el asistente de creación.**
+
+Ahora los campos de texto del asistente se comportan como un campo de texto normal: un cursor que se ve, que se mueve con las flechas, que inserta y borra donde está.
+
+- **Navegación con cursor** — `←` / `→` mueven el cursor dentro del campo
+- **Inicio / Fin** — saltan al principio o al final del texto
+- **Edición completa** — `Backspace` y `Delete` funcionan en cualquier posición
+- **Atajos de teclado** — `Ctrl+A/E/W/U/K` para edición rápida
+- **Pegado** — pegar texto lo inserta completo en la posición del cursor
+- **Acentos y emojis** — manejo correcto por punto de código
+
+---
+
+## Versiones anteriores
+
+### v4.1 — Shell interactivo
 
 **Abre un shell dentro de cualquier contenedor con una sola tecla.**
 
 Presiona `S` y CDD te lleva a un shell interactivo completo (`bash` o `sh`) dentro del contenedor seleccionado — sin necesidad de escribir `docker exec`.
 
 - **Shell auto-detectado** — CDD sondea el contenedor y elige `bash` o `sh` automáticamente
-- **Soporte de terminal completo** — ejecutá `psql`, `python3`, `node`, `redis-cli`, o cualquier comando dentro del contenedor
+- **Soporte de terminal completo** — ejecuta `psql`, `python3`, `node`, `redis-cli`, o cualquier comando dentro del contenedor
 - **Salida limpia** — escribe `exit` o presiona `Ctrl+D` para volver al dashboard
-
----
-
-## Versiones anteriores
 
 ### v3.2 — Asistente de creación interactivo
 
@@ -85,18 +95,18 @@ cdd
 
 Usa `↑` / `↓` para navegar por los contenedores. Atajos de teclado disponibles:
 
-| Tecla | Acción |
-|-------|--------|
-| `↑` / `↓` | Navegar la lista de contenedores |
-| `I` | Iniciar el contenedor seleccionado |
-| `P` | Detener el contenedor seleccionado |
-| `R` | Reiniciar el contenedor seleccionado |
-| `C` | Abrir el asistente de creación |
-| `L` | Ver logs del contenedor seleccionado en tiempo real |
-| `S` | Abrir shell interactivo dentro del contenedor seleccionado |
-| `E` | Eliminar el contenedor seleccionado — requiere confirmación |
-| `D` | Activar/desactivar panel de debug en vivo |
-| `Q` | Salir |
+| Tecla     | Acción                                                      |
+| --------- | ----------------------------------------------------------- |
+| `↑` / `↓` | Navegar la lista de contenedores                            |
+| `I`       | Iniciar el contenedor seleccionado                          |
+| `P`       | Detener el contenedor seleccionado                          |
+| `R`       | Reiniciar el contenedor seleccionado                        |
+| `C`       | Abrir el asistente de creación                              |
+| `L`       | Ver logs del contenedor seleccionado en tiempo real         |
+| `S`       | Abrir shell interactivo dentro del contenedor seleccionado  |
+| `E`       | Eliminar el contenedor seleccionado — requiere confirmación |
+| `D`       | Activar/desactivar panel de debug en vivo                   |
+| `Q`       | Salir                                                       |
 
 ---
 
@@ -124,13 +134,13 @@ Ingresa un mapeo de puertos en formato `HOST:CONTENEDOR`, por ejemplo `8080:80`,
 
 Ingresa pares `CLAVE=VALOR` de a uno. Las **sugerencias contextuales** muestran variables recomendadas para la imagen seleccionada:
 
-| Imagen | Variables sugeridas |
-|--------|---------------------|
-| postgres | `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` |
-| mysql | `MYSQL_ROOT_PASSWORD`, `MYSQL_DATABASE` |
-| redis | *(sin variables requeridas)* |
-| mongo | `MONGO_INITDB_ROOT_USERNAME`, `MONGO_INITDB_ROOT_PASSWORD` |
-| node / nginx / otros | Variables de runtime comunes según corresponda |
+| Imagen               | Variables sugeridas                                        |
+| -------------------- | ---------------------------------------------------------- |
+| postgres             | `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`        |
+| mysql                | `MYSQL_ROOT_PASSWORD`, `MYSQL_DATABASE`                    |
+| redis                | _(sin variables requeridas)_                               |
+| mongo                | `MONGO_INITDB_ROOT_USERNAME`, `MONGO_INITDB_ROOT_PASSWORD` |
+| node / nginx / otros | Variables de runtime comunes según corresponda             |
 
 Presiona `Enter` en una línea vacía para terminar y crear el contenedor.
 
@@ -144,9 +154,9 @@ Presiona `S` desde el dashboard con un contenedor en ejecución seleccionado. CD
 2. Abrirá una sesión de terminal interactiva completa
 3. Te dejará en el shell del contenedor
 
-Desde ahí podés ejecutar cualquier comando — `psql` para PostgreSQL, `python3` para Python, `node` para Node.js, `redis-cli` para Redis, etc.
+Desde ahí puedes ejecutar cualquier comando — `psql` para PostgreSQL, `python3` para Python, `node` para Node.js, `redis-cli` para Redis, etc.
 
-Escribí `exit` o presioná `Ctrl+D` para salir del shell y volver al dashboard de CDD.
+Escribe `exit` o presiona `Ctrl+D` para salir del shell y volver al dashboard de CDD.
 
 ---
 
