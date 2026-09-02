@@ -196,6 +196,43 @@ describe('textEditing', () => {
         expect(result.handled).toBe(true);
         expect(result.state).toBe(state);
       });
+
+      test('\\x7f input treated as backspace', () => {
+        const { state, handled } = applyKeyToText(
+          { value: 'abc', cursor: 2 },
+          '\x7f',
+          {}
+        );
+        expect(handled).toBe(true);
+        expect(state).toEqual({ value: 'ac', cursor: 1 });
+      });
+
+      test('\\b input treated as backspace', () => {
+        const { state, handled } = applyKeyToText(
+          { value: 'abc', cursor: 2 },
+          '\b',
+          {}
+        );
+        expect(handled).toBe(true);
+        expect(state).toEqual({ value: 'ac', cursor: 1 });
+      });
+
+      test('\\x7f at end deletes last char', () => {
+        const { state, handled } = applyKeyToText(
+          { value: 'abc', cursor: 3 },
+          '\x7f',
+          {}
+        );
+        expect(handled).toBe(true);
+        expect(state).toEqual({ value: 'ab', cursor: 2 });
+      });
+
+      test('\\x7f at start is no-op', () => {
+        const state = { value: 'abc', cursor: 0 };
+        const result = applyKeyToText(state, '\x7f', {});
+        expect(result.handled).toBe(true);
+        expect(result.state).toBe(state);
+      });
     });
 
     describe('delete', () => {

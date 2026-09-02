@@ -186,8 +186,15 @@ export function useControls(containers = [], overrides = {}) {
         }
       }
 
+      // Ink v6 maps \x7f (Backspace on most terminals) to key.delete instead
+      // of key.backspace. Normalize so text editing always receives backspace.
+      const normalizedKey =
+        key.delete && !key.backspace
+          ? { ...key, delete: false, backspace: true }
+          : key;
+
       // Delegate to the text editor for all field input
-      if (creation.handleFieldKey(input, key)) return;
+      if (creation.handleFieldKey(input, normalizedKey)) return;
     },
     [
       creation,

@@ -194,6 +194,14 @@ export function applyKeyToText(state, input, key) {
     return { state: newState, handled: true };
   }
 
+  // Safety net: \x7f (DEL) is what most terminals send for Backspace.
+  // Ink v6 maps it to key.delete, but if we receive the raw char directly
+  // (e.g. from tests or non-Ink callers), handle it as backspace.
+  if (input === '\x7f' || input === '\b') {
+    const newState = deleteBackward(state);
+    return { state: newState, handled: true };
+  }
+
   // Regular text input (single char or paste)
   if (input && input.length >= 1) {
     const newState = insertAt(state, input);
