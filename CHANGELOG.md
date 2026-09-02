@@ -7,6 +7,23 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 - Nothing yet.
 
+## [4.2.0] - 2026-09-01
+
+### Added
+- **Editable text fields** with visible cursor in the creation wizard
+  - Arrow keys (←/→) move the cursor within the field
+  - Home/End jump to the start/end of the field
+  - Backspace and Delete work at any cursor position
+  - Ctrl+A/E/W/U/K keyboard shortcuts for text editing
+  - Paste support: multi-character input inserts at cursor position
+  - Accented characters and emojis handled correctly via code-point segmentation
+- `textEditing.js` — pure text editing logic (no React dependency)
+- `TextField.jsx` — presentational component with inverse-rendered block cursor
+
+### Fixed
+- **D1**: Could only delete the last character; cursor was fixed at the end
+- **D2**: Pasted text was silently discarded (single-char guard)
+
 ## [4.1.0] - 2026-07-01
 
 ### Added

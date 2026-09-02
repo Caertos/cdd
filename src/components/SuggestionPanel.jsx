@@ -24,7 +24,9 @@ export function SuggestionPanel({
   const hasItems = items && items.length > 0;
   if (!hasItems && !isLoading) return null;
 
-  const visible = hasItems ? items.slice(visibleOffset, visibleOffset + maxVisible) : [];
+  const visible = hasItems
+    ? items.slice(visibleOffset, visibleOffset + maxVisible)
+    : [];
 
   return (
     <Box
@@ -38,7 +40,11 @@ export function SuggestionPanel({
         const globalIdx = visibleOffset + localIdx;
         const isFocused = globalIdx === selectedIndex;
         return (
-          <Text key={item} color={isFocused ? 'cyan' : undefined} dimColor={!isFocused}>
+          <Text
+            key={item}
+            color={isFocused ? 'cyan' : undefined}
+            dimColor={!isFocused}
+          >
             {isFocused ? `› ${item}` : `  ${item}`}
           </Text>
         );

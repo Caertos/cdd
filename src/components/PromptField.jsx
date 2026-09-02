@@ -1,25 +1,29 @@
 import React from 'react';
+import { TextField } from './TextField.jsx';
 import { Text } from 'ink';
 import PropTypes from 'prop-types';
 
 /**
  * PromptField shows a label and the current typed value for an input field.
- * The cursor is represented with a trailing underscore.
+ * Wraps TextField with cursor rendering.
  *
  * @param {Object} props
  * @param {string} props.label - Label shown above the input value
  * @param {string} props.value - Current value of the input
+ * @param {number} [props.cursor] - Cursor position (0..value.length). When
+ *   omitted the cursor defaults to the end of the value.
  * @param {boolean} [props.required=false] - Whether the field is required
  * @returns {JSX.Element}
  */
-export function PromptField({ label, value, required }) {
-  // If the field is required and empty, show in red
-  const isEmpty = required && !value.trim();
+export function PromptField({ label, value, cursor, required }) {
+  const cursorPos = cursor !== undefined ? cursor : (value || '').length;
   return (
-    <>
-      <Text>{label}</Text>
-      <Text color={isEmpty ? 'red' : 'cyan'}>{value}_</Text>
-    </>
+    <TextField
+      label={label}
+      value={value || ''}
+      cursor={cursorPos}
+      required={required}
+    />
   );
 }
 
@@ -39,6 +43,7 @@ export function PromptMessage({ message, color }) {
 PromptField.propTypes = {
   label: PropTypes.string,
   value: PropTypes.string,
+  cursor: PropTypes.number,
   required: PropTypes.bool,
 };
 

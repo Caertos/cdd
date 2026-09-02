@@ -30,6 +30,7 @@ export default function ContainerCreationPrompt(props) {
     containerName,
     portInput,
     envInput,
+    cursors = {},
     message,
     messageColor,
     suggestions = [],
@@ -43,28 +44,33 @@ export default function ContainerCreationPrompt(props) {
     {
       label: 'Name of the image to create (e.g., nginx:1.27-alpine):',
       value: imageName,
+      cursor: cursors.imageName,
       required: true,
     },
     {
       label: 'Name of the container (optional):',
       value: containerName,
+      cursor: cursors.containerName,
       required: false,
     },
     {
       label: 'Ports (optional, format 8080:80,443:443):',
       value: portInput,
+      cursor: cursors.portInput,
       required: false,
     },
     {
       label: 'Environment variables (optional, format VAR1=val1,VAR2=val2):',
       value: envInput,
+      cursor: cursors.envInput,
       required: false,
     },
   ];
-  const { label, value, required } = prompts[step] || {};
+  const { label, value, cursor, required } = prompts[step] || {};
   const activeItems = hubResults ?? suggestions;
-  const showSuggestions = step === 0 && (isSearchingHub || activeItems.length > 0);
-  const hasSuggestions = (suggestions?.length > 0) || (hubResults?.length > 0);
+  const showSuggestions =
+    step === 0 && (isSearchingHub || activeItems.length > 0);
+  const hasSuggestions = suggestions?.length > 0 || hubResults?.length > 0;
   return (
     <Box
       flexDirection="column"
@@ -72,7 +78,12 @@ export default function ContainerCreationPrompt(props) {
       borderColor="yellow"
       padding={1}
     >
-      <PromptField label={label} value={value} required={required} />
+      <PromptField
+        label={label}
+        value={value}
+        cursor={cursor}
+        required={required}
+      />
       {showSuggestions && (
         <SuggestionPanel
           items={activeItems}
@@ -82,7 +93,12 @@ export default function ContainerCreationPrompt(props) {
         />
       )}
       <PromptMessage message={message} color={messageColor} />
-      <ControlsHUD step={step} hasSuggestions={hasSuggestions} isSearchingHub={isSearchingHub} hasSuggestedEnv={hasSuggestedEnv} />
+      <ControlsHUD
+        step={step}
+        hasSuggestions={hasSuggestions}
+        isSearchingHub={isSearchingHub}
+        hasSuggestedEnv={hasSuggestedEnv}
+      />
     </Box>
   );
 }
@@ -93,6 +109,12 @@ ContainerCreationPrompt.propTypes = {
   containerName: PropTypes.string,
   portInput: PropTypes.string,
   envInput: PropTypes.string,
+  cursors: PropTypes.shape({
+    imageName: PropTypes.number,
+    containerName: PropTypes.number,
+    portInput: PropTypes.number,
+    envInput: PropTypes.number,
+  }),
   message: PropTypes.string,
   messageColor: PropTypes.string,
   suggestions: PropTypes.arrayOf(PropTypes.string),
