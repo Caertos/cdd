@@ -9,7 +9,6 @@ import {
   searchDockerHub,
   formatHubResult,
 } from '../../helpers/dockerHubService.js';
-import { applyKeyToText } from '../../helpers/textEditing.js';
 
 const MAX_VISIBLE = 6;
 
@@ -19,7 +18,6 @@ const INITIAL_FORM = {
   containerName: '',
   portInput: '',
   envInput: '',
-  cursors: { imageName: 0, containerName: 0, portInput: 0, envInput: 0 },
   message: '',
   messageColor: 'yellow',
   suggestions: [],
@@ -68,7 +66,6 @@ export function useContainerCreation({
     containerName,
     portInput,
     envInput,
-    cursors,
     message,
     messageColor,
     suggestions,
@@ -116,82 +113,6 @@ export function useContainerCreation({
     }
   };
 
-  /**
-   * Sets a field's text value and cursor position together.
-   * @param {'imageName'|'containerName'|'portInput'|'envInput'} fieldName
-   * @param {string} value
-   * @param {number} cursor
-   */
-  function setFieldText(fieldName, value, cursor) {
-    dispatch({
-      type: 'SET',
-      payload: {
-        [fieldName]: value,
-        cursors: { ...form.cursors, [fieldName]: cursor },
-      },
-    });
-  }
-
-  /**
-   * Returns the field name associated with a wizard step.
-   * @param {number} step
-   * @returns {'imageName'|'containerName'|'portInput'|'envInput'|null}
-   */
-  function fieldForStep(step) {
-    return (
-      ['imageName', 'containerName', 'portInput', 'envInput'][step] ?? null
-    );
-  }
-
-  /**
-   * Applies a keypress to the field associated with the current step.
-   * When the edited field is imageName, recalculates suggestions.
-   * @param {string} input - Raw Ink input
-   * @param {import('ink').Key} key - Ink key object
-   * @returns {boolean} true if the key was consumed
-   */
-  function handleFieldKey(input, key) {
-    const fieldName = fieldForStep(step);
-    if (!fieldName) return false;
-
-    const currentState = { value: form[fieldName], cursor: cursors[fieldName] };
-    const { state: newState, handled } = applyKeyToText(
-      currentState,
-      input,
-      key
-    );
-
-    if (!handled) return false;
-
-    if (fieldName === 'imageName') {
-      // Recalculate suggestions when image name changes
-      activeHubRequestRef.current.controller?.abort();
-      activeHubRequestRef.current.requestId += 1;
-      setIsSearchingHub(false);
-      setHubResults(null);
-
-      const lower = newState.value.toLowerCase();
-      const matches = newState.value.trim()
-        ? Object.keys(imageProfiles).filter((key) => key.includes(lower))
-        : [];
-
-      dispatch({
-        type: 'SET',
-        payload: {
-          imageName: newState.value,
-          cursors: { ...form.cursors, imageName: newState.cursor },
-          selectedSuggestionIndex: -1,
-          visibleOffset: 0,
-          suggestions: matches,
-        },
-      });
-    } else {
-      setFieldText(fieldName, newState.value, newState.cursor);
-    }
-
-    return true;
-  }
-
   // Docker Hub search state (kept as useState because they are independent of form)
   const [isSearchingHub, setIsSearchingHub] = useState(false);
   const [hubResults, setHubResults] = useState(null);
@@ -227,17 +148,12 @@ export function useContainerCreation({
 
   /**
    * Updates the image name input and recalculates autocomplete suggestions.
-   * Accepts either a plain string (backward compatible) or a TextState object.
    * Resets selectedSuggestionIndex to -1 on every keystroke.
    * Also aborts any in-flight Hub search and clears Hub results.
    *
-   * @param {string|TextState} input - New image name (string or {value, cursor})
+   * @param {string} value - New raw image name typed by user
    */
-  function updateImageInput(input) {
-    const value = typeof input === 'string' ? input : input.value;
-    const cursor =
-      typeof input === 'string' ? value.length : (input.cursor ?? value.length);
-
+  function updateImageInput(value) {
     // Abort any in-flight Hub search and clear its state
     activeHubRequestRef.current.controller?.abort();
     activeHubRequestRef.current.requestId += 1;
@@ -253,7 +169,6 @@ export function useContainerCreation({
       type: 'SET',
       payload: {
         imageName: value,
-        cursors: { ...form.cursors, imageName: cursor },
         selectedSuggestionIndex: -1,
         visibleOffset: 0,
         suggestions: matches,
@@ -307,17 +222,15 @@ export function useContainerCreation({
 
   /**
    * Moves the suggestion selection up (-1) or down (+1).
-   * Uses activeItems (hubResults ?? suggestions) to fix D3.
-   * Clamps index to [-1, activeItems.length - 1].
+   * Clamps index to [-1, suggestions.length - 1].
    * Adjusts visibleOffset to keep selected item in the visible window.
    *
    * @param {number} direction - -1 (up) or 1 (down)
    */
   function moveSuggestionSelection(direction) {
-    const activeItems = hubResults ?? suggestions;
     const next = Math.max(
       -1,
-      Math.min(activeItems.length - 1, selectedSuggestionIndex + direction)
+      Math.min(suggestions.length - 1, selectedSuggestionIndex + direction)
     );
     let newOffset = visibleOffset;
     if (next < visibleOffset) newOffset = Math.max(0, next);
@@ -331,28 +244,20 @@ export function useContainerCreation({
 
   /**
    * Applies the currently focused suggestion to imageName.
-   * Uses activeItems (hubResults ?? suggestions) to fix D3.
    * Does NOT advance the step. Clears suggestions after applying.
    */
   function applyFocusedSuggestion() {
-    const activeItems = hubResults ?? suggestions;
     if (
       selectedSuggestionIndex < 0 ||
-      selectedSuggestionIndex >= activeItems.length
+      selectedSuggestionIndex >= suggestions.length
     )
       return;
-    const chosen = activeItems[selectedSuggestionIndex];
-    // Only resolve tag for local profiles; Hub results already have full names
-    const resolved = hubResults
-      ? chosen
-      : resolveImageTag(chosen, imageProfiles);
+    const chosen = suggestions[selectedSuggestionIndex];
     dispatch({
       type: 'SET',
       payload: {
-        imageName: resolved,
-        cursors: { ...form.cursors, imageName: resolved.length },
+        imageName: resolveImageTag(chosen, imageProfiles),
         suggestions: [],
-        hubResults: null,
         selectedSuggestionIndex: -1,
         visibleOffset: 0,
       },
@@ -369,14 +274,7 @@ export function useContainerCreation({
         return;
       }
       const resolved = resolveImageTag(imageName, imageProfiles);
-      dispatch({
-        type: 'SET',
-        payload: {
-          imageName: resolved,
-          cursors: { ...form.cursors, imageName: resolved.length },
-          step: 1,
-        },
-      });
+      dispatch({ type: 'SET', payload: { imageName: resolved, step: 1 } });
       setStepMessage(
         'Optional: Enter container name or leave empty and press Enter',
         'yellow'
@@ -496,13 +394,7 @@ export function useContainerCreation({
       return;
     }
     const newEnvInput = envInput ? `${envInput},${next}` : next;
-    dispatch({
-      type: 'SET',
-      payload: {
-        envInput: newEnvInput,
-        cursors: { ...form.cursors, envInput: newEnvInput.length },
-      },
-    });
+    dispatch({ type: 'SET', payload: { envInput: newEnvInput } });
   }
 
   /**
@@ -528,13 +420,11 @@ export function useContainerCreation({
     setPortInput,
     envInput,
     setEnvInput,
-    cursors,
     message,
     setMessage,
     messageColor,
     setMessageColor,
     suggestions,
-    activeItems: hubResults ?? suggestions,
     selectedSuggestionIndex,
     visibleOffset,
     isSearchingHub,
@@ -548,7 +438,5 @@ export function useContainerCreation({
     resetCreation,
     insertNextSuggestedEnv,
     hasSuggestedEnv,
-    fieldForStep,
-    handleFieldKey,
   };
 }

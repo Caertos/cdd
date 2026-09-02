@@ -39,7 +39,10 @@ export const KEYMAP = {
   ],
   wizard: [
     { id: 'wizard.next', keys: ['enter'], label: 'Enter', help: 'Confirm and continue to next step', priority: 90 },
-    { id: 'wizard.cancel', keys: ['escape'], label: 'Esc', help: 'Cancel creation and return to list', priority: 80 },
+    { id: 'wizard.tab', keys: ['tab'], label: 'Tab', help: 'Search Hub or insert env var', priority: 85, when: (s) => s.wizardStep === 0 || s.wizardStep === 3 },
+    { id: 'wizard.list_up', keys: ['up'], label: '↑', help: 'Navigate suggestions up', priority: 80, when: (s) => s.wizardStep === 0 && s.hasActiveList },
+    { id: 'wizard.list_down', keys: ['down'], label: '↓', help: 'Navigate suggestions down', priority: 80, when: (s) => s.wizardStep === 0 && s.hasActiveList },
+    { id: 'wizard.cancel', keys: ['escape'], label: 'Esc', help: 'Cancel creation and return to list', priority: 70 },
     { id: 'app.help', keys: ['?'], label: '?', help: 'Show this help', priority: 5 },
   ],
   'wizard-list': [

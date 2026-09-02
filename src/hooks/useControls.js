@@ -7,7 +7,6 @@ import { useContainerSelection } from './navigation/useContainerSelection';
 import { useDebugLogs } from './debug/useDebugLogs';
 import { useEraseConfirmation } from './useEraseConfirmation';
 import { useExitHandler } from './useExitHandler';
-import { useContainerCommandRouter } from './useContainerCommandRouter';
 import { useShellMode } from './useShellMode';
 import { getLogsStream } from '../helpers/dockerService/serviceComponents/containerLogs.js';
 import { createContainer as svcCreateContainer } from '../helpers/dockerService/serviceComponents/containerActions.js';
@@ -113,25 +112,6 @@ export function useControls(containers = [], overrides = {}) {
     [logsViewer]
   );
 
-  const commandRouter = useContainerCommandRouter({
-    actions,
-    containers,
-    selected: selection.selected,
-    creation,
-    logsViewer,
-    startLogsStream,
-    onStartErase: () => {
-      eraseConfirmation.startErase();
-      actions.setMessage(
-        'Are you sure you want to erase this container? (y/n)'
-      );
-      actions.setMessageColor('yellow');
-    },
-    onToggleDebug: () => debugLogs.setShowDebugLogs((prev) => !prev),
-    onStartCreate: () => setCreatingContainer(true),
-    onOpenShell: (container) => shellMode.openShell(container),
-  });
-
   const exitHandler = useExitHandler({
     onBeforeExit: () => {
       actions.setMessage('Exiting...');
@@ -150,6 +130,7 @@ export function useControls(containers = [], overrides = {}) {
     hasActiveList: creation.suggestions.length > 0 || (creation.hubResults ?? []).length > 0,
     showDebugLogs: debugLogs.showDebugLogs,
     hasSelection: selection.selected >= 0 && containers.length > 0,
+    wizardStep: creation.step,
   }), [
     eraseConfirmation.confirmErase,
     showHelp,
@@ -157,6 +138,7 @@ export function useControls(containers = [], overrides = {}) {
     creatingContainer,
     creation.suggestions,
     creation.hubResults,
+    creation.step,
     debugLogs.showDebugLogs,
     selection.selected,
     containers.length,
@@ -239,6 +221,19 @@ export function useControls(containers = [], overrides = {}) {
         creation.nextStep();
       }
     },
+    'wizard.tab': () => {
+      if (creation.step === 0) {
+        // Trigger Hub search if not already searching and image name is not empty
+        if (!isSearchingHub && (creation.imageName || '').trim() !== '') {
+          triggerHubSearch();
+        }
+      } else if (creation.step === 3) {
+        // Insert next suggested env var
+        insertNextSuggestedEnv?.();
+      }
+    },
+    'wizard.list_up': () => creation.moveSuggestionSelection(-1),
+    'wizard.list_down': () => creation.moveSuggestionSelection(1),
     'wizard.cancel': () => {
       creation.cancelCreation();
       setCreatingContainer(false);
@@ -266,72 +261,6 @@ export function useControls(containers = [], overrides = {}) {
     shellMode, eraseConfirmation, creation, debugLogs, exitHandler,
   ]);
 
-  /**
-   * Route keystrokes to the container creation wizard.
-   */
-  const processCreationInput = React.useCallback(
-    (input, key) => {
-      const step = creation.step;
-
-      if (key.escape) {
-        creation.cancelCreation();
-        setCreatingContainer(false);
-        return;
-      }
-
-      if (input === '\r' || input === '\n') {
-        // If on step 0 with a focused suggestion, apply it instead of advancing
-        if (step === 0 && creation.selectedSuggestionIndex >= 0) {
-          creation.applyFocusedSuggestion();
-          return;
-        }
-        creation.nextStep();
-        return;
-      }
-
-      // Tab on step 0: trigger Docker Hub search (with guards)
-      if (key.tab) {
-        if (step === 0) {
-          if (!isSearchingHub && (creation.imageName || '').trim() !== '') {
-            triggerHubSearch();
-          }
-        } else if (step === 3) {
-          insertNextSuggestedEnv?.();
-        }
-        return;
-      }
-
-      // Arrow keys on step 0: navigate suggestion list
-      if (step === 0 && creation.suggestions.length > 0) {
-        if (key.upArrow) {
-          creation.moveSuggestionSelection(-1);
-          return;
-        }
-        if (key.downArrow) {
-          creation.moveSuggestionSelection(1);
-          return;
-        }
-      }
-
-      // Ink v6 maps \x7f (Backspace on most terminals) to key.delete instead
-      // of key.backspace. Normalize so text editing always receives backspace.
-      const normalizedKey =
-        key.delete && !key.backspace
-          ? { ...key, delete: false, backspace: true }
-          : key;
-
-      // Delegate to the text editor for all field input
-      if (creation.handleFieldKey(input, normalizedKey)) return;
-    },
-    [
-      creation,
-      setCreatingContainer,
-      triggerHubSearch,
-      isSearchingHub,
-      insertNextSuggestedEnv,
-    ]
-  );
-
   // Single keyboard entry point — declarative keymap dispatch
   useInput((input, key) => {
     const ctx = getActiveContext(uiState);
@@ -340,12 +269,6 @@ export function useControls(containers = [], overrides = {}) {
     const WIZARD_CONTEXTS = ['wizard', 'wizard-list'];
     if (WIZARD_CONTEXTS.includes(ctx) && creation.handleFieldKey(input, key)) {
       return;
-    }
-
-    // Arrow keys on wizard step 0 with hubResults or suggestions → navigate list
-    if (ctx === 'wizard' && creation.step === 0 && creation.suggestions.length === 0 && creation.hubResults && creation.hubResults.length > 0) {
-      if (key.upArrow) { creation.moveSuggestionSelection(-1); return; }
-      if (key.downArrow) { creation.moveSuggestionSelection(1); return; }
     }
 
     const binding = resolveKey(ctx, input, key, uiState);
