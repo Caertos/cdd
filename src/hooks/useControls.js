@@ -289,9 +289,16 @@ export function useControls(containers = [], overrides = {}) {
   useInput((input, key) => {
     const ctx = getActiveContext(uiState);
 
+    // Ink v6 maps \x7f (Backspace on most terminals) to key.delete instead
+    // of key.backspace. Normalize so text editing always receives backspace.
+    const normalizedKey =
+      key.delete && !key.backspace
+        ? { ...key, delete: false, backspace: true }
+        : key;
+
     // Text fields have priority in wizard contexts
     const WIZARD_CONTEXTS = ['wizard', 'wizard-list'];
-    if (WIZARD_CONTEXTS.includes(ctx) && creation.handleFieldKey(input, key)) {
+    if (WIZARD_CONTEXTS.includes(ctx) && creation.handleFieldKey(input, normalizedKey)) {
       return;
     }
 
