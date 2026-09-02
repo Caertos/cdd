@@ -307,15 +307,17 @@ export function useContainerCreation({
 
   /**
    * Moves the suggestion selection up (-1) or down (+1).
-   * Clamps index to [-1, suggestions.length - 1].
+   * Uses activeItems (hubResults ?? suggestions) to fix D3.
+   * Clamps index to [-1, activeItems.length - 1].
    * Adjusts visibleOffset to keep selected item in the visible window.
    *
    * @param {number} direction - -1 (up) or 1 (down)
    */
   function moveSuggestionSelection(direction) {
+    const activeItems = hubResults ?? suggestions;
     const next = Math.max(
       -1,
-      Math.min(suggestions.length - 1, selectedSuggestionIndex + direction)
+      Math.min(activeItems.length - 1, selectedSuggestionIndex + direction)
     );
     let newOffset = visibleOffset;
     if (next < visibleOffset) newOffset = Math.max(0, next);
@@ -329,22 +331,28 @@ export function useContainerCreation({
 
   /**
    * Applies the currently focused suggestion to imageName.
+   * Uses activeItems (hubResults ?? suggestions) to fix D3.
    * Does NOT advance the step. Clears suggestions after applying.
    */
   function applyFocusedSuggestion() {
+    const activeItems = hubResults ?? suggestions;
     if (
       selectedSuggestionIndex < 0 ||
-      selectedSuggestionIndex >= suggestions.length
+      selectedSuggestionIndex >= activeItems.length
     )
       return;
-    const chosen = suggestions[selectedSuggestionIndex];
-    const resolved = resolveImageTag(chosen, imageProfiles);
+    const chosen = activeItems[selectedSuggestionIndex];
+    // Only resolve tag for local profiles; Hub results already have full names
+    const resolved = hubResults
+      ? chosen
+      : resolveImageTag(chosen, imageProfiles);
     dispatch({
       type: 'SET',
       payload: {
         imageName: resolved,
         cursors: { ...form.cursors, imageName: resolved.length },
         suggestions: [],
+        hubResults: null,
         selectedSuggestionIndex: -1,
         visibleOffset: 0,
       },
@@ -526,6 +534,7 @@ export function useContainerCreation({
     messageColor,
     setMessageColor,
     suggestions,
+    activeItems: hubResults ?? suggestions,
     selectedSuggestionIndex,
     visibleOffset,
     isSearchingHub,
