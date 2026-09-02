@@ -7,6 +7,27 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 - Nothing yet.
 
+## [4.3.0] - 2026-09-02
+
+### Added
+- **Central keymap** (`keymap.js`) — single source of truth for all keybindings
+- **Contextual HUD** — bottom bar shows only active keys for current context
+- **Help panel** (`?` key) — full help for the current context, replaces fixed UsageMenu
+- `KeyHUD.jsx` — presentational component for the keyboard shortcut bar
+- `HelpPanel.jsx` — context-aware help panel component
+
+### Changed
+- All keybindings now defined declaratively in `KEYMAP` constant
+- HUD changes dynamically: list, wizard, logs, confirm, help, debug
+- `useControls.js` uses declarative keymap dispatch instead of imperative if/else
+
+### Fixed
+- **D3**: Arrow keys now navigate Docker Hub search results (was broken since v3.2)
+- Backspace in wizard works correctly (Ink v6 key normalization restored)
+
+### Removed
+- Fixed shortcut block (`UsageMenu`) from main screen (replaced by contextual HUD)
+
 ## [4.2.0] - 2026-09-01
 
 ### Added
