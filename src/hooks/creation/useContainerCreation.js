@@ -227,17 +227,12 @@ export function useContainerCreation({
 
   /**
    * Updates the image name input and recalculates autocomplete suggestions.
-   * Accepts either a plain string (backward compatible) or a TextState object.
    * Resets selectedSuggestionIndex to -1 on every keystroke.
    * Also aborts any in-flight Hub search and clears Hub results.
    *
-   * @param {string|TextState} input - New image name (string or {value, cursor})
+   * @param {string} value - New raw image name typed by user
    */
-  function updateImageInput(input) {
-    const value = typeof input === 'string' ? input : input.value;
-    const cursor =
-      typeof input === 'string' ? value.length : (input.cursor ?? value.length);
-
+  function updateImageInput(value) {
     // Abort any in-flight Hub search and clear its state
     activeHubRequestRef.current.controller?.abort();
     activeHubRequestRef.current.requestId += 1;
@@ -253,7 +248,6 @@ export function useContainerCreation({
       type: 'SET',
       payload: {
         imageName: value,
-        cursors: { ...form.cursors, imageName: cursor },
         selectedSuggestionIndex: -1,
         visibleOffset: 0,
         suggestions: matches,
@@ -338,12 +332,10 @@ export function useContainerCreation({
     )
       return;
     const chosen = suggestions[selectedSuggestionIndex];
-    const resolved = resolveImageTag(chosen, imageProfiles);
     dispatch({
       type: 'SET',
       payload: {
-        imageName: resolved,
-        cursors: { ...form.cursors, imageName: resolved.length },
+        imageName: resolveImageTag(chosen, imageProfiles),
         suggestions: [],
         selectedSuggestionIndex: -1,
         visibleOffset: 0,
@@ -361,14 +353,7 @@ export function useContainerCreation({
         return;
       }
       const resolved = resolveImageTag(imageName, imageProfiles);
-      dispatch({
-        type: 'SET',
-        payload: {
-          imageName: resolved,
-          cursors: { ...form.cursors, imageName: resolved.length },
-          step: 1,
-        },
-      });
+      dispatch({ type: 'SET', payload: { imageName: resolved, step: 1 } });
       setStepMessage(
         'Optional: Enter container name or leave empty and press Enter',
         'yellow'
@@ -488,13 +473,7 @@ export function useContainerCreation({
       return;
     }
     const newEnvInput = envInput ? `${envInput},${next}` : next;
-    dispatch({
-      type: 'SET',
-      payload: {
-        envInput: newEnvInput,
-        cursors: { ...form.cursors, envInput: newEnvInput.length },
-      },
-    });
+    dispatch({ type: 'SET', payload: { envInput: newEnvInput } });
   }
 
   /**
@@ -526,6 +505,7 @@ export function useContainerCreation({
     messageColor,
     setMessageColor,
     suggestions,
+    activeItems: hubResults ?? suggestions,
     selectedSuggestionIndex,
     visibleOffset,
     isSearchingHub,

@@ -10,18 +10,16 @@
 
 ---
 
-## 🎉 Novedades en v4.2
+## 🎉 Novedades en v4.3
 
-**Campos de texto editables con cursor visible en el asistente de creación.**
+**Mapa de teclas central, HUD contextual y sistema de ayuda.**
 
-Ahora los campos de texto del asistente se comportan como un campo de texto normal: un cursor que se ve, que se mueve con las flechas, que inserta y borra donde está.
+CDD ahora tiene una única fuente de verdad para todos los atajos de teclado. La barra inferior (HUD) cambia dinámicamente según lo que estés haciendo, y presionando `?` se abre un panel de ayuda completo para el contexto actual.
 
-- **Navegación con cursor** — `←` / `→` mueven el cursor dentro del campo
-- **Inicio / Fin** — saltan al principio o al final del texto
-- **Edición completa** — `Backspace` y `Delete` funcionan en cualquier posición
-- **Atajos de teclado** — `Ctrl+A/E/W/U/K` para edición rápida
-- **Pegado** — pegar texto lo inserta completo en la posición del cursor
-- **Acentos y emojis** — manejo correcto por punto de código
+- **HUD contextual** — solo muestra las teclas que realmente están activas ahora
+- **Ayuda con `?`** — presiona `?` para ver todas las teclas disponibles con descripciones
+- **Navegación en Docker Hub arreglada** — las flechas ahora navegan los resultados del Hub (D3)
+- **Mapa de teclas central** — todos los bindings definidos en un solo lugar, evitando contradicciones
 
 ---
 
@@ -93,7 +91,9 @@ cdd
 
 ## Uso
 
-Usa `↑` / `↓` para navegar por los contenedores. Atajos de teclado disponibles:
+Usa `↑` / `↓` para navegar por los contenedores. El **HUD** en la parte inferior muestra las teclas disponibles para el contexto actual. Presiona `?` para ayuda completa.
+
+### Lista de Contenedores
 
 | Tecla     | Acción                                                      |
 | --------- | ----------------------------------------------------------- |
@@ -107,6 +107,34 @@ Usa `↑` / `↓` para navegar por los contenedores. Atajos de teclado disponibl
 | `E`       | Eliminar el contenedor seleccionado — requiere confirmación |
 | `D`       | Activar/desactivar panel de debug en vivo                   |
 | `Q`       | Salir                                                       |
+| `?`       | Mostrar panel de ayuda                                      |
+
+### Asistente de Creación
+
+| Tecla     | Acción                                          |
+| --------- | ----------------------------------------------- |
+| `Enter`   | Confirmar y continuar al siguiente paso         |
+| `Esc`     | Cancelar creación y volver a la lista           |
+| `Tab`     | Buscar en Docker Hub (paso 0) o insertar env    |
+| `↑` / `↓` | Navegar sugerencias                             |
+| `?`       | Mostrar panel de ayuda                          |
+
+### Visor de Logs
+
+| Tecla     | Acción                      |
+| --------- | --------------------------- |
+| `↑` / `↓` | Desplazar arriba/abajo      |
+| `PgUp` / `PgDn` | Página arriba/abajo  |
+| `f`       | Activar/desactivar auto-follow |
+| `Esc` / `Q` | Cerrar visor de logs     |
+| `?`       | Mostrar panel de ayuda      |
+
+### Confirmación
+
+| Tecla | Acción                  |
+| ----- | ----------------------- |
+| `y`   | Confirmar la acción     |
+| `n`   | Cancelar la acción      |
 
 ---
 

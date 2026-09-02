@@ -7,12 +7,16 @@ import { useContainerSelection } from './navigation/useContainerSelection';
 import { useDebugLogs } from './debug/useDebugLogs';
 import { useEraseConfirmation } from './useEraseConfirmation';
 import { useExitHandler } from './useExitHandler';
-import { useContainerCommandRouter } from './useContainerCommandRouter';
 import { useShellMode } from './useShellMode';
 import { getLogsStream } from '../helpers/dockerService/serviceComponents/containerLogs.js';
 import { createContainer as svcCreateContainer } from '../helpers/dockerService/serviceComponents/containerActions.js';
 import { buildContainerOptions } from '../helpers/containerOptionsBuilder.js';
 import { DB_IMAGES } from '../helpers/constants.js';
+import {
+  getActiveContext,
+  getBindings,
+  resolveKey,
+} from '../helpers/keymap.js';
 
 // Principal hook to manage user inputs and control the app state
 /**
@@ -24,6 +28,7 @@ import { DB_IMAGES } from '../helpers/constants.js';
  */
 export function useControls(containers = [], overrides = {}) {
   const [creatingContainer, setCreatingContainer] = React.useState(false);
+  const [showHelp, setShowHelp] = React.useState(false);
 
   // — Modular hooks —
   const actions = useContainerActions({ containers });
@@ -111,25 +116,6 @@ export function useControls(containers = [], overrides = {}) {
     [logsViewer]
   );
 
-  const commandRouter = useContainerCommandRouter({
-    actions,
-    containers,
-    selected: selection.selected,
-    creation,
-    logsViewer,
-    startLogsStream,
-    onStartErase: () => {
-      eraseConfirmation.startErase();
-      actions.setMessage(
-        'Are you sure you want to erase this container? (y/n)'
-      );
-      actions.setMessageColor('yellow');
-    },
-    onToggleDebug: () => debugLogs.setShowDebugLogs((prev) => !prev),
-    onStartCreate: () => setCreatingContainer(true),
-    onOpenShell: (container) => shellMode.openShell(container),
-  });
-
   const exitHandler = useExitHandler({
     onBeforeExit: () => {
       actions.setMessage('Exiting...');
@@ -139,99 +125,200 @@ export function useControls(containers = [], overrides = {}) {
     },
   });
 
-  /**
-   * Route keystrokes to the container creation wizard.
-   */
-  const processCreationInput = React.useCallback(
-    (input, key) => {
-      const step = creation.step;
-
-      if (key.escape) {
-        creation.cancelCreation();
-        setCreatingContainer(false);
-        return;
-      }
-
-      if (input === '\r' || input === '\n') {
-        // If on step 0 with a focused suggestion, apply it instead of advancing
-        if (step === 0 && creation.selectedSuggestionIndex >= 0) {
-          creation.applyFocusedSuggestion();
-          return;
-        }
-        creation.nextStep();
-        return;
-      }
-
-      // Tab on step 0: trigger Docker Hub search (with guards)
-      if (key.tab) {
-        if (step === 0) {
-          if (!isSearchingHub && (creation.imageName || '').trim() !== '') {
-            triggerHubSearch();
-          }
-        } else if (step === 3) {
-          insertNextSuggestedEnv?.();
-        }
-        return;
-      }
-
-      // Arrow keys on step 0: navigate suggestion list
-      if (step === 0 && creation.suggestions.length > 0) {
-        if (key.upArrow) {
-          creation.moveSuggestionSelection(-1);
-          return;
-        }
-        if (key.downArrow) {
-          creation.moveSuggestionSelection(1);
-          return;
-        }
-      }
-
-      // Ink v6 maps \x7f (Backspace on most terminals) to key.delete instead
-      // of key.backspace. Normalize so text editing always receives backspace.
-      const normalizedKey =
-        key.delete && !key.backspace
-          ? { ...key, delete: false, backspace: true }
-          : key;
-
-      // Delegate to the text editor for all field input
-      if (creation.handleFieldKey(input, normalizedKey)) return;
-    },
+  // Derive UI state for the keymap context
+  const uiState = React.useMemo(
+    () => ({
+      confirmErase: eraseConfirmation.confirmErase,
+      showHelp,
+      showLogs: logsViewer.showLogs,
+      creatingContainer,
+      hasActiveList:
+        creation.suggestions.length > 0 ||
+        (creation.hubResults ?? []).length > 0,
+      showDebugLogs: debugLogs.showDebugLogs,
+      hasSelection: selection.selected >= 0 && containers.length > 0,
+      wizardStep: creation.step,
+    }),
     [
-      creation,
-      setCreatingContainer,
-      triggerHubSearch,
-      isSearchingHub,
-      insertNextSuggestedEnv,
+      eraseConfirmation.confirmErase,
+      showHelp,
+      logsViewer.showLogs,
+      creatingContainer,
+      creation.suggestions,
+      creation.hubResults,
+      creation.step,
+      debugLogs.showDebugLogs,
+      selection.selected,
+      containers.length,
     ]
   );
 
-  // Single keyboard entry point
+  const context = getActiveContext(uiState);
+  const keymapBindings = getBindings(context, uiState);
+
+  // Action handlers for the keymap
+  const handlers = React.useMemo(
+    () => ({
+      // List context
+      'container.start': () => {
+        const container = containers[selection.selected];
+        if (!container) return;
+        actions.handleAction({
+          actionFn: async (id) => await actions.startContainer(id),
+          actionLabel: 'Starting',
+          selected: selection.selected,
+          stateCheck: (c) =>
+            (c.state === 'running' || c.status === 'running') &&
+            'Container is already running.',
+        });
+      },
+      'container.stop': () => {
+        const container = containers[selection.selected];
+        if (!container) return;
+        actions.handleAction({
+          actionFn: async (id) => await actions.stopContainer(id),
+          actionLabel: 'Stopping',
+          selected: selection.selected,
+          stateCheck: (c) =>
+            (c.state === 'exited' ||
+              c.status === 'exited' ||
+              c.state === 'stopped' ||
+              c.status === 'stopped') &&
+            'Container is already stopped.',
+        });
+      },
+      'container.restart': () => {
+        const container = containers[selection.selected];
+        if (!container) return;
+        actions.handleAction({
+          actionFn: async (id) => await actions.restartContainer(id),
+          actionLabel: 'Restarting',
+          selected: selection.selected,
+        });
+      },
+      'container.logs': () => {
+        const container = containers[selection.selected];
+        if (!container) return;
+        logsViewer.openLogs();
+        startLogsStream(container.id);
+      },
+      'container.shell': () => {
+        const container = containers[selection.selected];
+        if (!container) return;
+        shellMode.openShell(container);
+      },
+      'container.erase': () => {
+        const container = containers[selection.selected];
+        if (!container) return;
+        eraseConfirmation.startErase();
+        actions.setMessage(
+          'Are you sure you want to erase this container? (y/n)'
+        );
+        actions.setMessageColor('yellow');
+      },
+      'container.create': () => {
+        creation.resetCreation();
+        setCreatingContainer(true);
+      },
+      'nav.up': () => selection.handleNavigation('', { upArrow: true }),
+      'nav.down': () => selection.handleNavigation('', { downArrow: true }),
+      'debug.toggle': () => debugLogs.setShowDebugLogs((prev) => !prev),
+      'app.search': () => {}, // Placeholder — search not yet implemented
+      'app.quit': () => exitHandler.handleExitCommand('q'),
+      'app.help': () => setShowHelp((prev) => !prev),
+
+      // Wizard context
+      'wizard.next': () => {
+        if (creation.step === 0 && creation.selectedSuggestionIndex >= 0) {
+          creation.applyFocusedSuggestion();
+        } else {
+          creation.nextStep();
+        }
+      },
+      'wizard.tab': () => {
+        if (creation.step === 0) {
+          // Trigger Hub search if not already searching and image name is not empty
+          if (!isSearchingHub && (creation.imageName || '').trim() !== '') {
+            triggerHubSearch();
+          }
+        } else if (creation.step === 3) {
+          // Insert next suggested env var
+          insertNextSuggestedEnv?.();
+        }
+      },
+      'wizard.list_up': () => creation.moveSuggestionSelection(-1),
+      'wizard.list_down': () => creation.moveSuggestionSelection(1),
+      'wizard.cancel': () => {
+        creation.cancelCreation();
+        setCreatingContainer(false);
+      },
+
+      // Wizard-list context
+      'list.select': () => creation.applyFocusedSuggestion(),
+      'list.up': () => creation.moveSuggestionSelection(-1),
+      'list.down': () => creation.moveSuggestionSelection(1),
+
+      // Logs context
+      'logs.close': () => logsViewer.closeLogs(),
+
+      // Confirm context
+      'confirm.yes': () => eraseConfirmation.processEraseConfirmation('y', {}),
+      'confirm.no': () => eraseConfirmation.processEraseConfirmation('n', {}),
+
+      // Help context
+      'help.close': () => setShowHelp(false),
+
+      // Debug context
+      'debug.close': () => debugLogs.setShowDebugLogs(false),
+    }),
+    [
+      containers,
+      selection.selected,
+      actions,
+      logsViewer,
+      startLogsStream,
+      shellMode,
+      eraseConfirmation,
+      creation,
+      debugLogs,
+      exitHandler,
+    ]
+  );
+
+  // Single keyboard entry point — declarative keymap dispatch
   useInput((input, key) => {
-    if (eraseConfirmation.confirmErase) {
-      eraseConfirmation.processEraseConfirmation(input, key);
+    const ctx = getActiveContext(uiState);
+
+    // Ink v6 maps \x7f (Backspace on most terminals) to key.delete instead
+    // of key.backspace. Normalize so text editing always receives backspace.
+    const normalizedKey =
+      key.delete && !key.backspace
+        ? { ...key, delete: false, backspace: true }
+        : key;
+
+    // Text fields have priority in wizard contexts
+    const WIZARD_CONTEXTS = ['wizard', 'wizard-list'];
+    if (WIZARD_CONTEXTS.includes(ctx) && creation.handleFieldKey(input, normalizedKey)) {
       return;
     }
 
-    if (logsViewer.showLogs) {
-      if (input === 'q' || key.escape) {
-        logsViewer.closeLogs();
+    const binding = resolveKey(ctx, input, key, uiState);
+    if (binding && handlers[binding.id]) {
+      handlers[binding.id]();
+      return;
+    }
+
+    // Fallback for logs scrolling (handled by logsViewer)
+    if (ctx === 'logs' && !binding) {
+      if (key.upArrow) {
+        logsViewer.scrollUp?.();
+        return;
       }
-      return;
+      if (key.downArrow) {
+        logsViewer.scrollDown?.();
+        return;
+      }
     }
-
-    if (creatingContainer) {
-      processCreationInput(input, key);
-      return;
-    }
-
-    if (debugLogs.showDebugLogs && key.escape) {
-      debugLogs.setShowDebugLogs(false);
-      return;
-    }
-
-    commandRouter.handleDockerCommands(input);
-    exitHandler.handleExitCommand(input);
-    selection.handleNavigation(input, key);
   });
 
   return {
@@ -256,5 +343,8 @@ export function useControls(containers = [], overrides = {}) {
     confirmErase: eraseConfirmation.confirmErase,
     showDebugLogs: debugLogs.showDebugLogs,
     debugLogs: debugLogs.debugLogs,
+    showHelp,
+    context,
+    keymapBindings,
   };
 }
