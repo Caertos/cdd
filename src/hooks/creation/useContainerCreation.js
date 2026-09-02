@@ -9,6 +9,7 @@ import {
   searchDockerHub,
   formatHubResult,
 } from '../../helpers/dockerHubService.js';
+import { applyKeyToText } from '../../helpers/textEditing.js';
 
 const MAX_VISIBLE = 6;
 
@@ -18,6 +19,7 @@ const INITIAL_FORM = {
   containerName: '',
   portInput: '',
   envInput: '',
+  cursors: { imageName: 0, containerName: 0, portInput: 0, envInput: 0 },
   message: '',
   messageColor: 'yellow',
   suggestions: [],
@@ -66,6 +68,7 @@ export function useContainerCreation({
     containerName,
     portInput,
     envInput,
+    cursors,
     message,
     messageColor,
     suggestions,
@@ -112,6 +115,82 @@ export function useContainerCreation({
       dispatch({ type: 'SET', payload: { visibleOffset: fn } });
     }
   };
+
+  /**
+   * Sets a field's text value and cursor position together.
+   * @param {'imageName'|'containerName'|'portInput'|'envInput'} fieldName
+   * @param {string} value
+   * @param {number} cursor
+   */
+  function setFieldText(fieldName, value, cursor) {
+    dispatch({
+      type: 'SET',
+      payload: {
+        [fieldName]: value,
+        cursors: { ...form.cursors, [fieldName]: cursor },
+      },
+    });
+  }
+
+  /**
+   * Returns the field name associated with a wizard step.
+   * @param {number} step
+   * @returns {'imageName'|'containerName'|'portInput'|'envInput'|null}
+   */
+  function fieldForStep(step) {
+    return (
+      ['imageName', 'containerName', 'portInput', 'envInput'][step] ?? null
+    );
+  }
+
+  /**
+   * Applies a keypress to the field associated with the current step.
+   * When the edited field is imageName, recalculates suggestions.
+   * @param {string} input - Raw Ink input
+   * @param {import('ink').Key} key - Ink key object
+   * @returns {boolean} true if the key was consumed
+   */
+  function handleFieldKey(input, key) {
+    const fieldName = fieldForStep(step);
+    if (!fieldName) return false;
+
+    const currentState = { value: form[fieldName], cursor: cursors[fieldName] };
+    const { state: newState, handled } = applyKeyToText(
+      currentState,
+      input,
+      key
+    );
+
+    if (!handled) return false;
+
+    if (fieldName === 'imageName') {
+      // Recalculate suggestions when image name changes
+      activeHubRequestRef.current.controller?.abort();
+      activeHubRequestRef.current.requestId += 1;
+      setIsSearchingHub(false);
+      setHubResults(null);
+
+      const lower = newState.value.toLowerCase();
+      const matches = newState.value.trim()
+        ? Object.keys(imageProfiles).filter((key) => key.includes(lower))
+        : [];
+
+      dispatch({
+        type: 'SET',
+        payload: {
+          imageName: newState.value,
+          cursors: { ...form.cursors, imageName: newState.cursor },
+          selectedSuggestionIndex: -1,
+          visibleOffset: 0,
+          suggestions: matches,
+        },
+      });
+    } else {
+      setFieldText(fieldName, newState.value, newState.cursor);
+    }
+
+    return true;
+  }
 
   // Docker Hub search state (kept as useState because they are independent of form)
   const [isSearchingHub, setIsSearchingHub] = useState(false);
@@ -420,11 +499,13 @@ export function useContainerCreation({
     setPortInput,
     envInput,
     setEnvInput,
+    cursors,
     message,
     setMessage,
     messageColor,
     setMessageColor,
     suggestions,
+    activeItems: hubResults ?? suggestions,
     selectedSuggestionIndex,
     visibleOffset,
     isSearchingHub,
@@ -438,5 +519,7 @@ export function useContainerCreation({
     resetCreation,
     insertNextSuggestedEnv,
     hasSuggestedEnv,
+    fieldForStep,
+    handleFieldKey,
   };
 }
