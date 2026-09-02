@@ -18,7 +18,8 @@ import MessageFeedback from './components/MessageFeedback.jsx';
 import Header from './components/Header.jsx';
 import LogViewer from './components/LogViewer.jsx';
 import ContainerCreationPrompt from './components/ContainerCreationPrompt.jsx';
-import UsageMenu from './components/UsageMenu.jsx';
+import { KeyHUD } from './components/KeyHUD.jsx';
+import { HelpPanel } from './components/HelpPanel.jsx';
 import Footer from './components/Footer.jsx';
 
 export default function App() {
@@ -27,22 +28,30 @@ export default function App() {
 
   if (controls.creatingContainer) {
     return (
-      <ContainerCreationPrompt
-        step={controls.creationStep}
-        imageName={controls.imageNameInput}
-        containerName={controls.containerNameInput}
-        portInput={controls.portInput}
-        envInput={controls.envInput}
-        cursors={controls.creation.cursors}
-        message={controls.message}
-        messageColor={controls.messageColor}
-        suggestions={controls.creation.suggestions}
-        selectedSuggestionIndex={controls.creation.selectedSuggestionIndex}
-        visibleOffset={controls.creation.visibleOffset}
-        isSearchingHub={controls.creation.isSearchingHub}
-        hubResults={controls.creation.hubResults}
-        hasSuggestedEnv={controls.creation.hasSuggestedEnv}
-      />
+      <>
+        <ContainerCreationPrompt
+          step={controls.creationStep}
+          imageName={controls.imageNameInput}
+          containerName={controls.containerNameInput}
+          portInput={controls.portInput}
+          envInput={controls.envInput}
+          cursors={controls.creation.cursors}
+          message={controls.message}
+          messageColor={controls.messageColor}
+          suggestions={controls.creation.activeItems}
+          selectedSuggestionIndex={controls.creation.selectedSuggestionIndex}
+          visibleOffset={controls.creation.visibleOffset}
+          isSearchingHub={controls.creation.isSearchingHub}
+          hubResults={controls.creation.hubResults}
+          hasSuggestedEnv={controls.creation.hasSuggestedEnv}
+        />
+        {controls.showHelp && (
+          <HelpPanel
+            context={controls.context}
+            bindings={controls.keymapBindings}
+          />
+        )}
+      </>
     );
   }
 
@@ -65,7 +74,7 @@ export default function App() {
           message={controls.message}
           color={controls.messageColor}
         />
-        <UsageMenu />
+        <KeyHUD bindings={controls.keymapBindings} />
         {controls.showDebugLogs && (
           <Box
             marginTop={1}
@@ -91,6 +100,12 @@ export default function App() {
         )}
         <Footer />
       </Box>
+      {controls.showHelp && (
+        <HelpPanel
+          context={controls.context}
+          bindings={controls.keymapBindings}
+        />
+      )}
       {controls.showLogs && (
         <LogViewer
           logs={controls.logs}
