@@ -25,6 +25,9 @@ dist-ssr
 
 AUDIT_REPORT.md
 
+# Atl temporary files
+.atl/
+
 # Generated docs (npm run docs — regenerable, not committed)
 docs/
 
