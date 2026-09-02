@@ -24,7 +24,12 @@ export function HelpPanel({ context, bindings }) {
   const title = CONTEXT_LABELS[context] ?? context;
 
   return (
-    <Box flexDirection="column" borderStyle="round" borderColor="cyan" padding={1}>
+    <Box
+      flexDirection="column"
+      borderStyle="round"
+      borderColor="cyan"
+      padding={1}
+    >
       <Text bold color="cyan">
         Help — {title}
       </Text>

@@ -12,7 +12,11 @@ import { getLogsStream } from '../helpers/dockerService/serviceComponents/contai
 import { createContainer as svcCreateContainer } from '../helpers/dockerService/serviceComponents/containerActions.js';
 import { buildContainerOptions } from '../helpers/containerOptionsBuilder.js';
 import { DB_IMAGES } from '../helpers/constants.js';
-import { getActiveContext, getBindings, resolveKey } from '../helpers/keymap.js';
+import {
+  getActiveContext,
+  getBindings,
+  resolveKey,
+} from '../helpers/keymap.js';
 
 // Principal hook to manage user inputs and control the app state
 /**
@@ -122,144 +126,164 @@ export function useControls(containers = [], overrides = {}) {
   });
 
   // Derive UI state for the keymap context
-  const uiState = React.useMemo(() => ({
-    confirmErase: eraseConfirmation.confirmErase,
-    showHelp,
-    showLogs: logsViewer.showLogs,
-    creatingContainer,
-    hasActiveList: creation.suggestions.length > 0 || (creation.hubResults ?? []).length > 0,
-    showDebugLogs: debugLogs.showDebugLogs,
-    hasSelection: selection.selected >= 0 && containers.length > 0,
-    wizardStep: creation.step,
-  }), [
-    eraseConfirmation.confirmErase,
-    showHelp,
-    logsViewer.showLogs,
-    creatingContainer,
-    creation.suggestions,
-    creation.hubResults,
-    creation.step,
-    debugLogs.showDebugLogs,
-    selection.selected,
-    containers.length,
-  ]);
+  const uiState = React.useMemo(
+    () => ({
+      confirmErase: eraseConfirmation.confirmErase,
+      showHelp,
+      showLogs: logsViewer.showLogs,
+      creatingContainer,
+      hasActiveList:
+        creation.suggestions.length > 0 ||
+        (creation.hubResults ?? []).length > 0,
+      showDebugLogs: debugLogs.showDebugLogs,
+      hasSelection: selection.selected >= 0 && containers.length > 0,
+      wizardStep: creation.step,
+    }),
+    [
+      eraseConfirmation.confirmErase,
+      showHelp,
+      logsViewer.showLogs,
+      creatingContainer,
+      creation.suggestions,
+      creation.hubResults,
+      creation.step,
+      debugLogs.showDebugLogs,
+      selection.selected,
+      containers.length,
+    ]
+  );
 
   const context = getActiveContext(uiState);
   const keymapBindings = getBindings(context, uiState);
 
   // Action handlers for the keymap
-  const handlers = React.useMemo(() => ({
-    // List context
-    'container.start': () => {
-      const container = containers[selection.selected];
-      if (!container) return;
-      actions.handleAction({
-        actionFn: async (id) => await actions.startContainer(id),
-        actionLabel: 'Starting',
-        selected: selection.selected,
-        stateCheck: (c) =>
-          (c.state === 'running' || c.status === 'running') &&
-          'Container is already running.',
-      });
-    },
-    'container.stop': () => {
-      const container = containers[selection.selected];
-      if (!container) return;
-      actions.handleAction({
-        actionFn: async (id) => await actions.stopContainer(id),
-        actionLabel: 'Stopping',
-        selected: selection.selected,
-        stateCheck: (c) =>
-          (c.state === 'exited' || c.status === 'exited' ||
-           c.state === 'stopped' || c.status === 'stopped') &&
-          'Container is already stopped.',
-      });
-    },
-    'container.restart': () => {
-      const container = containers[selection.selected];
-      if (!container) return;
-      actions.handleAction({
-        actionFn: async (id) => await actions.restartContainer(id),
-        actionLabel: 'Restarting',
-        selected: selection.selected,
-      });
-    },
-    'container.logs': () => {
-      const container = containers[selection.selected];
-      if (!container) return;
-      logsViewer.openLogs();
-      startLogsStream(container.id);
-    },
-    'container.shell': () => {
-      const container = containers[selection.selected];
-      if (!container) return;
-      shellMode.openShell(container);
-    },
-    'container.erase': () => {
-      const container = containers[selection.selected];
-      if (!container) return;
-      eraseConfirmation.startErase();
-      actions.setMessage('Are you sure you want to erase this container? (y/n)');
-      actions.setMessageColor('yellow');
-    },
-    'container.create': () => {
-      creation.resetCreation();
-      setCreatingContainer(true);
-    },
-    'nav.up': () => selection.handleNavigation('', { upArrow: true }),
-    'nav.down': () => selection.handleNavigation('', { downArrow: true }),
-    'debug.toggle': () => debugLogs.setShowDebugLogs((prev) => !prev),
-    'app.search': () => {}, // Placeholder — search not yet implemented
-    'app.quit': () => exitHandler.handleExitCommand('q'),
-    'app.help': () => setShowHelp((prev) => !prev),
+  const handlers = React.useMemo(
+    () => ({
+      // List context
+      'container.start': () => {
+        const container = containers[selection.selected];
+        if (!container) return;
+        actions.handleAction({
+          actionFn: async (id) => await actions.startContainer(id),
+          actionLabel: 'Starting',
+          selected: selection.selected,
+          stateCheck: (c) =>
+            (c.state === 'running' || c.status === 'running') &&
+            'Container is already running.',
+        });
+      },
+      'container.stop': () => {
+        const container = containers[selection.selected];
+        if (!container) return;
+        actions.handleAction({
+          actionFn: async (id) => await actions.stopContainer(id),
+          actionLabel: 'Stopping',
+          selected: selection.selected,
+          stateCheck: (c) =>
+            (c.state === 'exited' ||
+              c.status === 'exited' ||
+              c.state === 'stopped' ||
+              c.status === 'stopped') &&
+            'Container is already stopped.',
+        });
+      },
+      'container.restart': () => {
+        const container = containers[selection.selected];
+        if (!container) return;
+        actions.handleAction({
+          actionFn: async (id) => await actions.restartContainer(id),
+          actionLabel: 'Restarting',
+          selected: selection.selected,
+        });
+      },
+      'container.logs': () => {
+        const container = containers[selection.selected];
+        if (!container) return;
+        logsViewer.openLogs();
+        startLogsStream(container.id);
+      },
+      'container.shell': () => {
+        const container = containers[selection.selected];
+        if (!container) return;
+        shellMode.openShell(container);
+      },
+      'container.erase': () => {
+        const container = containers[selection.selected];
+        if (!container) return;
+        eraseConfirmation.startErase();
+        actions.setMessage(
+          'Are you sure you want to erase this container? (y/n)'
+        );
+        actions.setMessageColor('yellow');
+      },
+      'container.create': () => {
+        creation.resetCreation();
+        setCreatingContainer(true);
+      },
+      'nav.up': () => selection.handleNavigation('', { upArrow: true }),
+      'nav.down': () => selection.handleNavigation('', { downArrow: true }),
+      'debug.toggle': () => debugLogs.setShowDebugLogs((prev) => !prev),
+      'app.search': () => {}, // Placeholder — search not yet implemented
+      'app.quit': () => exitHandler.handleExitCommand('q'),
+      'app.help': () => setShowHelp((prev) => !prev),
 
-    // Wizard context
-    'wizard.next': () => {
-      if (creation.step === 0 && creation.selectedSuggestionIndex >= 0) {
-        creation.applyFocusedSuggestion();
-      } else {
-        creation.nextStep();
-      }
-    },
-    'wizard.tab': () => {
-      if (creation.step === 0) {
-        // Trigger Hub search if not already searching and image name is not empty
-        if (!isSearchingHub && (creation.imageName || '').trim() !== '') {
-          triggerHubSearch();
+      // Wizard context
+      'wizard.next': () => {
+        if (creation.step === 0 && creation.selectedSuggestionIndex >= 0) {
+          creation.applyFocusedSuggestion();
+        } else {
+          creation.nextStep();
         }
-      } else if (creation.step === 3) {
-        // Insert next suggested env var
-        insertNextSuggestedEnv?.();
-      }
-    },
-    'wizard.list_up': () => creation.moveSuggestionSelection(-1),
-    'wizard.list_down': () => creation.moveSuggestionSelection(1),
-    'wizard.cancel': () => {
-      creation.cancelCreation();
-      setCreatingContainer(false);
-    },
+      },
+      'wizard.tab': () => {
+        if (creation.step === 0) {
+          // Trigger Hub search if not already searching and image name is not empty
+          if (!isSearchingHub && (creation.imageName || '').trim() !== '') {
+            triggerHubSearch();
+          }
+        } else if (creation.step === 3) {
+          // Insert next suggested env var
+          insertNextSuggestedEnv?.();
+        }
+      },
+      'wizard.list_up': () => creation.moveSuggestionSelection(-1),
+      'wizard.list_down': () => creation.moveSuggestionSelection(1),
+      'wizard.cancel': () => {
+        creation.cancelCreation();
+        setCreatingContainer(false);
+      },
 
-    // Wizard-list context
-    'list.select': () => creation.applyFocusedSuggestion(),
-    'list.up': () => creation.moveSuggestionSelection(-1),
-    'list.down': () => creation.moveSuggestionSelection(1),
+      // Wizard-list context
+      'list.select': () => creation.applyFocusedSuggestion(),
+      'list.up': () => creation.moveSuggestionSelection(-1),
+      'list.down': () => creation.moveSuggestionSelection(1),
 
-    // Logs context
-    'logs.close': () => logsViewer.closeLogs(),
+      // Logs context
+      'logs.close': () => logsViewer.closeLogs(),
 
-    // Confirm context
-    'confirm.yes': () => eraseConfirmation.processEraseConfirmation('y', {}),
-    'confirm.no': () => eraseConfirmation.processEraseConfirmation('n', {}),
+      // Confirm context
+      'confirm.yes': () => eraseConfirmation.processEraseConfirmation('y', {}),
+      'confirm.no': () => eraseConfirmation.processEraseConfirmation('n', {}),
 
-    // Help context
-    'help.close': () => setShowHelp(false),
+      // Help context
+      'help.close': () => setShowHelp(false),
 
-    // Debug context
-    'debug.close': () => debugLogs.setShowDebugLogs(false),
-  }), [
-    containers, selection.selected, actions, logsViewer, startLogsStream,
-    shellMode, eraseConfirmation, creation, debugLogs, exitHandler,
-  ]);
+      // Debug context
+      'debug.close': () => debugLogs.setShowDebugLogs(false),
+    }),
+    [
+      containers,
+      selection.selected,
+      actions,
+      logsViewer,
+      startLogsStream,
+      shellMode,
+      eraseConfirmation,
+      creation,
+      debugLogs,
+      exitHandler,
+    ]
+  );
 
   // Single keyboard entry point — declarative keymap dispatch
   useInput((input, key) => {
@@ -279,8 +303,14 @@ export function useControls(containers = [], overrides = {}) {
 
     // Fallback for logs scrolling (handled by logsViewer)
     if (ctx === 'logs' && !binding) {
-      if (key.upArrow) { logsViewer.scrollUp?.(); return; }
-      if (key.downArrow) { logsViewer.scrollDown?.(); return; }
+      if (key.upArrow) {
+        logsViewer.scrollUp?.();
+        return;
+      }
+      if (key.downArrow) {
+        logsViewer.scrollDown?.();
+        return;
+      }
     }
   });
 

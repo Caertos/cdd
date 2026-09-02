@@ -40,7 +40,10 @@ export function KeyHUD({ bindings, maxWidth = 80 }) {
       ))}
       {truncated && (
         <Box>
-          <Text dimColor italic> ? more</Text>
+          <Text dimColor italic>
+            {' '}
+            ? more
+          </Text>
         </Box>
       )}
     </Box>
