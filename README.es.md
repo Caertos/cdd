@@ -29,13 +29,13 @@ Ahora los campos de texto del asistente se comportan como un campo de texto norm
 
 ### v4.1 — Shell interactivo
 
-**Abrí un shell dentro de cualquier contenedor con una sola tecla.**
+**Abre un shell dentro de cualquier contenedor con una sola tecla.**
 
 Presiona `S` y CDD te lleva a un shell interactivo completo (`bash` o `sh`) dentro del contenedor seleccionado — sin necesidad de escribir `docker exec`.
 
 - **Shell auto-detectado** — CDD sondea el contenedor y elige `bash` o `sh` automáticamente
-- **Soporte de terminal completo** — ejecutá `psql`, `python3`, `node`, `redis-cli`, o cualquier comando dentro del contenedor
-- **Salida limpia** — escribí `exit` o presioná `Ctrl+D` para volver al dashboard
+- **Soporte de terminal completo** — ejecuta `psql`, `python3`, `node`, `redis-cli`, o cualquier comando dentro del contenedor
+- **Salida limpia** — escribe `exit` o presiona `Ctrl+D` para volver al dashboard
 
 ### v3.2 — Asistente de creación interactivo
 
@@ -154,9 +154,9 @@ Presiona `S` desde el dashboard con un contenedor en ejecución seleccionado. CD
 2. Abrirá una sesión de terminal interactiva completa
 3. Te dejará en el shell del contenedor
 
-Desde ahí podés ejecutar cualquier comando — `psql` para PostgreSQL, `python3` para Python, `node` para Node.js, `redis-cli` para Redis, etc.
+Desde ahí puedes ejecutar cualquier comando — `psql` para PostgreSQL, `python3` para Python, `node` para Node.js, `redis-cli` para Redis, etc.
 
-Escribí `exit` o presioná `Ctrl+D` para salir del shell y volver al dashboard de CDD.
+Escribe `exit` o presiona `Ctrl+D` para salir del shell y volver al dashboard de CDD.
 
 ---
 
