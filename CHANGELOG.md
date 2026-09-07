@@ -7,6 +7,31 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 - Nothing yet.
 
+## [4.4.0] - 2026-09-07
+
+### Added
+- **Wizard navigation** — go back between steps without losing data (`Esc` now goes back one step)
+- **Step indicator** — "Step X of Y" shown in the creation wizard header
+- **Discard confirmation** — `Esc` on step 0 with data asks "Discard this container? [s/n]" instead of silently destroying progress
+- `useConfirmation.js` — generic yes/no confirmation hook (replaces `useEraseConfirmation`)
+- `validateStep()` — pure function to validate a wizard step without side effects
+- `stepMessageFor()` — pure function to get the help message for a wizard step
+- `prevStep()` — go back one step, preserving all field values and cursors
+- `goToStep()` — jump to a specific step (for future TASK-4 summary screen)
+- `hasAnyInput()` — check if any wizard field has content
+- `closeSuggestions()` — close suggestion list without changing step
+- `cancelHubSearch()` — cancel in-flight Hub search
+- `WIZARD_STEP_COUNT` constant in `constants.js`
+
+### Changed
+- **`Esc` in the wizard now goes back one step** instead of canceling the entire wizard
+- `useEraseConfirmation` now delegates to `useConfirmation`
+- ControlsHUD shows "Back" instead of "Cancel" for `Esc` in wizard steps > 0
+- ControlsHUD shows "Exit" instead of "Cancel" for `Esc` on step 0
+
+### Fixed
+- **D4**: `Esc` no longer silently destroys all wizard progress — it either goes back or asks for confirmation
+
 ## [4.3.0] - 2026-09-02
 
 ### Added

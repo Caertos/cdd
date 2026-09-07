@@ -364,10 +364,10 @@ describe('textEditing', () => {
     test('enter returns handled: false', () => {
       const state = { value: 'abc', cursor: 1 };
       const result = applyKeyToText(state, '\r', {});
-      // Enter is a single char, so applyKeyToText treats it as text input.
-      // The caller must intercept Enter BEFORE calling applyKeyToText.
-      expect(result.handled).toBe(true);
-      expect(result.state.value).toBe('a\rbc');
+      // Enter is a control character — must NOT be inserted as text.
+      // The caller (useControls) routes it to wizard.next instead.
+      expect(result.handled).toBe(false);
+      expect(result.state.value).toBe('abc');
     });
     });
 
@@ -432,6 +432,38 @@ describe('textEditing', () => {
         );
         expect(state.value).toBe(`a${emoji}`);
         expect(state.cursor).toBe(2);
+      });
+    });
+
+    describe('control characters', () => {
+      test('Enter (\\r) is not inserted as text', () => {
+        const { state, handled } = applyKeyToText(
+          { value: 'abc', cursor: 3 },
+          '\r',
+          { return: true }
+        );
+        expect(handled).toBe(false);
+        expect(state.value).toBe('abc');
+      });
+
+      test('newline (\\n) is not inserted as text', () => {
+        const { state, handled } = applyKeyToText(
+          { value: 'abc', cursor: 3 },
+          '\n',
+          {}
+        );
+        expect(handled).toBe(false);
+        expect(state.value).toBe('abc');
+      });
+
+      test('tab (\\t) is not inserted as text', () => {
+        const { state, handled } = applyKeyToText(
+          { value: 'abc', cursor: 3 },
+          '\t',
+          { tab: true }
+        );
+        expect(handled).toBe(false);
+        expect(state.value).toBe('abc');
       });
     });
   });

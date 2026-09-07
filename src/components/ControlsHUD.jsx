@@ -8,39 +8,48 @@ import { Box, Text } from 'ink';
  * @param {boolean} hasSuggestions - Whether suggestions/hub results are visible
  * @param {boolean} isSearchingHub - Whether a Hub search is in progress
  * @param {boolean} [hasSuggestedEnv=false] - Whether the image has suggestedEnv entries
+ * @param {boolean} [confirmDiscard=false] - Whether discard confirmation is active
  * @returns {{ key: string, label: string }[]}
  */
 function getHints(
   step,
   hasSuggestions,
   isSearchingHub,
-  hasSuggestedEnv = false
+  hasSuggestedEnv = false,
+  confirmDiscard = false
 ) {
+  if (confirmDiscard) {
+    return [
+      { key: 's', label: 'Yes' },
+      { key: 'n', label: 'No' },
+    ];
+  }
+
   if (step === 0) {
     if (hasSuggestions) {
       return [
         { key: '↑↓', label: 'Navigate' },
         { key: 'Enter', label: 'Select' },
-        { key: 'Esc', label: 'Cancel' },
+        { key: 'Esc', label: 'Exit' },
       ];
     }
     const hints = [];
     if (!isSearchingHub) hints.push({ key: 'Tab', label: 'Search Hub' });
     hints.push({ key: '↑↓', label: 'Browse' });
     hints.push({ key: 'Enter', label: 'Confirm' });
-    hints.push({ key: 'Esc', label: 'Cancel' });
+    hints.push({ key: 'Esc', label: 'Exit' });
     return hints;
   }
   if (step === 3) {
     const hints = [];
     if (hasSuggestedEnv) hints.push({ key: 'Tab', label: 'Insert next env' });
     hints.push({ key: 'Enter', label: 'Continue' });
-    hints.push({ key: 'Esc', label: 'Cancel' });
+    hints.push({ key: 'Esc', label: 'Back' });
     return hints;
   }
   return [
     { key: 'Enter', label: 'Continue' },
-    { key: 'Esc', label: 'Cancel' },
+    { key: 'Esc', label: 'Back' },
   ];
 }
 
@@ -52,14 +61,16 @@ function getHints(
  * @param {boolean} [props.hasSuggestions=false] - Whether suggestions/hub results are visible
  * @param {boolean} [props.isSearchingHub=false] - Whether a Hub search is in progress
  * @param {boolean} [props.hasSuggestedEnv=false] - Whether the image has suggestedEnv entries
+ * @param {boolean} [props.confirmDiscard=false] - Whether discard confirmation is active
  */
 function ControlsHUD({
   step,
   hasSuggestions = false,
   isSearchingHub = false,
   hasSuggestedEnv = false,
+  confirmDiscard = false,
 }) {
-  const hints = getHints(step, hasSuggestions, isSearchingHub, hasSuggestedEnv);
+  const hints = getHints(step, hasSuggestions, isSearchingHub, hasSuggestedEnv, confirmDiscard);
   return (
     <Box flexDirection="row" columnGap={2}>
       {hints.map(({ key, label }) => (

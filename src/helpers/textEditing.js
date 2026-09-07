@@ -202,8 +202,10 @@ export function applyKeyToText(state, input, key) {
     return { state: newState, handled: true };
   }
 
-  // Regular text input (single char or paste)
-  if (input && input.length >= 1) {
+  // Regular text input (single char or paste).
+  // Reject control characters that Ink delivers as \r, \n, \t — these are
+  // navigation/action keys, not text to insert.
+  if (input && input.length >= 1 && !/[\r\n\t]/.test(input)) {
     const newState = insertAt(state, input);
     return { state: newState, handled: true };
   }

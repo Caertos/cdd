@@ -6,6 +6,7 @@ import { useLogsViewer } from './creation/useLogsViewer';
 import { useContainerSelection } from './navigation/useContainerSelection';
 import { useDebugLogs } from './debug/useDebugLogs';
 import { useEraseConfirmation } from './useEraseConfirmation';
+import { useConfirmation } from './useConfirmation';
 import { useExitHandler } from './useExitHandler';
 import { useShellMode } from './useShellMode';
 import { getLogsStream } from '../helpers/dockerService/serviceComponents/containerLogs.js';
@@ -95,6 +96,36 @@ export function useControls(containers = [], overrides = {}) {
     },
   });
 
+  // Discard confirmation for wizard Esc on step 0 with data
+  const backHintShownRef = React.useRef(false);
+  const discardConfirmation = useConfirmation({
+    onConfirm: () => {
+      creation.cancelCreation();
+      setCreatingContainer(false);
+    },
+    onCancel: () => {
+      // Return to wizard — message will be recalculated on next render
+    },
+  });
+
+  // Quit confirmation
+  const quitConfirmation = useConfirmation({
+    onConfirm: () => exitHandler.handleExitCommand('q'),
+    onCancel: () => {
+      actions.setMessage('');
+      actions.setMessageColor('');
+    },
+  });
+
+  /** Show the "Esc now goes back" hint once per wizard session. */
+  function showBackHintOnce() {
+    if (!backHintShownRef.current) {
+      backHintShownRef.current = true;
+      creation.setMessage('Esc now goes back one step — to cancel, press Esc from the first step');
+      creation.setMessageColor('cyan');
+    }
+  }
+
   /**
    * Pipe container logs into the viewer while applying a hard limit.
    * @param {string} containerId - Container identifier used by Docker.
@@ -129,6 +160,8 @@ export function useControls(containers = [], overrides = {}) {
   const uiState = React.useMemo(
     () => ({
       confirmErase: eraseConfirmation.confirmErase,
+      confirmDiscard: discardConfirmation.active,
+      confirmQuit: quitConfirmation.active,
       showHelp,
       showLogs: logsViewer.showLogs,
       creatingContainer,
@@ -141,6 +174,8 @@ export function useControls(containers = [], overrides = {}) {
     }),
     [
       eraseConfirmation.confirmErase,
+      discardConfirmation.active,
+      quitConfirmation.active,
       showHelp,
       logsViewer.showLogs,
       creatingContainer,
@@ -217,6 +252,7 @@ export function useControls(containers = [], overrides = {}) {
         actions.setMessageColor('yellow');
       },
       'container.create': () => {
+        backHintShownRef.current = false;
         creation.resetCreation();
         setCreatingContainer(true);
       },
@@ -224,7 +260,11 @@ export function useControls(containers = [], overrides = {}) {
       'nav.down': () => selection.handleNavigation('', { downArrow: true }),
       'debug.toggle': () => debugLogs.setShowDebugLogs((prev) => !prev),
       'app.search': () => {}, // Placeholder — search not yet implemented
-      'app.quit': () => exitHandler.handleExitCommand('q'),
+      'app.quit': () => {
+        quitConfirmation.start();
+        actions.setMessage('Are you sure you want to quit? [y] Yes  [n] No');
+        actions.setMessageColor('yellow');
+      },
       'app.help': () => setShowHelp((prev) => !prev),
 
       // Wizard context
@@ -248,9 +288,29 @@ export function useControls(containers = [], overrides = {}) {
       },
       'wizard.list_up': () => creation.moveSuggestionSelection(-1),
       'wizard.list_down': () => creation.moveSuggestionSelection(1),
-      'wizard.cancel': () => {
-        creation.cancelCreation();
-        setCreatingContainer(false);
+      'wizard.back': () => {
+        // Esc chain: suggestions → Hub search → prev step → discard confirm → exit
+        if (creation.isSearchingHub) {
+          creation.cancelHubSearch();
+          return;
+        }
+        if (creation.suggestions.length > 0 || (creation.hubResults ?? []).length > 0) {
+          creation.closeSuggestions();
+          return;
+        }
+        if (creation.step > 0) {
+          creation.prevStep();
+          showBackHintOnce();
+          return;
+        }
+        if (!creation.hasAnyInput()) {
+          creation.cancelCreation();
+          setCreatingContainer(false);
+          return;
+        }
+        discardConfirmation.start();
+        creation.setMessage('Discard this container? All progress will be lost. [y] Yes  [n] No');
+        creation.setMessageColor('yellow');
       },
 
       // Wizard-list context
@@ -264,6 +324,14 @@ export function useControls(containers = [], overrides = {}) {
       // Confirm context
       'confirm.yes': () => eraseConfirmation.processEraseConfirmation('y', {}),
       'confirm.no': () => eraseConfirmation.processEraseConfirmation('n', {}),
+
+      // Wizard-discard context
+      'confirm-discard.yes': () => discardConfirmation.processKey('y', {}),
+      'confirm-discard.no': () => discardConfirmation.processKey('n', {}),
+
+      // Confirm-quit context
+      'confirm-quit.yes': () => quitConfirmation.processKey('y'),
+      'confirm-quit.no': () => quitConfirmation.processKey('n'),
 
       // Help context
       'help.close': () => setShowHelp(false),
@@ -279,6 +347,8 @@ export function useControls(containers = [], overrides = {}) {
       startLogsStream,
       shellMode,
       eraseConfirmation,
+      discardConfirmation,
+      quitConfirmation,
       creation,
       debugLogs,
       exitHandler,
@@ -341,6 +411,8 @@ export function useControls(containers = [], overrides = {}) {
     actions,
     logsViewer,
     confirmErase: eraseConfirmation.confirmErase,
+    confirmDiscard: discardConfirmation.active,
+    confirmQuit: quitConfirmation.active,
     showDebugLogs: debugLogs.showDebugLogs,
     debugLogs: debugLogs.debugLogs,
     showHelp,

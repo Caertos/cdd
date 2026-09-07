@@ -1,9 +1,12 @@
 import React from 'react';
-import { Box } from 'ink';
+import { Box, Text } from 'ink';
 import { PromptField, PromptMessage } from './PromptField.jsx';
 import { SuggestionPanel } from './SuggestionPanel.jsx';
 import { ControlsHUD } from './ControlsHUD.jsx';
 import PropTypes from 'prop-types';
+
+/** Number of steps in the wizard. Must stay in sync with WIZARD_STEP_COUNT in constants.js. */
+const WIZARD_STEP_COUNT = 4;
 
 /**
  * Prompt UI shown when creating a new container.
@@ -21,6 +24,7 @@ import PropTypes from 'prop-types';
  * @param {string[]} [props.suggestions] - Autocomplete suggestions (shown only on step 0)
  * @param {number} [props.selectedSuggestionIndex] - Currently focused suggestion index
  * @param {number} [props.visibleOffset] - First visible suggestion offset
+ * @param {boolean} [props.confirmDiscard=false] - Whether discard confirmation is active
  * @returns {JSX.Element}
  */
 export default function ContainerCreationPrompt(props) {
@@ -39,6 +43,7 @@ export default function ContainerCreationPrompt(props) {
     hubResults = null,
     isSearchingHub = false,
     hasSuggestedEnv = false,
+    confirmDiscard = false,
   } = props;
   const prompts = [
     {
@@ -78,19 +83,39 @@ export default function ContainerCreationPrompt(props) {
       borderColor="yellow"
       padding={1}
     >
-      <PromptField
-        label={label}
-        value={value}
-        cursor={cursor}
-        required={required}
-      />
-      {showSuggestions && (
-        <SuggestionPanel
-          items={activeItems}
-          selectedIndex={selectedSuggestionIndex}
-          visibleOffset={visibleOffset}
-          isLoading={isSearchingHub}
-        />
+      <Box justifyContent="center">
+        <Text dimColor>
+          Step {step + 1} of {WIZARD_STEP_COUNT}
+        </Text>
+      </Box>
+      {confirmDiscard ? (
+        <Box flexDirection="column">
+          <Text>
+            <Text color="yellow">Discard this container?</Text>{' '}
+            <Text dimColor>All progress will be lost.</Text>
+          </Text>
+          <Text>
+            <Text color="cyan">[y]</Text> Yes{'  '}
+            <Text color="cyan">[n]</Text> No
+          </Text>
+        </Box>
+      ) : (
+        <>
+          <PromptField
+            label={label}
+            value={value}
+            cursor={cursor}
+            required={required}
+          />
+          {showSuggestions && (
+            <SuggestionPanel
+              items={activeItems}
+              selectedIndex={selectedSuggestionIndex}
+              visibleOffset={visibleOffset}
+              isLoading={isSearchingHub}
+            />
+          )}
+        </>
       )}
       <PromptMessage message={message} color={messageColor} />
       <ControlsHUD
@@ -98,6 +123,7 @@ export default function ContainerCreationPrompt(props) {
         hasSuggestions={hasSuggestions}
         isSearchingHub={isSearchingHub}
         hasSuggestedEnv={hasSuggestedEnv}
+        confirmDiscard={confirmDiscard}
       />
     </Box>
   );
@@ -123,6 +149,7 @@ ContainerCreationPrompt.propTypes = {
   hubResults: PropTypes.arrayOf(PropTypes.string),
   isSearchingHub: PropTypes.bool,
   hasSuggestedEnv: PropTypes.bool,
+  confirmDiscard: PropTypes.bool,
 };
 
 // Named export for test compatibility with jest ESM interop
