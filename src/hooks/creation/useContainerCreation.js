@@ -3,7 +3,11 @@ import {
   validatePorts,
   validateEnvVars,
 } from '../../helpers/validationHelpers.js';
-import { IMAGE_PROFILES, resolveImageTag } from '../../helpers/constants.js';
+import {
+  IMAGE_PROFILES,
+  resolveImageTag,
+  WIZARD_STEP_COUNT,
+} from '../../helpers/constants.js';
 import { safeCall } from '../../helpers/safeCall.js';
 import {
   searchDockerHub,
@@ -12,6 +16,9 @@ import {
 import { applyKeyToText } from '../../helpers/textEditing.js';
 
 const MAX_VISIBLE = 6;
+
+/** Number of steps in the wizard. Passes to 5 in TASK-4. */
+export const STEP_COUNT = WIZARD_STEP_COUNT;
 
 const INITIAL_FORM = {
   step: 0,
@@ -45,6 +52,123 @@ function formReducer(state, action) {
 }
 
 /**
+ * Validates the content of a step without changing step.
+ * Extracted from the logic that was inside nextStep().
+ *
+ * @param {number} step
+ * @param {Object} values - { imageName, containerName, portInput, envInput }
+ * @param {Object} ctx    - { imageProfiles, dbImages }
+ * @returns {{ ok: boolean, error?: string }}
+ */
+export function validateStep(step, values, ctx) {
+  const { imageName, portInput, envInput } = values;
+  const { imageProfiles, dbImages } = ctx;
+
+  if (step === 0) {
+    if (!imageName.trim()) {
+      return { ok: false, error: 'Image name cannot be empty.' };
+    }
+    return { ok: true };
+  }
+
+  if (step === 2) {
+    if (portInput.trim() && !validatePorts(portInput)) {
+      return {
+        ok: false,
+        error:
+          'Port format must be host:container and both must be numbers (e.g. 8080:80)',
+      };
+    }
+    return { ok: true };
+  }
+
+  if (step === 3) {
+    const result = validateEnvVars(envInput, imageName, imageProfiles);
+    if (!result.valid) {
+      return { ok: false, error: result.errors.join(' | ') };
+    }
+    return { ok: true };
+  }
+
+  // Steps without validation (1, future steps) always pass
+  return { ok: true };
+}
+
+/**
+ * Returns the help message that corresponds to a step.
+ * Extracted from the setStepMessage() calls scattered in nextStep().
+ *
+ * @param {number} step
+ * @param {Object} values - { imageName, containerName, portInput, envInput }
+ * @param {Object} ctx    - { imageProfiles, dbImages }
+ * @returns {{ text: string, color: string }}
+ */
+export function stepMessageFor(step, values, ctx) {
+  const { imageName } = values;
+  const { imageProfiles, dbImages } = ctx;
+
+  if (step === 0) {
+    return {
+      text: 'Insert the name of the image to create: ',
+      color: 'yellow',
+    };
+  }
+  if (step === 1) {
+    return {
+      text: 'Optional: Enter container name or leave empty and press Enter',
+      color: 'yellow',
+    };
+  }
+  if (step === 2) {
+    return {
+      text: 'Optional: Enter ports (format 8080:80,443:443) or leave empty and press Enter',
+      color: 'yellow',
+    };
+  }
+  if (step === 3) {
+    const isDb = dbImages.some((db) =>
+      imageName.trim().toLowerCase().includes(db)
+    );
+    const baseName = imageName
+      .trim()
+      .toLowerCase()
+      .split(':')[0]
+      .split('/')
+      .pop();
+    const profile = imageProfiles[baseName];
+
+    if (profile?.requiredEnv?.length) {
+      const suggestedPart =
+        profile.suggestedEnv?.length
+          ? ` | Suggested: ${profile.suggestedEnv.join(', ')}`
+          : '';
+      return {
+        text: `Required env vars for ${baseName}: ${profile.requiredEnv.join(', ')}. Enter as VAR=val,VAR2=val2${suggestedPart}`,
+        color: 'yellow',
+      };
+    }
+    if (profile?.suggestedEnv?.length) {
+      return {
+        text: `Suggested env vars for ${baseName}: ${profile.suggestedEnv.join(', ')}. Enter as VAR=val,VAR2=val2 or leave empty.`,
+        color: 'yellow',
+      };
+    }
+    if (isDb) {
+      return {
+        text: 'Warning: This image usually requires environment variables (e.g. MYSQL_ROOT_PASSWORD=my-secret-pw for MySQL, POSTGRES_PASSWORD=yourpassword for Postgres). Enter them as VAR=val,VAR2=val2 or leave empty and press Enter.',
+        color: 'yellow',
+      };
+    }
+    return {
+      text: 'Optional: Enter environment variables (format VAR1=val1,VAR2=val2) or leave empty and press Enter',
+      color: 'yellow',
+    };
+  }
+
+  return { text: '', color: 'yellow' };
+}
+
+/**
  * Custom hook to manage the container creation flow, step by step.
  * Handles input, validation, and feedback for each creation step.
  *
@@ -75,6 +199,11 @@ export function useContainerCreation({
     selectedSuggestionIndex,
     visibleOffset,
   } = form;
+
+  // Ref always holds the latest form state for use inside callbacks
+  // that capture stale closure values.
+  const formRef = useRef(form);
+  formRef.current = form;
 
   // Convenience setters that mirror the old useState API
   const setStep = (v) => dispatch({ type: 'SET', payload: { step: v } });
@@ -300,6 +429,30 @@ export function useContainerCreation({
   }
 
   /**
+   * Closes the suggestion list without changing step.
+   */
+  function closeSuggestions() {
+    dispatch({
+      type: 'SET',
+      payload: {
+        suggestions: [],
+        selectedSuggestionIndex: -1,
+        visibleOffset: 0,
+      },
+    });
+  }
+
+  /**
+   * Cancels any in-flight Hub search and clears results.
+   */
+  function cancelHubSearch() {
+    activeHubRequestRef.current.controller?.abort();
+    activeHubRequestRef.current.requestId += 1;
+    setIsSearchingHub(false);
+    setHubResults(null);
+  }
+
+  /**
    * Moves the suggestion selection up (-1) or down (+1).
    * Clamps index to [-1, suggestions.length - 1].
    * Adjusts visibleOffset to keep selected item in the visible window.
@@ -343,93 +496,92 @@ export function useContainerCreation({
     });
   }
 
+  /** Build context object for pure helper functions */
+  const stepCtx = { imageProfiles, dbImages };
+
   /**
    * Advances to the next step, with validation and feedback.
    */
   function nextStep() {
-    if (step === 0) {
-      if (!imageName.trim()) {
-        setTimedMessage('Image name cannot be empty.', 'red');
-        return;
-      }
-      const resolved = resolveImageTag(imageName, imageProfiles);
+    // Read current values from ref (closure values may be stale in batched updates)
+    const f = formRef.current;
+    const currentValues = {
+      imageName: f.imageName,
+      containerName: f.containerName,
+      portInput: f.portInput,
+      envInput: f.envInput,
+    };
+    const validation = validateStep(f.step, currentValues, stepCtx);
+    if (!validation.ok) {
+      setTimedMessage(validation.error, 'red');
+      return;
+    }
+
+    // Step 3 is the final step — call onCreate before advancing
+    if (f.step === 3) {
+      safeCall(onCreate, currentValues);
+      return;
+    }
+
+    // Step 0: resolve image tag before advancing
+    if (f.step === 0) {
+      const resolved = resolveImageTag(f.imageName, imageProfiles);
       dispatch({ type: 'SET', payload: { imageName: resolved, step: 1 } });
-      setStepMessage(
-        'Optional: Enter container name or leave empty and press Enter',
-        'yellow'
-      );
-      return;
+    } else {
+      dispatch({ type: 'SET', payload: { step: f.step + 1 } });
     }
-    if (step === 1) {
-      dispatch({ type: 'SET', payload: { step: 2 } });
-      setStepMessage(
-        'Optional: Enter ports (format 8080:80,443:443) or leave empty and press Enter',
-        'yellow'
-      );
-      return;
-    }
-    if (step === 2) {
-      // Ports are now optional - only validate if provided
-      if (portInput.trim() && !validatePorts(portInput)) {
-        setTimedMessage(
-          'Port format must be host:container and both must be numbers (e.g. 8080:80)',
-          'red'
-        );
-        return;
-      }
-      dispatch({ type: 'SET', payload: { step: 3 } });
-      const isDb = dbImages.some((db) =>
-        imageName.trim().toLowerCase().includes(db)
-      );
-      // Check if the image has a profile with required env vars
-      const baseName = imageName
-        .trim()
-        .toLowerCase()
-        .split(':')[0]
-        .split('/')
-        .pop();
-      const profile = imageProfiles[baseName];
-      if (profile && profile.requiredEnv && profile.requiredEnv.length) {
-        const suggestedPart =
-          profile.suggestedEnv && profile.suggestedEnv.length
-            ? ` | Suggested: ${profile.suggestedEnv.join(', ')}`
-            : '';
-        setStepMessage(
-          `Required env vars for ${baseName}: ${profile.requiredEnv.join(', ')}. Enter as VAR=val,VAR2=val2${suggestedPart}`,
-          'yellow'
-        );
-      } else if (
-        profile &&
-        profile.suggestedEnv &&
-        profile.suggestedEnv.length
-      ) {
-        setStepMessage(
-          `Suggested env vars for ${baseName}: ${profile.suggestedEnv.join(', ')}. Enter as VAR=val,VAR2=val2 or leave empty.`,
-          'yellow'
-        );
-      } else if (isDb) {
-        setStepMessage(
-          'Warning: This image usually requires environment variables (e.g. MYSQL_ROOT_PASSWORD=my-secret-pw for MySQL, POSTGRES_PASSWORD=yourpassword for Postgres). Enter them as VAR=val,VAR2=val2 or leave empty and press Enter.',
-          'yellow'
-        );
-      } else {
-        setStepMessage(
-          'Optional: Enter environment variables (format VAR1=val1,VAR2=val2) or leave empty and press Enter',
-          'yellow'
-        );
-      }
-      return;
-    }
-    if (step === 3) {
-      // Contextual env validation using image profiles
-      const result = validateEnvVars(envInput, imageName, imageProfiles);
-      if (!result.valid) {
-        setTimedMessage(result.errors.join(' | '), 'red');
-        return;
-      }
-      // Final step: call onCreate with all data (safely)
-      safeCall(onCreate, { imageName, containerName, portInput, envInput });
-    }
+
+    const msg = stepMessageFor(f.step + 1, currentValues, stepCtx);
+    setStepMessage(msg.text, msg.color);
+  }
+
+  /**
+   * Goes back one step. Does not validate and does not erase anything.
+   * No-op at step 0.
+   */
+  function prevStep() {
+    const f = formRef.current;
+    if (f.step <= 0) return;
+    dispatch({ type: 'SET', payload: { step: f.step - 1 } });
+    const currentValues = {
+      imageName: f.imageName,
+      containerName: f.containerName,
+      portInput: f.portInput,
+      envInput: f.envInput,
+    };
+    const msg = stepMessageFor(f.step - 1, currentValues, stepCtx);
+    setStepMessage(msg.text, msg.color);
+  }
+
+  /**
+   * Jumps to a specific step, preserving all data.
+   * Used by TASK-4 for direct navigation from the summary screen.
+   * @param {number} targetStep
+   */
+  function goToStep(targetStep) {
+    if (targetStep < 0 || targetStep >= STEP_COUNT) return;
+    dispatch({ type: 'SET', payload: { step: targetStep } });
+    const f = formRef.current;
+    const currentValues = {
+      imageName: f.imageName,
+      containerName: f.containerName,
+      portInput: f.portInput,
+      envInput: f.envInput,
+    };
+    const msg = stepMessageFor(targetStep, currentValues, stepCtx);
+    setStepMessage(msg.text, msg.color);
+  }
+
+  /**
+   * True if any field has content (decides whether Esc asks or exits).
+   */
+  function hasAnyInput() {
+    return !!(
+      imageName.trim() ||
+      containerName.trim() ||
+      portInput.trim() ||
+      envInput.trim()
+    );
   }
 
   /**
@@ -512,9 +664,14 @@ export function useContainerCreation({
     hubResults,
     updateImageInput,
     triggerHubSearch,
+    closeSuggestions,
+    cancelHubSearch,
     moveSuggestionSelection,
     applyFocusedSuggestion,
     nextStep,
+    prevStep,
+    goToStep,
+    hasAnyInput,
     cancelCreation,
     resetCreation,
     insertNextSuggestedEnv,

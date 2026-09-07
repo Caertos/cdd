@@ -8,6 +8,9 @@ export const REFRESH_INTERVALS = {
   CONTAINER_STATS: 1500,
 };
 
+/** Number of steps in the container creation wizard. Passes to 5 in TASK-4. */
+export const WIZARD_STEP_COUNT = 4;
+
 /**
  * Timeout values for UI messages before they disappear.
  */
