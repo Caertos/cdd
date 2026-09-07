@@ -43,7 +43,7 @@ export function useExitHandler({ onBeforeExit } = {}) {
       const clearTerminal = () => {
         try {
           if (process.stdout && process.stdout.isTTY) {
-            process.stdout.write('\u001Bc');
+            process.stdout.write('\x1B[2J\x1B[0;0H');
           } else {
             console.clear();
           }
@@ -53,8 +53,8 @@ export function useExitHandler({ onBeforeExit } = {}) {
       };
 
       setTimeout(() => {
-        clearTerminal();
         exit();
+        clearTerminal();
         if (process.env.NODE_ENV !== 'test') {
           setTimeout(() => process.exit(0), 50);
         }
