@@ -7,7 +7,7 @@
 
 /**
  * Context identifiers. In each instant CDD is in exactly one context.
- * @typedef {'list'|'wizard'|'wizard-list'|'logs'|'confirm'|'help'|'debug'} ContextId
+ * @typedef {'list'|'wizard'|'wizard-list'|'wizard-discard'|'logs'|'confirm'|'help'|'debug'} ContextId
  */
 
 /**
@@ -109,9 +109,9 @@ export const KEYMAP = {
     {
       id: 'app.quit',
       keys: ['q'],
-      label: 'Quit',
-      help: 'Exit CDD',
-      priority: 10,
+      label: 'Exit',
+      help: 'Quit CDD',
+      priority: 60,
     },
     {
       id: 'app.help',
@@ -154,10 +154,10 @@ export const KEYMAP = {
       when: (s) => s.wizardStep === 0 && s.hasActiveList,
     },
     {
-      id: 'wizard.cancel',
+      id: 'wizard.back',
       keys: ['escape'],
       label: 'Esc',
-      help: 'Cancel creation and return to list',
+      help: 'Go back one step (or cancel from first step)',
       priority: 70,
     },
     {
@@ -191,7 +191,7 @@ export const KEYMAP = {
       priority: 80,
     },
     {
-      id: 'wizard.cancel',
+      id: 'wizard.back',
       keys: ['escape'],
       label: 'Esc',
       help: 'Close the list',
@@ -203,6 +203,22 @@ export const KEYMAP = {
       label: '?',
       help: 'Show this help',
       priority: 5,
+    },
+  ],
+  'wizard-discard': [
+    {
+      id: 'confirm-discard.yes',
+      keys: ['y', 'Y'],
+      label: 'y',
+      help: 'Discard and exit',
+      priority: 90,
+    },
+    {
+      id: 'confirm-discard.no',
+      keys: ['n', 'N', 'escape'],
+      label: 'n',
+      help: 'Keep editing',
+      priority: 80,
     },
   ],
   logs: [
@@ -290,6 +306,22 @@ export const KEYMAP = {
       priority: 90,
     },
   ],
+  'confirm-quit': [
+    {
+      id: 'confirm-quit.yes',
+      keys: ['y', 'Y'],
+      label: 'y',
+      help: 'Quit CDD',
+      priority: 90,
+    },
+    {
+      id: 'confirm-quit.no',
+      keys: ['n', 'N', 'escape'],
+      label: 'n',
+      help: 'Cancel',
+      priority: 80,
+    },
+  ],
 };
 
 /**
@@ -298,6 +330,7 @@ export const KEYMAP = {
  *
  * @param {Object} state
  * @param {boolean} [state.confirmErase]
+ * @param {boolean} [state.confirmDiscard]
  * @param {boolean} [state.showHelp]
  * @param {boolean} [state.showLogs]
  * @param {boolean} [state.creatingContainer]
@@ -309,9 +342,11 @@ export function getActiveContext(state) {
   if (state.confirmErase) return 'confirm';
   if (state.showHelp) return 'help';
   if (state.showLogs) return 'logs';
+  if (state.creatingContainer && state.confirmDiscard) return 'wizard-discard';
   if (state.creatingContainer && state.hasActiveList) return 'wizard-list';
   if (state.creatingContainer) return 'wizard';
   if (state.showDebugLogs) return 'debug';
+  if (state.confirmQuit) return 'confirm-quit';
   return 'list';
 }
 

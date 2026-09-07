@@ -44,6 +44,7 @@ export default function App() {
           isSearchingHub={controls.creation.isSearchingHub}
           hubResults={controls.creation.hubResults}
           hasSuggestedEnv={controls.creation.hasSuggestedEnv}
+          confirmDiscard={controls.confirmDiscard}
         />
         {controls.showHelp && (
           <HelpPanel
