@@ -1,4 +1,7 @@
 import { docker } from '../dockerService.js';
+import { normalizeImageName } from '../../imageNameUtils.js';
+import { IMAGE_PROFILES } from '../../constants.js';
+import { findAvailablePort } from '../../portUtils.js';
 
 /**
  * Check whether an image exists locally.
@@ -29,4 +32,68 @@ export async function pullImage(imageName) {
       });
     });
   });
+}
+
+/**
+ * Preview the host ports CDD would auto-assign if the user left ports empty.
+ * Returns null when the answer cannot be known (image not local, inspect failed).
+ *
+ * @param {string} imageName
+ * @param {Array<{ports: string[]}>} containers
+ * @param {Object} [imageProfiles]
+ * @returns {Promise<Array<{containerPort:string, hostPort:string, protocol:string}>|null>}
+ */
+export async function previewAutoPorts(
+  imageName,
+  containers,
+  imageProfiles = IMAGE_PROFILES
+) {
+  let exists;
+  try {
+    exists = await imageExists(imageName);
+  } catch {
+    return null;
+  }
+  if (!exists) return null;
+
+  try {
+    const image = docker.getImage(imageName);
+    if (!image || typeof image.inspect !== 'function') return null;
+
+    const inspectData = await image.inspect();
+    let exposed =
+      inspectData?.Config?.ExposedPorts ||
+      inspectData?.ContainerConfig?.ExposedPorts ||
+      {};
+    let exposedKeys = Object.keys(exposed || {});
+
+    if (!exposedKeys.length) {
+      const baseName = normalizeImageName(imageName);
+      const profile = imageProfiles[baseName];
+      if (profile?.defaultPort) {
+        const fallbackKey = `${profile.defaultPort}/tcp`;
+        exposed = { [fallbackKey]: {} };
+        exposedKeys = [fallbackKey];
+      }
+    }
+
+    if (!exposedKeys.length) return null;
+
+    const usedHostPorts = new Set();
+    for (const container of containers || []) {
+      for (const port of container.ports || []) {
+        usedHostPorts.add(String(port));
+      }
+    }
+
+    return exposedKeys.map((portKey) => {
+      const parts = portKey.split('/');
+      const containerPort = parts[0];
+      const protocol = parts[1] || 'tcp';
+      const hostPort = findAvailablePort(containerPort, usedHostPorts);
+      return { containerPort, hostPort, protocol };
+    });
+  } catch {
+    return null;
+  }
 }
