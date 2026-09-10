@@ -7,6 +7,24 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 - Nothing yet.
 
+## [4.5.0] - 2026-09-10
+
+### Added
+- **Review step** — wizard now shows a summary before creating the container (4 → 5 steps)
+- `CreationSummary` component — displays resolved image tag, container name, ports, and env vars
+- `creationSummary.js` — pure helpers: `buildCreationSummary`, `buildCreationWarnings`, `detectPortConflicts`
+- `previewAutoPorts()` — previews auto-assigned ports before creation
+- `findAvailablePort()` — extracted to shared utility (was inline in `containerActions.js`)
+- `wizard-review` keymap context — Enter creates, 1-4 edits a field, ↑/↓ scroll, Esc returns to step 3
+
+### Changed
+- Wizard now has 5 steps instead of 4
+- Step 3 (env) no longer creates immediately — advances to review step
+- `Esc` on review returns to step 3 (not cancel)
+
+### Fixed
+- **D5**: Container creation now shows summary first (resolved tags, auto-ports, warnings)
+
 ## [4.4.0] - 2026-09-07
 
 ### Added

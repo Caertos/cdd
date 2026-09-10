@@ -3,10 +3,11 @@ import { Box, Text } from 'ink';
 import { PromptField, PromptMessage } from './PromptField.jsx';
 import { SuggestionPanel } from './SuggestionPanel.jsx';
 import { ControlsHUD } from './ControlsHUD.jsx';
+import { CreationSummary } from './CreationSummary.jsx';
 import PropTypes from 'prop-types';
 
 /** Number of steps in the wizard. Must stay in sync with WIZARD_STEP_COUNT in constants.js. */
-const WIZARD_STEP_COUNT = 4;
+const WIZARD_STEP_COUNT = 5;
 
 /**
  * Prompt UI shown when creating a new container.
@@ -14,7 +15,7 @@ const WIZARD_STEP_COUNT = 4;
  * a contextual message provided by the creation hook.
  *
  * @param {Object} props
- * @param {number} props.step - Current step index (0..3)
+ * @param {number} props.step - Current step index (0..4)
  * @param {string} props.imageName - Value for the image name field
  * @param {string} props.containerName - Value for the container name field
  * @param {string} props.portInput - Value for the ports input field
@@ -44,6 +45,10 @@ export default function ContainerCreationPrompt(props) {
     isSearchingHub = false,
     hasSuggestedEnv = false,
     confirmDiscard = false,
+    reviewRows = [],
+    reviewWarnings = [],
+    focusedReviewRow = 0,
+    isLoadingPreview = false,
   } = props;
   const prompts = [
     {
@@ -99,8 +104,14 @@ export default function ContainerCreationPrompt(props) {
             <Text color="cyan">[n]</Text> No
           </Text>
         </Box>
+      ) : step === 4 ? (
+        <CreationSummary
+          rows={reviewRows}
+          warnings={reviewWarnings}
+          focusedRow={focusedReviewRow}
+          isLoadingPreview={isLoadingPreview}
+        />
       ) : (
-        <>
           <PromptField
             label={label}
             value={value}
@@ -150,6 +161,10 @@ ContainerCreationPrompt.propTypes = {
   isSearchingHub: PropTypes.bool,
   hasSuggestedEnv: PropTypes.bool,
   confirmDiscard: PropTypes.bool,
+  reviewRows: PropTypes.array,
+  reviewWarnings: PropTypes.array,
+  focusedReviewRow: PropTypes.number,
+  isLoadingPreview: PropTypes.bool,
 };
 
 // Named export for test compatibility with jest ESM interop

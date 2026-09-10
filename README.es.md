@@ -35,7 +35,7 @@ Presiona `S` y CDD te lleva a un shell interactivo completo (`bash` o `sh`) dent
 - **Soporte de terminal completo** — ejecuta `psql`, `python3`, `node`, `redis-cli`, o cualquier comando dentro del contenedor
 - **Salida limpia** — escribe `exit` o presiona `Ctrl+D` para volver al dashboard
 
-### v3.2 — Asistente de creación interactivo
+### v4.5 — Asistente de creación interactivo
 
 Olvídate de los flags de `docker run`, las variables de entorno olvidadas y los tags `:latest` que fallan en silencio. Presiona `C` y CDD te guía para crear un contenedor en segundos:
 
@@ -43,6 +43,7 @@ Olvídate de los flags de `docker run`, las variables de entorno olvidadas y los
 - **Tags por defecto que realmente funcionan**: `postgres:17-alpine`, `redis:7-alpine`, `nginx:1.27-alpine` — sin más fallos silenciosos por `:latest`
 - **Búsqueda en vivo en Docker Hub** con un solo `Tab` — con indicador `[searching Docker Hub...]` para que siempre sepas qué está pasando
 - **Sugerencias contextuales de variables de entorno** — ¿creando un contenedor de Postgres? CDD sugiere `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` automáticamente
+- **Revisa antes de crear** — ves exactamente qué se va a crear (tag de imagen resuelto, puertos auto-asignados, advertencias) antes de que el contenedor exista
 - **HUD sensible al contexto** — solo se muestran las teclas que tienen sentido en ese momento, nada más
 
 Así debería sentirse la experiencia de desarrollo.
@@ -113,10 +114,11 @@ Usa `↑` / `↓` para navegar por los contenedores. El **HUD** en la parte infe
 
 | Tecla     | Acción                                          |
 | --------- | ----------------------------------------------- |
-| `Enter`   | Confirmar y continuar al siguiente paso         |
-| `Esc`     | Cancelar creación y volver a la lista           |
+| `Enter`   | Confirmar y continuar al siguiente paso (o crear en revisión) |
+| `Esc`     | Volver un paso atrás (o cancelar en paso 0)     |
 | `Tab`     | Buscar en Docker Hub (paso 0) o insertar env    |
 | `↑` / `↓` | Navegar sugerencias                             |
+| `1`–`4`   | Editar un campo desde la pantalla de revisión   |
 | `?`       | Mostrar panel de ayuda                          |
 
 ### Visor de Logs

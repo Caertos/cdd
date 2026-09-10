@@ -35,7 +35,7 @@ Press `S` and CDD drops you into a full interactive shell (`bash` or `sh`) insid
 - **Full terminal support** — run `psql`, `python3`, `node`, `redis-cli`, or any command inside the container
 - **Clean exit** — type `exit` or press `Ctrl+D` to return to the dashboard
 
-### v3.2 — Interactive creation wizard
+### v4.5 — Interactive creation wizard
 
 Forget `docker run` flags, forgotten env vars, and broken `:latest` tags. Press `C` and CDD guides you through creating a container in seconds:
 
@@ -43,6 +43,7 @@ Forget `docker run` flags, forgotten env vars, and broken `:latest` tags. Press 
 - **Smart default tags** that actually work: `postgres:17-alpine`, `redis:7-alpine`, `nginx:1.27-alpine` — no more silent `:latest` failures
 - **Live Docker Hub search** with a single `Tab` keystroke — with a `[searching Docker Hub...]` indicator so you always know what's happening
 - **Contextual env var hints** — creating a Postgres container? CDD suggests `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` automatically
+- **Review before you create** — see exactly what will be created (resolved image tag, auto-assigned ports, warnings) before the container exists
 - **Context-sensitive HUD** — only the keys that make sense right now are shown, nothing more
 
 This is what developer experience should feel like.
@@ -113,10 +114,11 @@ Use `↑` / `↓` to navigate containers. The **HUD** at the bottom shows availa
 
 | Key       | Action                                    |
 | --------- | ----------------------------------------- |
-| `Enter`   | Confirm and continue to next step         |
-| `Esc`     | Cancel creation and return to list        |
+| `Enter`   | Confirm and continue to next step (or create on review) |
+| `Esc`     | Go back one step (or cancel on step 0)   |
 | `Tab`     | Search Docker Hub (step 0) or insert env  |
 | `↑` / `↓` | Navigate suggestions                      |
+| `1`–`4`   | Edit a field from the review screen       |
 | `?`       | Show help panel                           |
 
 ### Logs Viewer

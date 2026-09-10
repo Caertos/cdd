@@ -3,6 +3,7 @@ import { imageExists, pullImage } from './imageUtils.js';
 import { TIMEOUTS, IMAGE_PROFILES } from '../../constants.js';
 import { logger } from '../../logger.js';
 import { normalizeImageName } from '../../imageNameUtils.js';
+import { findAvailablePort } from '../../portUtils.js';
 
 /**
  * Helper to add timeout to promises. If the provided promise does not settle
@@ -111,33 +112,8 @@ export async function createContainer(
             );
           }
         }
-        const reservePort = (port) => {
-          const portStr = String(port);
-          usedHostPorts.add(portStr);
-        };
-        const pickNextAvailablePort = (base) => {
-          const numericBase = Number.parseInt(base, 10);
-          if (Number.isNaN(numericBase)) {
-            if (!usedHostPorts.has(base)) {
-              usedHostPorts.add(base);
-              return base;
-            }
-            let counter = 1;
-            let candidate = `${base}-${counter}`;
-            while (usedHostPorts.has(candidate)) {
-              counter += 1;
-              candidate = `${base}-${counter}`;
-            }
-            usedHostPorts.add(candidate);
-            return candidate;
-          }
-          let candidate = numericBase;
-          while (usedHostPorts.has(String(candidate))) {
-            candidate += 1;
-          }
-          reservePort(candidate);
-          return String(candidate);
-        };
+        const pickNextAvailablePort = (base) =>
+          findAvailablePort(base, usedHostPorts);
 
         const inspectData = await withTimeout(
           image.inspect(),

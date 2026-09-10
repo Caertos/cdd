@@ -70,7 +70,13 @@ function ControlsHUD({
   hasSuggestedEnv = false,
   confirmDiscard = false,
 }) {
-  const hints = getHints(step, hasSuggestions, isSearchingHub, hasSuggestedEnv, confirmDiscard);
+  const hints = getHints(
+    step,
+    hasSuggestions,
+    isSearchingHub,
+    hasSuggestedEnv,
+    confirmDiscard
+  );
   return (
     <Box flexDirection="row" columnGap={2}>
       {hints.map(({ key, label }) => (

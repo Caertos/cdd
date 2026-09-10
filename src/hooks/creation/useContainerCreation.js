@@ -14,10 +14,15 @@ import {
   formatHubResult,
 } from '../../helpers/dockerHubService.js';
 import { applyKeyToText } from '../../helpers/textEditing.js';
+import {
+  buildCreationSummary,
+  buildCreationWarnings,
+} from '../../helpers/creationSummary.js';
+import { previewAutoPorts } from '../../helpers/dockerService/serviceComponents/imageUtils.js';
 
 const MAX_VISIBLE = 6;
 
-/** Number of steps in the wizard. Passes to 5 in TASK-4. */
+/** Number of steps in the wizard. 5 since TASK-4 (review step). */
 export const STEP_COUNT = WIZARD_STEP_COUNT;
 
 const INITIAL_FORM = {
@@ -138,10 +143,9 @@ export function stepMessageFor(step, values, ctx) {
     const profile = imageProfiles[baseName];
 
     if (profile?.requiredEnv?.length) {
-      const suggestedPart =
-        profile.suggestedEnv?.length
-          ? ` | Suggested: ${profile.suggestedEnv.join(', ')}`
-          : '';
+      const suggestedPart = profile.suggestedEnv?.length
+        ? ` | Suggested: ${profile.suggestedEnv.join(', ')}`
+        : '';
       return {
         text: `Required env vars for ${baseName}: ${profile.requiredEnv.join(', ')}. Enter as VAR=val,VAR2=val2${suggestedPart}`,
         color: 'yellow',
@@ -327,6 +331,13 @@ export function useContainerCreation({
   // Tracks active request: { controller: AbortController|null, requestId: number }
   const activeHubRequestRef = useRef({ controller: null, requestId: 0 });
 
+  // Review step state
+  const [reviewRows, setReviewRows] = useState([]);
+  const [reviewWarnings, setReviewWarnings] = useState([]);
+  const [focusedReviewRow, setFocusedReviewRow] = useState(0);
+  const [isLoadingPreview, setIsLoadingPreview] = useState(false);
+  const returnToReviewRef = useRef(false);
+
   // Timer for auto-clearing messages
   const messageTimerRef = useRef(null);
 
@@ -496,6 +507,109 @@ export function useContainerCreation({
     });
   }
 
+  /**
+   * Prepares the review step: builds summary rows, warnings,
+   * and previews auto-ports if the image is local.
+   */
+  async function prepareReview() {
+    const f = formRef.current;
+    const currentValues = {
+      imageName: f.imageName,
+      containerName: f.containerName,
+      portInput: f.portInput,
+      envInput: f.envInput,
+    };
+
+    // Advance to step 4 immediately
+    dispatch({ type: 'SET', payload: { step: 4 } });
+    setStepMessage(
+      'Review and confirm — [Enter] Create  [1-4] Edit  [Esc] Back',
+      'cyan'
+    );
+    setFocusedReviewRow(0);
+
+    // Build summary (pure, no Docker calls)
+    const rawInput = f._rawImageInput ?? f.imageName;
+    const rows = buildCreationSummary(currentValues, {
+      rawImageInput: rawInput,
+      imageProfiles,
+      previewedPorts: null,
+    });
+    setReviewRows(rows);
+
+    // Preview auto-ports if user left ports empty
+    let previewedPorts = null;
+    if (!currentValues.portInput.trim()) {
+      setIsLoadingPreview(true);
+      try {
+        const { docker } =
+          await import('../../helpers/dockerService/dockerService.js');
+        const containers = await docker
+          .listContainers({ all: true })
+          .catch(() => []);
+        previewedPorts = await previewAutoPorts(
+          currentValues.imageName,
+          containers,
+          imageProfiles
+        );
+      } catch {
+        previewedPorts = null;
+      } finally {
+        setIsLoadingPreview(false);
+      }
+      // Rebuild summary with previewed ports
+      if (previewedPorts) {
+        const updatedRows = buildCreationSummary(currentValues, {
+          rawImageInput: rawInput,
+          imageProfiles,
+          previewedPorts,
+        });
+        setReviewRows(updatedRows);
+      }
+    }
+
+    // Build warnings (pure, needs container list + image check)
+    let containers = [];
+    let imageIsLocal = null;
+    try {
+      const { imageExists } =
+        await import('../../helpers/dockerService/serviceComponents/imageUtils.js');
+      imageIsLocal = await imageExists(currentValues.imageName);
+      // We need container list for port/name conflict detection
+      const { docker } =
+        await import('../../helpers/dockerService/dockerService.js');
+      containers = await docker.listContainers({ all: true });
+    } catch {
+      // Docker not available — warnings will be partial
+    }
+    const warnings = buildCreationWarnings(currentValues, {
+      containers,
+      imageIsLocal,
+      imageProfiles,
+    });
+    setReviewWarnings(warnings);
+  }
+
+  /**
+   * Moves the focused row in the review summary up or down.
+   * @param {number} direction - -1 (up) or 1 (down)
+   */
+  function moveReviewRow(direction) {
+    setFocusedReviewRow((prev) =>
+      Math.max(0, Math.min(reviewRows.length - 1, prev + direction))
+    );
+  }
+
+  /**
+   * Jumps from review to a specific edit step, setting returnToReview
+   * so that pressing Enter in that step returns to review.
+   * @param {number} targetStep
+   */
+  function editFromReview(targetStep) {
+    returnToReviewRef.current = true;
+    goToStep(targetStep);
+  }
+
   /** Build context object for pure helper functions */
   const stepCtx = { imageProfiles, dbImages };
 
@@ -517,8 +631,21 @@ export function useContainerCreation({
       return;
     }
 
-    // Step 3 is the final step — call onCreate before advancing
+    // Returning from editing a field: skip to review directly
+    if (returnToReviewRef.current) {
+      returnToReviewRef.current = false;
+      prepareReview();
+      return;
+    }
+
+    // Step 3 goes to review (step 4), not directly to onCreate
     if (f.step === 3) {
+      prepareReview();
+      return;
+    }
+
+    // Step 4 (review) — confirmed: call onCreate
+    if (f.step === 4) {
       safeCall(onCreate, currentValues);
       return;
     }
@@ -678,5 +805,12 @@ export function useContainerCreation({
     hasSuggestedEnv,
     fieldForStep,
     handleFieldKey,
+    // Review step
+    reviewRows,
+    reviewWarnings,
+    focusedReviewRow,
+    isLoadingPreview,
+    moveReviewRow,
+    editFromReview,
   };
 }
