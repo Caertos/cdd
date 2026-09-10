@@ -45,6 +45,10 @@ export default function App() {
           hubResults={controls.creation.hubResults}
           hasSuggestedEnv={controls.creation.hasSuggestedEnv}
           confirmDiscard={controls.confirmDiscard}
+          reviewRows={controls.creation.reviewRows}
+          reviewWarnings={controls.creation.reviewWarnings}
+          focusedReviewRow={controls.creation.focusedReviewRow}
+          isLoadingPreview={controls.creation.isLoadingPreview}
         />
         {controls.showHelp && (
           <HelpPanel
