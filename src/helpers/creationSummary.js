@@ -85,7 +85,6 @@ export function buildCreationSummary(values, ctx) {
       const eqIdx = v.indexOf('=');
       if (eqIdx === -1) return v;
       const key = v.slice(0, eqIdx);
-      const val = v.slice(eqIdx + 1);
       const profile = imageProfiles[baseName];
       const isSecret =
         key.toUpperCase().includes('PASSWORD') ||

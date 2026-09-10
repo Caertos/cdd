@@ -19,7 +19,6 @@ import {
   buildCreationWarnings,
 } from '../../helpers/creationSummary.js';
 import { previewAutoPorts } from '../../helpers/dockerService/serviceComponents/imageUtils.js';
-import { normalizeImageName } from '../../helpers/imageNameUtils.js';
 
 const MAX_VISIBLE = 6;
 
@@ -541,9 +540,10 @@ export function useContainerCreation({
     if (!currentValues.portInput.trim()) {
       setIsLoadingPreview(true);
       try {
-        const containers = await (typeof docker !== 'undefined'
-          ? docker.listContainers({ all: true }).catch(() => [])
-          : Promise.resolve([]));
+        const { docker } = await import(
+          '../../helpers/dockerService/dockerService.js'
+        );
+        const containers = await docker.listContainers({ all: true }).catch(() => []);
         previewedPorts = await previewAutoPorts(
           currentValues.imageName,
           containers,
