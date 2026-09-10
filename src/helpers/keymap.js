@@ -7,7 +7,7 @@
 
 /**
  * Context identifiers. In each instant CDD is in exactly one context.
- * @typedef {'list'|'wizard'|'wizard-list'|'wizard-discard'|'logs'|'confirm'|'help'|'debug'} ContextId
+ * @typedef {'list'|'wizard'|'wizard-list'|'wizard-discard'|'wizard-review'|'logs'|'confirm'|'help'|'debug'} ContextId
  */
 
 /**
@@ -221,6 +221,64 @@ export const KEYMAP = {
       priority: 80,
     },
   ],
+  'wizard-review': [
+    {
+      id: 'wizard-review.create',
+      keys: ['enter'],
+      label: 'Enter',
+      help: 'Create the container',
+      priority: 90,
+    },
+    {
+      id: 'wizard-review.edit-1',
+      keys: ['1'],
+      label: '1',
+      help: 'Edit image',
+      priority: 80,
+    },
+    {
+      id: 'wizard-review.edit-2',
+      keys: ['2'],
+      label: '2',
+      help: 'Edit name',
+      priority: 80,
+    },
+    {
+      id: 'wizard-review.edit-3',
+      keys: ['3'],
+      label: '3',
+      help: 'Edit ports',
+      priority: 80,
+    },
+    {
+      id: 'wizard-review.edit-4',
+      keys: ['4'],
+      label: '4',
+      help: 'Edit env vars',
+      priority: 80,
+    },
+    {
+      id: 'wizard-review.row-up',
+      keys: ['up'],
+      label: '\u2191',
+      help: 'Navigate summary up',
+      priority: 70,
+    },
+    {
+      id: 'wizard-review.row-down',
+      keys: ['down'],
+      label: '\u2193',
+      help: 'Navigate summary down',
+      priority: 70,
+    },
+    {
+      id: 'wizard-review.back',
+      keys: ['escape'],
+      label: 'Esc',
+      help: 'Go back to env vars step',
+      priority: 60,
+    },
+  ],
   logs: [
     {
       id: 'logs.up',
@@ -343,6 +401,7 @@ export function getActiveContext(state) {
   if (state.showHelp) return 'help';
   if (state.showLogs) return 'logs';
   if (state.creatingContainer && state.confirmDiscard) return 'wizard-discard';
+  if (state.creatingContainer && state.wizardStep === 4) return 'wizard-review';
   if (state.creatingContainer && state.hasActiveList) return 'wizard-list';
   if (state.creatingContainer) return 'wizard';
   if (state.showDebugLogs) return 'debug';
