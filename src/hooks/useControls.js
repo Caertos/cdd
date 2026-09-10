@@ -30,6 +30,7 @@ import {
 export function useControls(containers = [], overrides = {}) {
   const [creatingContainer, setCreatingContainer] = React.useState(false);
   const [showHelp, setShowHelp] = React.useState(false);
+  const lastCreationRef = React.useRef(null);
 
   // — Modular hooks —
   const actions = useContainerActions({ containers });
@@ -43,6 +44,7 @@ export function useControls(containers = [], overrides = {}) {
         portInput,
         envInput,
       });
+      lastCreationRef.current = { imageName, containerName, portInput, envInput, options };
       actions.setTimedMessage(`Creating container ${imageName}...`, 'yellow');
       try {
         const { id, ports } = await svcCreateContainer(imageName, options);
@@ -317,6 +319,16 @@ export function useControls(containers = [], overrides = {}) {
       'list.select': () => creation.applyFocusedSuggestion(),
       'list.up': () => creation.moveSuggestionSelection(-1),
       'list.down': () => creation.moveSuggestionSelection(1),
+
+      // Wizard-review context
+      'wizard-review.create': () => creation.nextStep(),
+      'wizard-review.edit-1': () => creation.editFromReview(0),
+      'wizard-review.edit-2': () => creation.editFromReview(1),
+      'wizard-review.edit-3': () => creation.editFromReview(2),
+      'wizard-review.edit-4': () => creation.editFromReview(3),
+      'wizard-review.row-up': () => creation.moveReviewRow(-1),
+      'wizard-review.row-down': () => creation.moveReviewRow(1),
+      'wizard-review.back': () => creation.prevStep(),
 
       // Logs context
       'logs.close': () => logsViewer.closeLogs(),
