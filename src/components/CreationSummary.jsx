@@ -19,7 +19,12 @@ const WARNING_COLORS = {
  * @param {number} props.focusedRow - Index of the currently focused row
  * @param {boolean} props.isLoadingPreview - True while port preview loads
  */
-export function CreationSummary({ rows, warnings, focusedRow, isLoadingPreview }) {
+export function CreationSummary({
+  rows,
+  warnings,
+  focusedRow,
+  isLoadingPreview,
+}) {
   return (
     <Box flexDirection="column">
       <Text bold>Review and confirm</Text>
@@ -37,7 +42,9 @@ export function CreationSummary({ rows, warnings, focusedRow, isLoadingPreview }
             </Box>
             {row.origin && (
               <Box paddingLeft={4}>
-                <Text dimColor>{'\u2193'} {row.origin}</Text>
+                <Text dimColor>
+                  {'\u2193'} {row.origin}
+                </Text>
               </Box>
             )}
           </Box>

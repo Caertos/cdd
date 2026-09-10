@@ -143,10 +143,9 @@ export function stepMessageFor(step, values, ctx) {
     const profile = imageProfiles[baseName];
 
     if (profile?.requiredEnv?.length) {
-      const suggestedPart =
-        profile.suggestedEnv?.length
-          ? ` | Suggested: ${profile.suggestedEnv.join(', ')}`
-          : '';
+      const suggestedPart = profile.suggestedEnv?.length
+        ? ` | Suggested: ${profile.suggestedEnv.join(', ')}`
+        : '';
       return {
         text: `Required env vars for ${baseName}: ${profile.requiredEnv.join(', ')}. Enter as VAR=val,VAR2=val2${suggestedPart}`,
         color: 'yellow',
@@ -523,7 +522,10 @@ export function useContainerCreation({
 
     // Advance to step 4 immediately
     dispatch({ type: 'SET', payload: { step: 4 } });
-    setStepMessage('Review and confirm — [Enter] Create  [1-4] Edit  [Esc] Back', 'cyan');
+    setStepMessage(
+      'Review and confirm — [Enter] Create  [1-4] Edit  [Esc] Back',
+      'cyan'
+    );
     setFocusedReviewRow(0);
 
     // Build summary (pure, no Docker calls)
@@ -540,10 +542,11 @@ export function useContainerCreation({
     if (!currentValues.portInput.trim()) {
       setIsLoadingPreview(true);
       try {
-        const { docker } = await import(
-          '../../helpers/dockerService/dockerService.js'
-        );
-        const containers = await docker.listContainers({ all: true }).catch(() => []);
+        const { docker } =
+          await import('../../helpers/dockerService/dockerService.js');
+        const containers = await docker
+          .listContainers({ all: true })
+          .catch(() => []);
         previewedPorts = await previewAutoPorts(
           currentValues.imageName,
           containers,
@@ -569,14 +572,12 @@ export function useContainerCreation({
     let containers = [];
     let imageIsLocal = null;
     try {
-      const { imageExists } = await import(
-        '../../helpers/dockerService/serviceComponents/imageUtils.js'
-      );
+      const { imageExists } =
+        await import('../../helpers/dockerService/serviceComponents/imageUtils.js');
       imageIsLocal = await imageExists(currentValues.imageName);
       // We need container list for port/name conflict detection
-      const { docker } = await import(
-        '../../helpers/dockerService/dockerService.js'
-      );
+      const { docker } =
+        await import('../../helpers/dockerService/dockerService.js');
       containers = await docker.listContainers({ all: true });
     } catch {
       // Docker not available — warnings will be partial

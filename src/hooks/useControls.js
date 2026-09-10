@@ -44,7 +44,13 @@ export function useControls(containers = [], overrides = {}) {
         portInput,
         envInput,
       });
-      lastCreationRef.current = { imageName, containerName, portInput, envInput, options };
+      lastCreationRef.current = {
+        imageName,
+        containerName,
+        portInput,
+        envInput,
+        options,
+      };
       actions.setTimedMessage(`Creating container ${imageName}...`, 'yellow');
       try {
         const { id, ports } = await svcCreateContainer(imageName, options);
@@ -123,7 +129,9 @@ export function useControls(containers = [], overrides = {}) {
   function showBackHintOnce() {
     if (!backHintShownRef.current) {
       backHintShownRef.current = true;
-      creation.setMessage('Esc now goes back one step — to cancel, press Esc from the first step');
+      creation.setMessage(
+        'Esc now goes back one step — to cancel, press Esc from the first step'
+      );
       creation.setMessageColor('cyan');
     }
   }
@@ -296,7 +304,10 @@ export function useControls(containers = [], overrides = {}) {
           creation.cancelHubSearch();
           return;
         }
-        if (creation.suggestions.length > 0 || (creation.hubResults ?? []).length > 0) {
+        if (
+          creation.suggestions.length > 0 ||
+          (creation.hubResults ?? []).length > 0
+        ) {
           creation.closeSuggestions();
           return;
         }
@@ -311,7 +322,9 @@ export function useControls(containers = [], overrides = {}) {
           return;
         }
         discardConfirmation.start();
-        creation.setMessage('Discard this container? All progress will be lost. [y] Yes  [n] No');
+        creation.setMessage(
+          'Discard this container? All progress will be lost. [y] Yes  [n] No'
+        );
         creation.setMessageColor('yellow');
       },
 
@@ -380,7 +393,10 @@ export function useControls(containers = [], overrides = {}) {
 
     // Text fields have priority in wizard contexts
     const WIZARD_CONTEXTS = ['wizard', 'wizard-list'];
-    if (WIZARD_CONTEXTS.includes(ctx) && creation.handleFieldKey(input, normalizedKey)) {
+    if (
+      WIZARD_CONTEXTS.includes(ctx) &&
+      creation.handleFieldKey(input, normalizedKey)
+    ) {
       return;
     }
 
