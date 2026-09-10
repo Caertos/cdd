@@ -70,7 +70,7 @@ describe('useContainerCreation (DOM render)', () => {
       expect(expose.current.step).toBe(2);
   });
 
-  test('complete flow calls onCreate with data', () => {
+  test('complete flow: step 3 → review, then step 4 → onCreate', async () => {
     const created = [];
     const onCreate = (data) => created.push(data);
     const expose = { current: null };
@@ -101,8 +101,14 @@ describe('useContainerCreation (DOM render)', () => {
         expose.current.setEnvInput('FOO=bar');
       });
 
-      act(() => {
-        expose.current.nextStep(); // final create
+      await act(async () => {
+        expose.current.nextStep(); // env → review (step 4)
+      });
+
+      expect(expose.current.step).toBe(4);
+
+      await act(async () => {
+        expose.current.nextStep(); // review → create
       });
 
       expect(created.length).toBe(1);
@@ -131,7 +137,7 @@ describe('useContainerCreation (DOM render)', () => {
     expect(created.length).toBe(0);
   });
 
-  test('step 3 with mysql image: valid env advances and calls onCreate', () => {
+  test('step 3 with mysql image: valid env advances to review, then to onCreate', async () => {
     const created = [];
     const expose = { current: null };
 
@@ -143,7 +149,11 @@ describe('useContainerCreation (DOM render)', () => {
     act(() => { expose.current.nextStep(); }); // at step 3
 
     act(() => { expose.current.setEnvInput('MYSQL_ROOT_PASSWORD=secret'); });
-    act(() => { expose.current.nextStep(); }); // should call onCreate
+    await act(async () => { expose.current.nextStep(); }); // → review (step 4)
+
+    expect(expose.current.step).toBe(4);
+
+    await act(async () => { expose.current.nextStep(); }); // → create
 
     expect(created.length).toBe(1);
     expect(created[0].imageName).toBe('mysql:8');
