@@ -39,11 +39,16 @@ describe('TextField', () => {
     expect(container.textContent).toContain('nginx');
   });
 
-  test('masked field shows asterisks instead of value', () => {
+  test('masked field shows dots for specified ranges', () => {
     const { container } = render(
-      <TextField label="Secret:" value="mysecret" cursor={8} masked />
+      <TextField
+        label="Secret:"
+        value="mysecret"
+        cursor={8}
+        maskRanges={[{ start: 0, end: 8 }]}
+      />
     );
-    expect(container.textContent).toContain('********');
+    expect(container.textContent).toContain('••••••••');
   });
 
   test('placeholder is not shown when value is non-empty', () => {

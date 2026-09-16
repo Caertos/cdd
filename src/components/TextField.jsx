@@ -14,7 +14,7 @@ import PropTypes from 'prop-types';
  * @param {string}  props.value      - Current text content
  * @param {number}  props.cursor     - Cursor position (0..value.length)
  * @param {boolean} [props.required=false] - Show in red if empty
- * @param {boolean} [props.masked=false]   - Reserved for TASK-5 (secrets)
+ * @param {Array<{start: number, end: number}>} [props.maskRanges=[]] - Ranges to mask with dots
  * @param {string}  [props.placeholder]    - Dimmed text when empty
  */
 export function TextField({
@@ -22,16 +22,24 @@ export function TextField({
   value = '',
   cursor = 0,
   required = false,
-  masked = false,
+  maskRanges = [],
 }) {
   const isEmpty = required && !value.trim();
-  const displayValue = masked ? '*'.repeat(value.length) : value;
-  const chars = Array.from(displayValue);
-  const clampedCursor = Math.max(0, Math.min(chars.length, cursor));
 
-  const before = chars.slice(0, clampedCursor).join('');
-  const atCursor = chars[clampedCursor] ?? '';
-  const after = chars.slice(clampedCursor + 1).join('');
+  // Build display value with masking applied to specified ranges
+  const chars = Array.from(value);
+  const displayChars = chars.map((char, idx) => {
+    const inMaskRange = maskRanges.some(
+      (range) => idx >= range.start && idx < range.end
+    );
+    return inMaskRange ? '•' : char;
+  });
+
+  const clampedCursor = Math.max(0, Math.min(displayChars.length, cursor));
+
+  const before = displayChars.slice(0, clampedCursor).join('');
+  const atCursor = displayChars[clampedCursor] ?? '';
+  const after = displayChars.slice(clampedCursor + 1).join('');
 
   const color = isEmpty ? 'red' : 'cyan';
 
@@ -52,6 +60,11 @@ TextField.propTypes = {
   value: PropTypes.string,
   cursor: PropTypes.number,
   required: PropTypes.bool,
-  masked: PropTypes.bool,
+  maskRanges: PropTypes.arrayOf(
+    PropTypes.shape({
+      start: PropTypes.number.isRequired,
+      end: PropTypes.number.isRequired,
+    })
+  ),
   placeholder: PropTypes.string,
 };
