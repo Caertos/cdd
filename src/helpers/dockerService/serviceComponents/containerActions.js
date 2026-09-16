@@ -4,6 +4,7 @@ import { TIMEOUTS, IMAGE_PROFILES } from '../../constants.js';
 import { logger } from '../../logger.js';
 import { normalizeImageName } from '../../imageNameUtils.js';
 import { findAvailablePort } from '../../portUtils.js';
+import { redactForLog } from '../../secrets.js';
 
 /**
  * Helper to add timeout to promises. If the provided promise does not settle
@@ -57,6 +58,9 @@ export async function createContainer(
   imageProfiles = IMAGE_PROFILES
 ) {
   logger.info('Creating container from image %s', imageName);
+  if (options.Env?.length) {
+    logger.debug('Env vars: %s', redactForLog(options.Env.join(',')));
+  }
   let exists;
   try {
     exists = await withTimeout(imageExists(imageName), 10000);
