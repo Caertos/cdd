@@ -42,6 +42,8 @@ function getHints(
   }
   if (step === 3) {
     const hints = [];
+    hints.push({ key: 'Ctrl+G', label: 'Generate secret' });
+    hints.push({ key: 'Ctrl+R', label: 'Reveal secrets' });
     if (hasSuggestedEnv) hints.push({ key: 'Tab', label: 'Insert next env' });
     hints.push({ key: 'Enter', label: 'Continue' });
     hints.push({ key: 'Esc', label: 'Back' });
