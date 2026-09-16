@@ -756,7 +756,13 @@ export function useContainerCreation({
       return;
     }
     const newEnvInput = envInput ? `${envInput},${next}` : next;
-    dispatch({ type: 'SET', payload: { envInput: newEnvInput } });
+    dispatch({
+      type: 'SET',
+      payload: {
+        envInput: newEnvInput,
+        cursors: { ...form.cursors, envInput: newEnvInput.length },
+      },
+    });
   }
 
   /**
@@ -786,7 +792,13 @@ export function useContainerCreation({
       // Fill the empty secret field
       pairs[targetIdx] = pairs[targetIdx].replace(/=$/, `=${secret}`);
       const newEnvInput = pairs.join(',');
-      dispatch({ type: 'SET', payload: { envInput: newEnvInput } });
+      dispatch({
+        type: 'SET',
+        payload: {
+          envInput: newEnvInput,
+          cursors: { ...form.cursors, envInput: newEnvInput.length },
+        },
+      });
       setTimedMessage('Password generated — it will not be shown again', 'cyan', 6000);
     } else {
       // No empty secret field found — show the generated password once

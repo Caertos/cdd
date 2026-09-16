@@ -20,7 +20,7 @@ function getHints(
 ) {
   if (confirmDiscard) {
     return [
-      { key: 's', label: 'Yes' },
+      { key: 'y', label: 'Yes' },
       { key: 'n', label: 'No' },
     ];
   }

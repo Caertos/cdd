@@ -105,10 +105,6 @@ export default function ContainerCreationPrompt(props) {
             <Text color="yellow">Discard this container?</Text>{' '}
             <Text dimColor>All progress will be lost.</Text>
           </Text>
-          <Text>
-            <Text color="cyan">[y]</Text> Yes{'  '}
-            <Text color="cyan">[n]</Text> No
-          </Text>
         </Box>
       ) : step === 4 ? (
         <CreationSummary
