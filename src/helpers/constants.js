@@ -96,7 +96,7 @@ export const IMAGE_PROFILES = {
   redis: {
     requiredEnv: [],
     defaultPort: '6379',
-    suggestedEnv: ['REDIS_PASSWORD=change-me'],
+    suggestedEnv: ['REDIS_PASSWORD='],
     defaultTag: '7-alpine',
   },
   memcached: {
@@ -109,7 +109,7 @@ export const IMAGE_PROFILES = {
     requiredEnv: ['POSTGRES_PASSWORD'],
     defaultPort: '5432',
     suggestedEnv: [
-      'POSTGRES_PASSWORD=secret',
+      'POSTGRES_PASSWORD=',
       'POSTGRES_USER=postgres',
       'POSTGRES_DB=app',
     ],
@@ -119,10 +119,10 @@ export const IMAGE_PROFILES = {
     requiredEnv: ['MYSQL_ROOT_PASSWORD'],
     defaultPort: '3306',
     suggestedEnv: [
-      'MYSQL_ROOT_PASSWORD=secret',
+      'MYSQL_ROOT_PASSWORD=',
       'MYSQL_DATABASE=app',
       'MYSQL_USER=app',
-      'MYSQL_PASSWORD=app123',
+      'MYSQL_PASSWORD=',
     ],
     defaultTag: '8.0',
   },
@@ -130,10 +130,10 @@ export const IMAGE_PROFILES = {
     requiredEnv: ['MARIADB_ROOT_PASSWORD'],
     defaultPort: '3306',
     suggestedEnv: [
-      'MARIADB_ROOT_PASSWORD=secret',
+      'MARIADB_ROOT_PASSWORD=',
       'MARIADB_DATABASE=app',
       'MARIADB_USER=app',
-      'MARIADB_PASSWORD=app123',
+      'MARIADB_PASSWORD=',
     ],
     defaultTag: '11-alpine',
   },
@@ -142,7 +142,7 @@ export const IMAGE_PROFILES = {
     defaultPort: '27017',
     suggestedEnv: [
       'MONGO_INITDB_ROOT_USERNAME=admin',
-      'MONGO_INITDB_ROOT_PASSWORD=secret',
+      'MONGO_INITDB_ROOT_PASSWORD=',
     ],
     defaultTag: '7.0',
   },
@@ -151,7 +151,7 @@ export const IMAGE_PROFILES = {
     defaultPort: '1433',
     suggestedEnv: [
       'ACCEPT_EULA=Y',
-      'SA_PASSWORD=Strong!Passw0rd',
+      'SA_PASSWORD=',
       'MSSQL_PID=Developer',
     ],
     defaultTag: '2022-latest',
@@ -161,7 +161,7 @@ export const IMAGE_PROFILES = {
     defaultPort: '5672',
     suggestedEnv: [
       'RABBITMQ_DEFAULT_USER=guest',
-      'RABBITMQ_DEFAULT_PASS=guest',
+      'RABBITMQ_DEFAULT_PASS=',
     ],
     defaultTag: '3-management-alpine',
   },
@@ -194,7 +194,7 @@ export const IMAGE_PROFILES = {
     defaultPort: '9000',
     suggestedEnv: [
       'MINIO_ROOT_USER=admin',
-      'MINIO_ROOT_PASSWORD=secret',
+      'MINIO_ROOT_PASSWORD=',
       'MINIO_CONSOLE_ADDRESS=:9001',
     ],
     defaultTag: 'latest',
@@ -210,7 +210,7 @@ export const IMAGE_PROFILES = {
     suggestedEnv: [
       'WORDPRESS_DB_HOST=db',
       'WORDPRESS_DB_USER=wp',
-      'WORDPRESS_DB_PASSWORD=secret',
+      'WORDPRESS_DB_PASSWORD=',
       'WORDPRESS_DB_NAME=wordpress',
       'WORDPRESS_TABLE_PREFIX=wp_',
     ],
