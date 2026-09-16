@@ -1,6 +1,7 @@
 import React from 'react';
 import { Box, Text } from 'ink';
 import PropTypes from 'prop-types';
+import { isSecretKey } from '../helpers/secrets.js';
 
 const WARNING_COLORS = {
   'image-pull': 'yellow',
@@ -8,6 +9,7 @@ const WARNING_COLORS = {
   'name-taken': 'red',
   'missing-env': 'yellow',
   'secret-plain': 'yellow',
+  'secret-weak': 'yellow',
 };
 
 /**
@@ -18,12 +20,14 @@ const WARNING_COLORS = {
  * @param {import('../helpers/creationSummary.js').Warning[]} props.warnings
  * @param {number} props.focusedRow - Index of the currently focused row
  * @param {boolean} props.isLoadingPreview - True while port preview loads
+ * @param {boolean} props.revealSecrets - If true, show secret values in plain text
  */
 export function CreationSummary({
   rows,
   warnings,
   focusedRow,
   isLoadingPreview,
+  revealSecrets = false,
 }) {
   return (
     <Box flexDirection="column">
@@ -38,7 +42,25 @@ export function CreationSummary({
                 [{row.step + 1}]{' '}
               </Text>
               <Text bold>{row.label} </Text>
-              <Text>{row.values.join(', ')}</Text>
+              <Text>
+                {row.values.map((v, vi) => {
+                  // For env rows, apply reveal logic
+                  if (row.key === 'env') {
+                    const eqIdx = v.indexOf('=');
+                    if (eqIdx !== -1) {
+                      const key = v.slice(0, eqIdx);
+                      if (isSecretKey(key)) {
+                        if (revealSecrets) {
+                          return v; // Show full value
+                        }
+                        // Show masked with Ctrl+R hint
+                        return `${key}=\u2022\u2022\u2022\u2022\u2022\u2022 [^R]`;
+                      }
+                    }
+                  }
+                  return v;
+                }).join(', ')}
+              </Text>
             </Box>
             {row.origin && (
               <Box paddingLeft={4}>
@@ -87,4 +109,5 @@ CreationSummary.propTypes = {
   ).isRequired,
   focusedRow: PropTypes.number.isRequired,
   isLoadingPreview: PropTypes.bool.isRequired,
+  revealSecrets: PropTypes.bool,
 };

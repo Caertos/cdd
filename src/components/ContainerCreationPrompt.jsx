@@ -26,6 +26,7 @@ const WIZARD_STEP_COUNT = 5;
  * @param {number} [props.selectedSuggestionIndex] - Currently focused suggestion index
  * @param {number} [props.visibleOffset] - First visible suggestion offset
  * @param {boolean} [props.confirmDiscard=false] - Whether discard confirmation is active
+ * @param {boolean} [props.revealSecrets=false] - If true, show secret values in plain text
  * @returns {JSX.Element}
  */
 export default function ContainerCreationPrompt(props) {
@@ -49,6 +50,7 @@ export default function ContainerCreationPrompt(props) {
     reviewWarnings = [],
     focusedReviewRow = 0,
     isLoadingPreview = false,
+    revealSecrets = false,
   } = props;
   const prompts = [
     {
@@ -110,6 +112,7 @@ export default function ContainerCreationPrompt(props) {
           warnings={reviewWarnings}
           focusedRow={focusedReviewRow}
           isLoadingPreview={isLoadingPreview}
+          revealSecrets={revealSecrets}
         />
       ) : (
           <PromptField
@@ -165,6 +168,7 @@ ContainerCreationPrompt.propTypes = {
   reviewWarnings: PropTypes.array,
   focusedReviewRow: PropTypes.number,
   isLoadingPreview: PropTypes.bool,
+  revealSecrets: PropTypes.bool,
 };
 
 // Named export for test compatibility with jest ESM interop

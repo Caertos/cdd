@@ -49,6 +49,7 @@ export default function App() {
           reviewWarnings={controls.creation.reviewWarnings}
           focusedReviewRow={controls.creation.focusedReviewRow}
           isLoadingPreview={controls.creation.isLoadingPreview}
+          revealSecrets={controls.creation.revealSecrets}
         />
         {controls.showHelp && (
           <HelpPanel

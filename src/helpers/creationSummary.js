@@ -1,4 +1,5 @@
 import { normalizeImageName } from './imageNameUtils.js';
+import { isSecretKey, findWeakSecrets } from './secrets.js';
 
 /**
  * @typedef {Object} SummaryRow
@@ -96,13 +97,7 @@ export function buildCreationSummary(values, ctx) {
       const eqIdx = v.indexOf('=');
       if (eqIdx === -1) return v;
       const key = v.slice(0, eqIdx);
-      const profile = imageProfiles[baseName];
-      const isSecret =
-        key.toUpperCase().includes('PASSWORD') ||
-        key.toUpperCase().includes('SECRET') ||
-        key.toUpperCase().includes('TOKEN') ||
-        (profile?.requiredEnv || []).includes(key);
-      return isSecret ? `${key}=\u2022\u2022\u2022\u2022\u2022\u2022` : v;
+      return isSecretKey(key) ? `${key}=\u2022\u2022\u2022\u2022\u2022\u2022` : v;
     });
     rows.push({ key: 'env', step: 3, label: 'Env', values: envLines });
   } else {
@@ -214,18 +209,30 @@ export function buildCreationWarnings(values, ctx) {
   for (const v of envVars) {
     const eqIdx = v.indexOf('=');
     if (eqIdx === -1) continue;
-    const key = v.slice(0, eqIdx).toUpperCase();
-    if (
-      key.includes('PASSWORD') ||
-      key.includes('SECRET') ||
-      key.includes('TOKEN')
-    ) {
+    const key = v.slice(0, eqIdx);
+    if (isSecretKey(key)) {
       warnings.push({
         kind: 'secret-plain',
         level: 'warn',
-        text: `"${v.slice(0, eqIdx)}" contains a secret in plain text.`,
+        text: `"${key}" contains a secret in plain text.`,
       });
     }
+  }
+
+  // Weak secrets
+  const weakSecrets = findWeakSecrets(envInput);
+  for (const { key, reason } of weakSecrets) {
+    const reasonText =
+      reason === 'example'
+        ? 'uses an example value'
+        : reason === 'short'
+          ? 'is too short'
+          : 'uses a common password';
+    warnings.push({
+      kind: 'secret-weak',
+      level: 'warn',
+      text: `"${key}" ${reasonText}. Consider using [Ctrl+G] to generate a strong password.`,
+    });
   }
 
   return warnings;
