@@ -325,10 +325,7 @@ export function useControls(containers = [], overrides = {}) {
           return;
         }
         discardConfirmation.start();
-        creation.setMessage(
-          'Discard this container? All progress will be lost. [y] Yes  [n] No'
-        );
-        creation.setMessageColor('yellow');
+        creation.setMessage('');
       },
 
       // Wizard-list context
