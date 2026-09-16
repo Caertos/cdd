@@ -181,6 +181,8 @@ export function useControls(containers = [], overrides = {}) {
       showDebugLogs: debugLogs.showDebugLogs,
       hasSelection: selection.selected >= 0 && containers.length > 0,
       wizardStep: creation.step,
+      isSecretField: creation.isCurrentFieldSecret(),
+      hasSecrets: creation.hasSecretsInEnv(),
     }),
     [
       eraseConfirmation.confirmErase,
@@ -192,6 +194,7 @@ export function useControls(containers = [], overrides = {}) {
       creation.suggestions,
       creation.hubResults,
       creation.step,
+      creation.envInput,
       debugLogs.showDebugLogs,
       selection.selected,
       containers.length,
@@ -342,6 +345,10 @@ export function useControls(containers = [], overrides = {}) {
       'wizard-review.row-up': () => creation.moveReviewRow(-1),
       'wizard-review.row-down': () => creation.moveReviewRow(1),
       'wizard-review.back': () => creation.prevStep(),
+
+      // Secrets context
+      'secrets.generate': () => creation.generateSecretForField(),
+      'secrets.reveal': () => creation.toggleRevealSecrets(),
 
       // Logs context
       'logs.close': () => logsViewer.closeLogs(),
