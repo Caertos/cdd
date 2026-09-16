@@ -4,6 +4,7 @@ import { PromptField, PromptMessage } from './PromptField.jsx';
 import { SuggestionPanel } from './SuggestionPanel.jsx';
 import { ControlsHUD } from './ControlsHUD.jsx';
 import { CreationSummary } from './CreationSummary.jsx';
+import { secretRanges } from '../helpers/secrets.js';
 import PropTypes from 'prop-types';
 
 /** Number of steps in the wizard. Must stay in sync with WIZARD_STEP_COUNT in constants.js. */
@@ -83,6 +84,9 @@ export default function ContainerCreationPrompt(props) {
   const showSuggestions =
     step === 0 && (isSearchingHub || activeItems.length > 0);
   const hasSuggestions = suggestions?.length > 0 || hubResults?.length > 0;
+  // Compute mask ranges for secret fields (step 3 = env vars)
+  const maskRanges =
+    step === 3 && !revealSecrets ? secretRanges(envInput) : [];
   return (
     <Box
       flexDirection="column"
@@ -121,6 +125,7 @@ export default function ContainerCreationPrompt(props) {
             value={value}
             cursor={cursor}
             required={required}
+            maskRanges={maskRanges}
           />
           {showSuggestions && (
             <SuggestionPanel
