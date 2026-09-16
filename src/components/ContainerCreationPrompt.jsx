@@ -115,6 +115,7 @@ export default function ContainerCreationPrompt(props) {
           revealSecrets={revealSecrets}
         />
       ) : (
+        <>
           <PromptField
             label={label}
             value={value}
