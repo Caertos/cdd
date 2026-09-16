@@ -10,16 +10,24 @@
 
 ---
 
-## 🎉 Novedades en v4.3
+## 🎉 Novedades en v4.6
 
-**Mapa de teclas central, HUD contextual y sistema de ayuda.**
+**Gestión de secretos — las contraseñas permanecen ocultas.**
 
-CDD ahora tiene una única fuente de verdad para todos los atajos de teclado. La barra inferior (HUD) cambia dinámicamente según lo que estés haciendo, y presionando `?` se abre un panel de ayuda completo para el contexto actual.
+CDD ahora protege las variables de entorno sensibles por defecto. Contraseñas, tokens y claves de API aparecen enmascarados en el asistente y la pantalla de revisión, y nunca aparecen en los logs de debug.
 
-- **HUD contextual** — solo muestra las teclas que realmente están activas ahora
-- **Ayuda con `?`** — presiona `?` para ver todas las teclas disponibles con descripciones
-- **Navegación en Docker Hub arreglada** — las flechas ahora navegan los resultados del Hub (D3)
-- **Mapa de teclas central** — todos los bindings definidos en un solo lugar, evitando contradicciones
+- **Enmascaramiento automático** — variables como `POSTGRES_PASSWORD`, `JWT_SECRET` o `API_KEY` se muestran como `••••••` mientras escribes
+- **`Ctrl+R` para revelar** — alterna la visibilidad de valores secretos cuando necesitas verificarlos
+- **`Ctrl+G` para generar** — crea contraseñas fuertes y sin caracteres ambiguos directamente en el asistente
+- **Sin contraseñas de ejemplo** — los perfiles de imagen ya no sugieren `secret` o `change-me` como valores por defecto
+- **Advertencias de contraseña débil** — la pantalla de revisión señala contraseñas comunes o cortas y sugiere generar una más fuerte
+- **Seguro para debug** — los secretos se redactan de toda salida de log, incluso en modo debug
+
+### Por qué es importante
+
+Antes de v4.6, seleccionar un perfil de Postgres pre-rellenaba `POSTGRES_PASSWORD=secret`. La mayoría de usuarios acepta esto sin pensarlo — y termina con una base de datos protegida por una contraseña literal `secret`. Peor aún, si compartes tu pantalla o revisas tu historial de terminal dos días después, cada contraseña es visible en texto plano.
+
+Ahora CDD fomenta prácticas seguras sin frenarte: valores vacíos para secretos, generación con una tecla y enmascaramiento que puedes alternar cuando lo necesites.
 
 ---
 
@@ -118,6 +126,8 @@ Usa `↑` / `↓` para navegar por los contenedores. El **HUD** en la parte infe
 | `Esc`     | Volver un paso atrás (o cancelar en paso 0)     |
 | `Tab`     | Buscar en Docker Hub (paso 0) o insertar env    |
 | `↑` / `↓` | Navegar sugerencias                             |
+| `Ctrl+G`  | Generar un secreto fuerte (paso 3)              |
+| `Ctrl+R`  | Alternar visibilidad de secretos (paso 3)       |
 | `1`–`4`   | Editar un campo desde la pantalla de revisión   |
 | `?`       | Mostrar panel de ayuda                          |
 
@@ -171,6 +181,8 @@ Ingresa pares `CLAVE=VALOR` de a uno. Las **sugerencias contextuales** muestran 
 | redis                | _(sin variables requeridas)_                               |
 | mongo                | `MONGO_INITDB_ROOT_USERNAME`, `MONGO_INITDB_ROOT_PASSWORD` |
 | node / nginx / otros | Variables de runtime comunes según corresponda             |
+
+**Las variables secretas** (`PASSWORD`, `SECRET`, `TOKEN`, `API_KEY`, etc.) se enmascaran automáticamente mientras escribes. Usa `Ctrl+R` para revelarlas temporalmente, o `Ctrl+G` para generar una contraseña fuerte con una sola tecla.
 
 Presiona `Enter` en una línea vacía para terminar y crear el contenedor.
 

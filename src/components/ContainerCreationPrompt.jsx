@@ -4,6 +4,7 @@ import { PromptField, PromptMessage } from './PromptField.jsx';
 import { SuggestionPanel } from './SuggestionPanel.jsx';
 import { ControlsHUD } from './ControlsHUD.jsx';
 import { CreationSummary } from './CreationSummary.jsx';
+import { secretRanges } from '../helpers/secrets.js';
 import PropTypes from 'prop-types';
 
 /** Number of steps in the wizard. Must stay in sync with WIZARD_STEP_COUNT in constants.js. */
@@ -26,6 +27,7 @@ const WIZARD_STEP_COUNT = 5;
  * @param {number} [props.selectedSuggestionIndex] - Currently focused suggestion index
  * @param {number} [props.visibleOffset] - First visible suggestion offset
  * @param {boolean} [props.confirmDiscard=false] - Whether discard confirmation is active
+ * @param {boolean} [props.revealSecrets=false] - If true, show secret values in plain text
  * @returns {JSX.Element}
  */
 export default function ContainerCreationPrompt(props) {
@@ -49,6 +51,7 @@ export default function ContainerCreationPrompt(props) {
     reviewWarnings = [],
     focusedReviewRow = 0,
     isLoadingPreview = false,
+    revealSecrets = false,
   } = props;
   const prompts = [
     {
@@ -81,6 +84,9 @@ export default function ContainerCreationPrompt(props) {
   const showSuggestions =
     step === 0 && (isSearchingHub || activeItems.length > 0);
   const hasSuggestions = suggestions?.length > 0 || hubResults?.length > 0;
+  // Compute mask ranges for secret fields (step 3 = env vars)
+  const maskRanges =
+    step === 3 && !revealSecrets ? secretRanges(envInput) : [];
   return (
     <Box
       flexDirection="column"
@@ -99,10 +105,6 @@ export default function ContainerCreationPrompt(props) {
             <Text color="yellow">Discard this container?</Text>{' '}
             <Text dimColor>All progress will be lost.</Text>
           </Text>
-          <Text>
-            <Text color="cyan">[y]</Text> Yes{'  '}
-            <Text color="cyan">[n]</Text> No
-          </Text>
         </Box>
       ) : step === 4 ? (
         <CreationSummary
@@ -110,13 +112,16 @@ export default function ContainerCreationPrompt(props) {
           warnings={reviewWarnings}
           focusedRow={focusedReviewRow}
           isLoadingPreview={isLoadingPreview}
+          revealSecrets={revealSecrets}
         />
       ) : (
+        <>
           <PromptField
             label={label}
             value={value}
             cursor={cursor}
             required={required}
+            maskRanges={maskRanges}
           />
           {showSuggestions && (
             <SuggestionPanel
@@ -165,6 +170,7 @@ ContainerCreationPrompt.propTypes = {
   reviewWarnings: PropTypes.array,
   focusedReviewRow: PropTypes.number,
   isLoadingPreview: PropTypes.bool,
+  revealSecrets: PropTypes.bool,
 };
 
 // Named export for test compatibility with jest ESM interop

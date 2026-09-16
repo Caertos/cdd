@@ -19,6 +19,7 @@ import {
   buildCreationWarnings,
 } from '../../helpers/creationSummary.js';
 import { previewAutoPorts } from '../../helpers/dockerService/serviceComponents/imageUtils.js';
+import { generateSecret, isSecretKey } from '../../helpers/secrets.js';
 
 const MAX_VISIBLE = 6;
 
@@ -337,6 +338,9 @@ export function useContainerCreation({
   const [focusedReviewRow, setFocusedReviewRow] = useState(0);
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
   const returnToReviewRef = useRef(false);
+
+  // Secret masking state
+  const [revealSecrets, setRevealSecrets] = useState(false);
 
   // Timer for auto-clearing messages
   const messageTimerRef = useRef(null);
@@ -752,7 +756,88 @@ export function useContainerCreation({
       return;
     }
     const newEnvInput = envInput ? `${envInput},${next}` : next;
-    dispatch({ type: 'SET', payload: { envInput: newEnvInput } });
+    dispatch({
+      type: 'SET',
+      payload: {
+        envInput: newEnvInput,
+        cursors: { ...form.cursors, envInput: newEnvInput.length },
+      },
+    });
+  }
+
+  /**
+   * Generates a strong password and inserts it for the current secret field.
+   * If the cursor is on a secret field (POSTGRES_PASSWORD=), generates and inserts.
+   * Otherwise, finds the first empty secret field and fills it.
+   */
+  function generateSecretForField() {
+    const secret = generateSecret(24);
+    const pairs = envInput ? envInput.split(',') : [];
+
+    // Try to find a secret key with empty value
+    let targetIdx = -1;
+    for (let i = 0; i < pairs.length; i++) {
+      const eqIdx = pairs[i].indexOf('=');
+      if (eqIdx !== -1) {
+        const key = pairs[i].slice(0, eqIdx).trim();
+        const value = pairs[i].slice(eqIdx + 1).trim();
+        if (isSecretKey(key) && !value) {
+          targetIdx = i;
+          break;
+        }
+      }
+    }
+
+    if (targetIdx >= 0) {
+      // Fill the empty secret field
+      pairs[targetIdx] = pairs[targetIdx].replace(/=$/, `=${secret}`);
+      const newEnvInput = pairs.join(',');
+      dispatch({
+        type: 'SET',
+        payload: {
+          envInput: newEnvInput,
+          cursors: { ...form.cursors, envInput: newEnvInput.length },
+        },
+      });
+      setTimedMessage('Password generated — it will not be shown again', 'cyan', 6000);
+    } else {
+      // No empty secret field found — show the generated password once
+      setTimedMessage(`Generated: ${secret} (copy it now, it won't be shown again)`, 'cyan', 8000);
+    }
+  }
+
+  /**
+   * Toggles reveal/hide state for secret values.
+   */
+  function toggleRevealSecrets() {
+    setRevealSecrets((prev) => !prev);
+  }
+
+  /**
+   * Returns true if the current envInput contains any secret keys.
+   */
+  function hasSecretsInEnv() {
+    if (!envInput) return false;
+    return envInput.split(',').some((pair) => {
+      const eqIdx = pair.indexOf('=');
+      if (eqIdx === -1) return false;
+      const key = pair.slice(0, eqIdx).trim();
+      return isSecretKey(key);
+    });
+  }
+
+  /**
+   * Returns true if the last suggested env var added is a secret key with empty value.
+   * Used by keymap to conditionally show Ctrl+G hint.
+   */
+  function isCurrentFieldSecret() {
+    if (!envInput) return false;
+    const lastPair = envInput.split(',').pop()?.trim() ?? '';
+    const eqIdx = lastPair.indexOf('=');
+    if (eqIdx === -1) return false;
+    const key = lastPair.slice(0, eqIdx).trim();
+    const value = lastPair.slice(eqIdx + 1).trim();
+    return isSecretKey(key) && !value;
   }
 
   /**
@@ -805,6 +890,12 @@ export function useContainerCreation({
     hasSuggestedEnv,
     fieldForStep,
     handleFieldKey,
+    // Secret management
+    revealSecrets,
+    generateSecretForField,
+    toggleRevealSecrets,
+    hasSecretsInEnv,
+    isCurrentFieldSecret,
     // Review step
     reviewRows,
     reviewWarnings,

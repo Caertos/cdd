@@ -13,9 +13,10 @@ import PropTypes from 'prop-types';
  * @param {number} [props.cursor] - Cursor position (0..value.length). When
  *   omitted the cursor defaults to the end of the value.
  * @param {boolean} [props.required=false] - Whether the field is required
+ * @param {Array<{start: number, end: number}>} [props.maskRanges=[]] - Ranges to mask with dots
  * @returns {JSX.Element}
  */
-export function PromptField({ label, value, cursor, required }) {
+export function PromptField({ label, value, cursor, required, maskRanges }) {
   const cursorPos = cursor !== undefined ? cursor : (value || '').length;
   return (
     <TextField
@@ -23,6 +24,7 @@ export function PromptField({ label, value, cursor, required }) {
       value={value || ''}
       cursor={cursorPos}
       required={required}
+      maskRanges={maskRanges}
     />
   );
 }
@@ -45,6 +47,12 @@ PromptField.propTypes = {
   value: PropTypes.string,
   cursor: PropTypes.number,
   required: PropTypes.bool,
+  maskRanges: PropTypes.arrayOf(
+    PropTypes.shape({
+      start: PropTypes.number.isRequired,
+      end: PropTypes.number.isRequired,
+    })
+  ),
 };
 
 PromptMessage.propTypes = {

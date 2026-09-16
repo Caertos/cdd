@@ -10,16 +10,24 @@
 
 ---
 
-## 🎉 What's new in v4.3
+## 🎉 What's new in v4.6
 
-**Central keymap, contextual HUD, and help system.**
+**Secret management — passwords stay hidden.**
 
-CDD now has a single source of truth for all keyboard shortcuts. The bottom bar (HUD) changes dynamically based on what you're doing, and pressing `?` opens a full help panel for the current context.
+CDD now protects sensitive environment variables by default. Passwords, tokens, and API keys are masked in the wizard and review screen, and never appear in debug logs.
 
-- **Contextual HUD** — only shows keys that are actually active right now
-- **`?` help** — press `?` to see all available keys with descriptions
-- **Docker Hub navigation fixed** — arrow keys now navigate Hub search results (D3)
-- **Central keymap** — all keybindings defined in one place, preventing contradictions
+- **Automatic masking** — variables like `POSTGRES_PASSWORD`, `JWT_SECRET`, or `API_KEY` show as `••••••` while typing
+- **`Ctrl+R` to reveal** — toggle visibility of secret values when you need to check them
+- **`Ctrl+G` to generate** — create strong, unambiguous passwords directly in the wizard
+- **No example passwords** — image profiles no longer suggest `secret` or `change-me` as defaults
+- **Weak password warnings** — the review screen flags common or short passwords and suggests generating a stronger one
+- **Debug-safe** — secrets are redacted from all log output, even in debug mode
+
+### Why this matters
+
+Before v4.6, selecting a Postgres profile would pre-fill `POSTGRES_PASSWORD=secret`. Most users accept this without thinking — and end up with a database protected by a literal `secret` password. Worse, if you share your screen or check your terminal history two days later, every password is visible in plain text.
+
+Now CDD encourages secure practices without slowing you down: empty defaults for secrets, one-key generation, and masking that you can toggle when needed.
 
 ---
 
@@ -118,6 +126,8 @@ Use `↑` / `↓` to navigate containers. The **HUD** at the bottom shows availa
 | `Esc`     | Go back one step (or cancel on step 0)   |
 | `Tab`     | Search Docker Hub (step 0) or insert env  |
 | `↑` / `↓` | Navigate suggestions                      |
+| `Ctrl+G`  | Generate a strong secret (step 3)         |
+| `Ctrl+R`  | Toggle secret visibility (step 3)         |
 | `1`–`4`   | Edit a field from the review screen       |
 | `?`       | Show help panel                           |
 
@@ -171,6 +181,8 @@ Enter `KEY=VALUE` pairs one at a time. **Contextual hints** show recommended var
 | redis                 | _(no required vars)_                                       |
 | mongo                 | `MONGO_INITDB_ROOT_USERNAME`, `MONGO_INITDB_ROOT_PASSWORD` |
 | node / nginx / others | Common runtime vars as applicable                          |
+
+**Secret variables** (`PASSWORD`, `SECRET`, `TOKEN`, `API_KEY`, etc.) are automatically masked as you type. Use `Ctrl+R` to reveal them temporarily, or `Ctrl+G` to generate a strong password with one keystroke.
 
 Press `Enter` on an empty line to finish and create the container.
 

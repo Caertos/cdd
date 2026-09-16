@@ -161,6 +161,22 @@ export const KEYMAP = {
       priority: 70,
     },
     {
+      id: 'secrets.generate',
+      keys: ['ctrl+g'],
+      label: '^G',
+      help: 'Generate a strong password for secret field',
+      priority: 65,
+      when: (s) => s.wizardStep === 3 && s.isSecretField,
+    },
+    {
+      id: 'secrets.reveal',
+      keys: ['ctrl+r'],
+      label: '^R',
+      help: 'Toggle reveal/hide secret values',
+      priority: 65,
+      when: (s) => s.wizardStep === 3 && s.hasSecrets,
+    },
+    {
       id: 'app.help',
       keys: ['?'],
       label: '?',
