@@ -94,8 +94,10 @@ export function secretRanges(envInput) {
  */
 export function generateSecret(length = 24) {
   // Avoids: 0/O/o, 1/l/I, quotes, backticks, backslash, dollar, exclamation
+  // Also avoids shell/YAML-conflicting chars: @ # % ^ & * + = etc.
+  // And ambiguous: i (looks like 1 in some fonts)
   const alphabet =
-    'abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789_-+=@#%^&*';
+    'abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789_-';
   const bytes = randomBytes(length);
   let result = '';
   for (let i = 0; i < length; i++) {
