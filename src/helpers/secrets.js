@@ -1,6 +1,44 @@
 import { randomBytes } from 'crypto';
 
 /**
+ * Creates a Buffer from a secret string for secure handling.
+ * The original string should be discarded after this call.
+ * @param {string} secret
+ * @returns {Buffer}
+ */
+export function secretToBuffer(secret) {
+  return Buffer.from(secret, 'utf8');
+}
+
+/**
+ * Clears a buffer's contents (best-effort zeroization).
+ * Note: JavaScript/Node.js cannot guarantee memory zeroization due to
+ * GC and string interning. This is a defense-in-depth measure.
+ * @param {Buffer} buf
+ */
+export function clearBuffer(buf) {
+  if (Buffer.isBuffer(buf)) {
+    buf.fill(0);
+  }
+}
+
+/**
+ * Compares two buffers in constant time to prevent timing attacks.
+ * @param {Buffer} a
+ * @param {Buffer} b
+ * @returns {boolean}
+ */
+export function timingSafeEqual(a, b) {
+  if (!Buffer.isBuffer(a) || !Buffer.isBuffer(b)) return false;
+  if (a.length !== b.length) return false;
+  let result = 0;
+  for (let i = 0; i < a.length; i++) {
+    result |= a[i] ^ b[i];
+  }
+  return result === 0;
+}
+
+/**
  * Fragments of env var names that mark a value as sensitive.
  * Matched case-insensitively against the variable name.
  */

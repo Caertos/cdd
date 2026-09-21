@@ -5,6 +5,7 @@ import {
   detectShell,
 } from '../helpers/dockerService/serviceComponents/containerExec.js';
 import { getInkApp, setInkApp } from '../helpers/appState.js';
+import { isValidContainerId } from '../helpers/validationHelpers.js';
 import App from '../App.jsx';
 import { logger } from '../helpers/logger.js';
 
@@ -31,6 +32,10 @@ async function openShell(container) {
   }
 
   const containerId = container.id;
+  if (!isValidContainerId(containerId)) {
+    logger.warn('Invalid container ID: %s', containerId);
+    return;
+  }
   const containerName = container.name || containerId.slice(0, 12);
 
   // Unmount Ink to release the terminal

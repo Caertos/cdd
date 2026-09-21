@@ -5,6 +5,10 @@ import { logger } from '../../logger.js';
 import { normalizeImageName } from '../../imageNameUtils.js';
 import { findAvailablePort } from '../../portUtils.js';
 import { redactForLog } from '../../secrets.js';
+import {
+  validateImageName,
+  validateContainerName,
+} from '../../validationHelpers.js';
 
 /**
  * Helper to add timeout to promises. If the provided promise does not settle
@@ -57,6 +61,17 @@ export async function createContainer(
   options = {},
   imageProfiles = IMAGE_PROFILES
 ) {
+  const imgValidation = validateImageName(imageName);
+  if (!imgValidation.valid) {
+    throw new Error(`Invalid image name: ${imgValidation.error}`);
+  }
+  if (options.name) {
+    const nameValidation = validateContainerName(options.name);
+    if (!nameValidation.valid) {
+      throw new Error(`Invalid container name: ${nameValidation.error}`);
+    }
+  }
+
   logger.info('Creating container from image %s', imageName);
   if (options.Env?.length) {
     logger.debug('Env vars: %s', redactForLog(options.Env.join(',')));

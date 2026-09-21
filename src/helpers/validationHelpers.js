@@ -1,5 +1,85 @@
-// Reusable validations for ports and environment variables
+// Reusable validations for ports, environment variables, and Docker identifiers
 import { normalizeImageName } from './imageNameUtils.js';
+
+/**
+ * Validates that a value looks like a Docker container/image ID (hex, 64 chars)
+ * or a valid container name (alphanumeric, hyphens, underscores, dots, slashes).
+ * @param {string} id
+ * @returns {boolean}
+ */
+export function isValidContainerId(id) {
+  if (!id || typeof id !== 'string') return false;
+  // Docker ID: 64 hex chars (sha256)
+  if (/^[a-f0-9]{64}$/.test(id)) return true;
+  // Docker also allows short IDs (12+ chars)
+  if (/^[a-f0-9]{12,63}$/.test(id)) return true;
+  // Container names: alphanumeric, hyphens, underscores, dots, slashes
+  if (/^[a-zA-Z0-9][a-zA-Z0-9_.\-/]{0,127}$/.test(id)) return true;
+  return false;
+}
+
+/**
+ * Validates a Docker container name.
+ * Docker names must match: /[a-zA-Z0-9][a-zA-Z0-9_.-]+/
+ * Max 128 characters.
+ * @param {string} name
+ * @returns {{ valid: boolean, error?: string }}
+ */
+export function validateContainerName(name) {
+  if (!name || !name.trim()) return { valid: true }; // Optional
+  const trimmed = name.trim();
+  if (trimmed.length > 128) {
+    return { valid: false, error: 'Container name too long (max 128 chars)' };
+  }
+  if (!/^[a-zA-Z0-9][a-zA-Z0-9_.-]*$/.test(trimmed)) {
+    return {
+      valid: false,
+      error:
+        'Container name can only contain letters, numbers, underscores, dots, and hyphens',
+    };
+  }
+  return { valid: true };
+}
+
+/**
+ * Validates a Docker image name format.
+ * Allows: [registry/]name[:tag]
+ * Rejects shell metacharacters and injection patterns.
+ * @param {string} name
+ * @returns {{ valid: boolean, error?: string }}
+ */
+export function validateImageName(name) {
+  if (!name || !name.trim()) {
+    return { valid: false, error: 'Image name is required' };
+  }
+  const trimmed = name.trim();
+  // Reject shell metacharacters
+  if (/[;&|`$(){}!<>]/.test(trimmed)) {
+    return {
+      valid: false,
+      error: 'Image name contains invalid characters',
+    };
+  }
+  // Reject docker CLI flags disguised as image names
+  if (/^--/.test(trimmed)) {
+    return {
+      valid: false,
+      error: 'Image name cannot start with --',
+    };
+  }
+  // Basic format: name[:tag] or registry/name[:tag]
+  if (
+    !/^[a-zA-Z0-9_-]+([.:/][a-zA-Z0-9_-]+)*(:[a-zA-Z0-9._-]+)?$/.test(
+      trimmed
+    )
+  ) {
+    return {
+      valid: false,
+      error: 'Invalid image name format',
+    };
+  }
+  return { valid: true };
+}
 
 /**
  * Validate a comma-separated list of port mappings in the form "host:container".

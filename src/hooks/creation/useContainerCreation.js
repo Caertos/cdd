@@ -2,6 +2,8 @@ import { useReducer, useState, useRef, useEffect } from 'react';
 import {
   validatePorts,
   validateEnvVars,
+  validateContainerName,
+  validateImageName,
 } from '../../helpers/validationHelpers.js';
 import {
   IMAGE_PROFILES,
@@ -19,7 +21,12 @@ import {
   buildCreationWarnings,
 } from '../../helpers/creationSummary.js';
 import { previewAutoPorts } from '../../helpers/dockerService/serviceComponents/imageUtils.js';
-import { generateSecret, isSecretKey } from '../../helpers/secrets.js';
+import {
+  generateSecret,
+  isSecretKey,
+  secretToBuffer,
+  clearBuffer,
+} from '../../helpers/secrets.js';
 
 const MAX_VISIBLE = 6;
 
@@ -67,12 +74,26 @@ function formReducer(state, action) {
  * @returns {{ ok: boolean, error?: string }}
  */
 export function validateStep(step, values, ctx) {
-  const { imageName, portInput, envInput } = values;
+  const { imageName, containerName, portInput, envInput } = values;
   const { imageProfiles, dbImages } = ctx;
 
   if (step === 0) {
     if (!imageName.trim()) {
       return { ok: false, error: 'Image name cannot be empty.' };
+    }
+    const imgValidation = validateImageName(imageName);
+    if (!imgValidation.valid) {
+      return { ok: false, error: imgValidation.error };
+    }
+    return { ok: true };
+  }
+
+  if (step === 1) {
+    if (containerName?.trim()) {
+      const nameValidation = validateContainerName(containerName);
+      if (!nameValidation.valid) {
+        return { ok: false, error: nameValidation.error };
+      }
     }
     return { ok: true };
   }
@@ -772,37 +793,52 @@ export function useContainerCreation({
    */
   function generateSecretForField() {
     const secret = generateSecret(24);
-    const pairs = envInput ? envInput.split(',') : [];
+    const secretBuf = secretToBuffer(secret);
 
-    // Try to find a secret key with empty value
-    let targetIdx = -1;
-    for (let i = 0; i < pairs.length; i++) {
-      const eqIdx = pairs[i].indexOf('=');
-      if (eqIdx !== -1) {
-        const key = pairs[i].slice(0, eqIdx).trim();
-        const value = pairs[i].slice(eqIdx + 1).trim();
-        if (isSecretKey(key) && !value) {
-          targetIdx = i;
-          break;
+    try {
+      const pairs = envInput ? envInput.split(',') : [];
+
+      // Try to find a secret key with empty value
+      let targetIdx = -1;
+      for (let i = 0; i < pairs.length; i++) {
+        const eqIdx = pairs[i].indexOf('=');
+        if (eqIdx !== -1) {
+          const key = pairs[i].slice(0, eqIdx).trim();
+          const value = pairs[i].slice(eqIdx + 1).trim();
+          if (isSecretKey(key) && !value) {
+            targetIdx = i;
+            break;
+          }
         }
       }
-    }
 
-    if (targetIdx >= 0) {
-      // Fill the empty secret field
-      pairs[targetIdx] = pairs[targetIdx].replace(/=$/, `=${secret}`);
-      const newEnvInput = pairs.join(',');
-      dispatch({
-        type: 'SET',
-        payload: {
-          envInput: newEnvInput,
-          cursors: { ...form.cursors, envInput: newEnvInput.length },
-        },
-      });
-      setTimedMessage('Password generated — it will not be shown again', 'cyan', 6000);
-    } else {
-      // No empty secret field found — show the generated password once
-      setTimedMessage(`Generated: ${secret} (copy it now, it won't be shown again)`, 'cyan', 8000);
+      if (targetIdx >= 0) {
+        // Fill the empty secret field
+        pairs[targetIdx] = pairs[targetIdx].replace(/=$/, `=${secret}`);
+        const newEnvInput = pairs.join(',');
+        dispatch({
+          type: 'SET',
+          payload: {
+            envInput: newEnvInput,
+            cursors: { ...form.cursors, envInput: newEnvInput.length },
+          },
+        });
+        setTimedMessage(
+          'Password generated — it will not be shown again',
+          'cyan',
+          6000
+        );
+      } else {
+        // No empty secret field found — show the generated password once
+        setTimedMessage(
+          `Generated: ${secret} (copy it now, it won't be shown again)`,
+          'cyan',
+          8000
+        );
+      }
+    } finally {
+      // Best-effort: clear the buffer
+      clearBuffer(secretBuf);
     }
   }
 
