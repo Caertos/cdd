@@ -1,4 +1,42 @@
-import { randomBytes } from 'crypto';
+import { randomInt } from 'crypto';
+
+/**
+ * Creates a Buffer from a secret string for secure handling.
+ * The original string should be discarded after this call.
+ * @param {string} secret
+ * @returns {Buffer}
+ */
+export function secretToBuffer(secret) {
+  return Buffer.from(secret, 'utf8');
+}
+
+/**
+ * Clears a buffer's contents (best-effort zeroization).
+ * Note: JavaScript/Node.js cannot guarantee memory zeroization due to
+ * GC and string interning. This is a defense-in-depth measure.
+ * @param {Buffer} buf
+ */
+export function clearBuffer(buf) {
+  if (Buffer.isBuffer(buf)) {
+    buf.fill(0);
+  }
+}
+
+/**
+ * Compares two buffers in constant time to prevent timing attacks.
+ * @param {Buffer} a
+ * @param {Buffer} b
+ * @returns {boolean}
+ */
+export function timingSafeEqual(a, b) {
+  if (!Buffer.isBuffer(a) || !Buffer.isBuffer(b)) return false;
+  if (a.length !== b.length) return false;
+  let result = 0;
+  for (let i = 0; i < a.length; i++) {
+    result |= a[i] ^ b[i];
+  }
+  return result === 0;
+}
 
 /**
  * Fragments of env var names that mark a value as sensitive.
@@ -86,8 +124,9 @@ export function secretRanges(envInput) {
 
 /**
  * Generates a strong password suitable for shell and YAML.
- * Uses crypto.randomBytes. Alphabet excludes ambiguous characters
- * (0/O, 1/l/I) and shell/YAML-conflicting characters.
+ * Uses crypto.randomInt (rejection sampling — no module bias).
+ * Alphabet excludes ambiguous characters (0/O, 1/l/I) and
+ * shell/YAML-conflicting characters.
  *
  * @param {number} [length=24]
  * @returns {string}
@@ -98,10 +137,10 @@ export function generateSecret(length = 24) {
   // And ambiguous: i (looks like 1 in some fonts)
   const alphabet =
     'abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789_-';
-  const bytes = randomBytes(length);
   let result = '';
   for (let i = 0; i < length; i++) {
-    result += alphabet[bytes[i] % alphabet.length];
+    // randomInt uses rejection sampling — uniform distribution, no bias
+    result += alphabet[randomInt(alphabet.length)];
   }
   return result;
 }
@@ -115,8 +154,9 @@ export function redactForLog(text) {
   if (!text) return text;
 
   // Match patterns like KEY=value where KEY contains a secret pattern
+  // Handles: UPPERCASE_KEY, lowercase_key, MixedCase_Key, keys with numbers
   return text.replace(
-    /([A-Z_]*(?:PASSWORD|PASSWD|SECRET|TOKEN|APIKEY|API_KEY|PRIVATE_KEY|ACCESS_KEY|CREDENTIAL|AUTH)[A-Z_]*)\s*=\s*[^,}\s)]+/gi,
+    /([a-zA-Z0-9_]*(?:PASSWORD|PASSWD|SECRET|TOKEN|APIKEY|API_KEY|PRIVATE_KEY|ACCESS_KEY|CREDENTIAL|AUTH)[a-zA-Z0-9_]*)\s*=\s*[^,}\s)]+/gi,
     '$1=***'
   );
 }

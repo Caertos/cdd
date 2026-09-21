@@ -2,6 +2,9 @@ import { spawn } from 'child_process';
 import { docker } from '../dockerService.js';
 import { logger } from '../../logger.js';
 import { TIMEOUTS } from '../../constants.js';
+import { isValidContainerId } from '../../validationHelpers.js';
+
+const ALLOWED_SHELLS = ['bash', 'sh'];
 
 /**
  * Detect the default shell available inside a running container.
@@ -11,6 +14,10 @@ import { TIMEOUTS } from '../../constants.js';
  * @returns {Promise<string>} The shell command (e.g. 'bash' or 'sh')
  */
 export async function detectShell(containerId) {
+  if (!isValidContainerId(containerId)) {
+    throw new Error('Invalid container ID');
+  }
+
   const container = docker.getContainer(containerId);
 
   const tryShell = (shell) =>
@@ -73,7 +80,15 @@ export async function detectShell(containerId) {
  * @returns {Promise<{code: number|null, signal: string|null}>} Exit info
  */
 export async function execInteractive(containerId, options = {}) {
+  if (!isValidContainerId(containerId)) {
+    throw new Error('Invalid container ID');
+  }
+
   const shell = options.shell || (await detectShell(containerId));
+
+  if (!ALLOWED_SHELLS.includes(shell)) {
+    throw new Error(`Unsupported shell: ${shell}`);
+  }
 
   const args = ['exec', '-it', containerId, shell];
   if (options.workingDir) {

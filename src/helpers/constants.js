@@ -79,7 +79,7 @@ export const IMAGE_PROFILES = {
     requiredEnv: [],
     defaultPort: '8000',
     suggestedEnv: ['PYTHONUNBUFFERED=1'],
-    defaultTag: '3.12-slim',
+    defaultTag: '3.13-slim',
   },
   openjdk: {
     requiredEnv: [],
@@ -91,7 +91,7 @@ export const IMAGE_PROFILES = {
     requiredEnv: [],
     defaultPort: '8080',
     suggestedEnv: ['GOMAXPROCS=2'],
-    defaultTag: '1.22-alpine',
+    defaultTag: '1.24-alpine',
   },
   redis: {
     requiredEnv: [],
@@ -124,7 +124,7 @@ export const IMAGE_PROFILES = {
       'MYSQL_USER=app',
       'MYSQL_PASSWORD=',
     ],
-    defaultTag: '8.0',
+    defaultTag: '8.4',
   },
   mariadb: {
     requiredEnv: ['MARIADB_ROOT_PASSWORD'],
@@ -163,16 +163,22 @@ export const IMAGE_PROFILES = {
       'RABBITMQ_DEFAULT_USER=guest',
       'RABBITMQ_DEFAULT_PASS=',
     ],
-    defaultTag: '3-management-alpine',
+    defaultTag: '4-management-alpine',
   },
   kafka: {
     requiredEnv: [],
     defaultPort: '9092',
     suggestedEnv: [
-      'KAFKA_CFG_LISTENERS=PLAINTEXT://:9092',
-      'KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://localhost:9092',
+      'KAFKA_NODE_ID=1',
+      'KAFKA_PROCESS_ROLES=broker,controller',
+      'KAFKA_LISTENERS=PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093',
+      'KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://localhost:9092',
+      'KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT',
+      'KAFKA_CONTROLLER_LISTENER_NAMES=CONTROLLER',
+      'KAFKA_CONTROLLER_QUORUM_VOTERS=1@localhost:9093',
+      'KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1',
     ],
-    defaultTag: '3.7',
+    defaultTag: 'latest',
   },
   zookeeper: {
     requiredEnv: [],
@@ -187,7 +193,7 @@ export const IMAGE_PROFILES = {
       'discovery.type=single-node',
       'xpack.security.enabled=false',
     ],
-    defaultTag: '8.13.0',
+    defaultTag: '8.14',
   },
   minio: {
     requiredEnv: ['MINIO_ROOT_USER', 'MINIO_ROOT_PASSWORD'],
@@ -214,7 +220,7 @@ export const IMAGE_PROFILES = {
       'WORDPRESS_DB_NAME=wordpress',
       'WORDPRESS_TABLE_PREFIX=wp_',
     ],
-    defaultTag: '6.5-apache',
+    defaultTag: '7.1-apache',
   },
 };
 

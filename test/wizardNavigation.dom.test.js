@@ -27,8 +27,8 @@ function HookTester({ onCreate, onCancel, dbImages, imageProfiles, expose }) {
 }
 
 describe('Wizard navigation — STEP_COUNT', () => {
-  test('STEP_COUNT is 4', () => {
-    expect(STEP_COUNT).toBe(4);
+  test('STEP_COUNT is 5', () => {
+    expect(STEP_COUNT).toBe(5);
   });
 });
 

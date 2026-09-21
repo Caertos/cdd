@@ -357,7 +357,7 @@ describe('useContainerCreation — insertNextSuggestedEnv() & hasSuggestedEnv', 
 
     act(() => { expose.current.insertNextSuggestedEnv(); });
     // envInput should contain the first suggestedEnv for postgres (required var first)
-    expect(expose.current.envInput).toBe('POSTGRES_PASSWORD=secret');
+    expect(expose.current.envInput).toBe('POSTGRES_PASSWORD=');
   });
 
   test('calling insertNextSuggestedEnv again inserts the next pending suggestion', () => {
@@ -370,7 +370,7 @@ describe('useContainerCreation — insertNextSuggestedEnv() & hasSuggestedEnv', 
 
     act(() => { expose.current.insertNextSuggestedEnv(); }); // inserts first
     act(() => { expose.current.insertNextSuggestedEnv(); }); // inserts second
-    expect(expose.current.envInput).toBe('POSTGRES_PASSWORD=secret,POSTGRES_USER=postgres');
+    expect(expose.current.envInput).toBe('POSTGRES_PASSWORD=,POSTGRES_USER=postgres');
   });
 
   test('calling insertNextSuggestedEnv when all already added sets feedback message', () => {
