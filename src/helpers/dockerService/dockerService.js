@@ -1,4 +1,13 @@
 import Docker from 'dockerode';
+import { logger } from '../logger.js';
+
+const dockerHost = process.env.DOCKER_HOST;
+if (dockerHost) {
+  logger.warn(
+    'DOCKER_HOST is set to "%s". CDD will connect to this Docker daemon. Ensure this is the intended host.',
+    dockerHost
+  );
+}
 
 // Use default dockerode configuration which automatically handles:
 // - /var/run/docker.sock on Linux/Mac

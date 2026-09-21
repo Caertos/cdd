@@ -352,6 +352,8 @@ export function useContainerCreation({
   const [hubResults, setHubResults] = useState(null);
   // Tracks active request: { controller: AbortController|null, requestId: number }
   const activeHubRequestRef = useRef({ controller: null, requestId: 0 });
+  // Debounce timer for Hub search
+  const hubDebounceRef = useRef(null);
 
   // Review step state
   const [reviewRows, setReviewRows] = useState([]);
@@ -388,7 +390,10 @@ export function useContainerCreation({
     }
   }
 
-  useEffect(() => () => clearTimeout(messageTimerRef.current), []);
+  useEffect(() => () => {
+    clearTimeout(messageTimerRef.current);
+    clearTimeout(hubDebounceRef.current);
+  }, []);
 
   /**
    * Updates the image name input and recalculates autocomplete suggestions.
@@ -425,7 +430,7 @@ export function useContainerCreation({
    * Guards: imageName must be non-empty; no concurrent search allowed.
    * Uses AbortController + requestId to handle race conditions.
    */
-  async function triggerHubSearch() {
+  async function doHubSearch() {
     const query = imageName.trim();
     if (!query) return;
     if (isSearchingHub) return;
@@ -462,6 +467,17 @@ export function useContainerCreation({
         setIsSearchingHub(false);
       }
     }
+  }
+
+  /**
+   * Debounced wrapper for Hub search — prevents rapid-fire requests.
+   * @param {number} [delay=300] - Debounce delay in ms
+   */
+  function triggerHubSearch(delay = 300) {
+    clearTimeout(hubDebounceRef.current);
+    hubDebounceRef.current = setTimeout(() => {
+      doHubSearch();
+    }, delay);
   }
 
   /**

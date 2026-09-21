@@ -98,7 +98,13 @@ export function validatePorts(portInput) {
   if (ports.length === 0) return true;
   const invalid = ports.find((pair) => {
     const [host, cont] = pair.split(':');
-    return !host || !cont || isNaN(Number(host)) || isNaN(Number(cont));
+    if (!host || !cont) return true;
+    const hostNum = Number(host);
+    const contNum = Number(cont);
+    if (isNaN(hostNum) || isNaN(contNum)) return true;
+    if (hostNum < 1 || hostNum > 65535) return true;
+    if (contNum < 1 || contNum > 65535) return true;
+    return false;
   });
   return !invalid;
 }

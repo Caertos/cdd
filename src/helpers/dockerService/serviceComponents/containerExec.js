@@ -4,6 +4,8 @@ import { logger } from '../../logger.js';
 import { TIMEOUTS } from '../../constants.js';
 import { isValidContainerId } from '../../validationHelpers.js';
 
+const ALLOWED_SHELLS = ['bash', 'sh'];
+
 /**
  * Detect the default shell available inside a running container.
  * Tries `bash` first, falls back to `sh`.
@@ -83,6 +85,10 @@ export async function execInteractive(containerId, options = {}) {
   }
 
   const shell = options.shell || (await detectShell(containerId));
+
+  if (!ALLOWED_SHELLS.includes(shell)) {
+    throw new Error(`Unsupported shell: ${shell}`);
+  }
 
   const args = ['exec', '-it', containerId, shell];
   if (options.workingDir) {
