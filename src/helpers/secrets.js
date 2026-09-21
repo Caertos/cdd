@@ -1,4 +1,4 @@
-import { randomBytes } from 'crypto';
+import { randomInt } from 'crypto';
 
 /**
  * Creates a Buffer from a secret string for secure handling.
@@ -124,8 +124,9 @@ export function secretRanges(envInput) {
 
 /**
  * Generates a strong password suitable for shell and YAML.
- * Uses crypto.randomBytes. Alphabet excludes ambiguous characters
- * (0/O, 1/l/I) and shell/YAML-conflicting characters.
+ * Uses crypto.randomInt (rejection sampling — no module bias).
+ * Alphabet excludes ambiguous characters (0/O, 1/l/I) and
+ * shell/YAML-conflicting characters.
  *
  * @param {number} [length=24]
  * @returns {string}
@@ -136,10 +137,10 @@ export function generateSecret(length = 24) {
   // And ambiguous: i (looks like 1 in some fonts)
   const alphabet =
     'abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789_-';
-  const bytes = randomBytes(length);
   let result = '';
   for (let i = 0; i < length; i++) {
-    result += alphabet[bytes[i] % alphabet.length];
+    // randomInt uses rejection sampling — uniform distribution, no bias
+    result += alphabet[randomInt(alphabet.length)];
   }
   return result;
 }
@@ -153,8 +154,9 @@ export function redactForLog(text) {
   if (!text) return text;
 
   // Match patterns like KEY=value where KEY contains a secret pattern
+  // Handles: UPPERCASE_KEY, lowercase_key, MixedCase_Key, keys with numbers
   return text.replace(
-    /([A-Z_]*(?:PASSWORD|PASSWD|SECRET|TOKEN|APIKEY|API_KEY|PRIVATE_KEY|ACCESS_KEY|CREDENTIAL|AUTH)[A-Z_]*)\s*=\s*[^,}\s)]+/gi,
+    /([a-zA-Z0-9_]*(?:PASSWORD|PASSWD|SECRET|TOKEN|APIKEY|API_KEY|PRIVATE_KEY|ACCESS_KEY|CREDENTIAL|AUTH)[a-zA-Z0-9_]*)\s*=\s*[^,}\s)]+/gi,
     '$1=***'
   );
 }
