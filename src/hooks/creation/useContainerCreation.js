@@ -352,8 +352,6 @@ export function useContainerCreation({
   const [hubResults, setHubResults] = useState(null);
   // Tracks active request: { controller: AbortController|null, requestId: number }
   const activeHubRequestRef = useRef({ controller: null, requestId: 0 });
-  // Debounce timer for Hub search
-  const hubDebounceRef = useRef(null);
 
   // Review step state
   const [reviewRows, setReviewRows] = useState([]);
@@ -392,7 +390,6 @@ export function useContainerCreation({
 
   useEffect(() => () => {
     clearTimeout(messageTimerRef.current);
-    clearTimeout(hubDebounceRef.current);
   }, []);
 
   /**
@@ -470,14 +467,12 @@ export function useContainerCreation({
   }
 
   /**
-   * Debounced wrapper for Hub search — prevents rapid-fire requests.
-   * @param {number} [delay=300] - Debounce delay in ms
+   * Triggers a Hub search for the current imageName.
+   * Concurrency is already guarded inside doHubSearch (isSearchingHub)
+   * and updateImageInput aborts in-flight requests on every keystroke.
    */
-  function triggerHubSearch(delay = 300) {
-    clearTimeout(hubDebounceRef.current);
-    hubDebounceRef.current = setTimeout(() => {
-      doHubSearch();
-    }, delay);
+  function triggerHubSearch() {
+    doHubSearch();
   }
 
   /**
