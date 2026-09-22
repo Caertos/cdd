@@ -69,9 +69,7 @@ export function validateImageName(name) {
   }
   // Basic format: name[:tag] or registry/name[:tag]
   if (
-    !/^[a-zA-Z0-9_-]+([.:/][a-zA-Z0-9_-]+)*(:[a-zA-Z0-9._-]+)?$/.test(
-      trimmed
-    )
+    !/^[a-zA-Z0-9_-]+([.:/][a-zA-Z0-9_-]+)*(:[a-zA-Z0-9._-]+)?$/.test(trimmed)
   ) {
     return {
       valid: false,

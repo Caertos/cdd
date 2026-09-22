@@ -97,7 +97,9 @@ export function buildCreationSummary(values, ctx) {
       const eqIdx = v.indexOf('=');
       if (eqIdx === -1) return v;
       const key = v.slice(0, eqIdx);
-      return isSecretKey(key) ? `${key}=\u2022\u2022\u2022\u2022\u2022\u2022` : v;
+      return isSecretKey(key)
+        ? `${key}=\u2022\u2022\u2022\u2022\u2022\u2022`
+        : v;
     });
     rows.push({ key: 'env', step: 3, label: 'Env', values: envLines });
   } else {

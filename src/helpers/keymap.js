@@ -396,6 +396,22 @@ export const KEYMAP = {
       priority: 80,
     },
   ],
+  disconnected: [
+    {
+      id: 'connection.retry',
+      keys: ['r'],
+      label: 'R',
+      help: 'Retry connection',
+      priority: 90,
+    },
+    {
+      id: 'app.quit',
+      keys: ['q'],
+      label: 'Q',
+      help: 'Quit CDD',
+      priority: 80,
+    },
+  ],
 };
 
 /**
