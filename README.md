@@ -29,6 +29,19 @@ Before v4.6, selecting a Postgres profile would pre-fill `POSTGRES_PASSWORD=secr
 
 Now CDD encourages secure practices without slowing you down: empty defaults for secrets, one-key generation, and masking that you can toggle when needed.
 
+### v4.6.1 — Docker connection handling
+
+**Clear error messages when Docker is unreachable.**
+
+Before v4.6.1, if Docker was stopped or unreachable, CDD showed "No containers found" — a misleading message that made users think something was wrong with their containers. Now CDD detects connection failures and shows an actionable error screen.
+
+- **Clear error screen** — "Can't reach Docker" with specific technical details
+- **Actionable suggestions** — tells you exactly how to fix it (`sudo systemctl start docker`, open Docker Desktop)
+- **Auto-retry** — CDD keeps trying to connect every 5 seconds in the background
+- **Manual retry** — press `R` to retry immediately without waiting
+- **Stale data indicator** — when reconnection happens, old container data is visually dimmed until fresh data arrives
+- **Centralized strings** — all UI text moved to `src/helpers/strings.js` for future internationalization
+
 ---
 
 ## Previous releases
@@ -67,6 +80,7 @@ This is what developer experience should feel like.
 - ✨ **Interactive creation wizard** — step-by-step container setup with curated profiles and live Hub search
 - 🪵 Real-time log streaming for any selected container
 - 🐛 Toggleable live debug panel (`D` key)
+- 🚨 **Smart connection handling** — clear error screen with actionable suggestions when Docker is unreachable
 
 ---
 
@@ -251,7 +265,8 @@ CDD_LOG_LEVEL=debug cdd > cdd-debug.log 2>&1
 
 ## Troubleshooting
 
-- **No containers visible?** Make sure Docker is running and your user has access to the Docker socket.
+- **No containers visible?** If Docker is running but no containers appear, you may have none running or created. Press `C` to create one. If Docker is unreachable, CDD now shows a clear error screen with instructions to fix it.
+- **Docker connection error?** CDD will show "Can't reach Docker" with specific steps to resolve it. Press `R` to retry after fixing the issue, or wait for automatic retry every 5 seconds.
 - **Permission errors on Linux/macOS?** Try `sudo cdd` or add your user to the `docker` group.
 - **Windows?** Run your terminal as Administrator.
 - **`dist/` missing?** Run `npm run build` — it's in `.gitignore` and not committed.

@@ -29,6 +29,19 @@ Antes de v4.6, seleccionar un perfil de Postgres pre-rellenaba `POSTGRES_PASSWOR
 
 Ahora CDD fomenta prácticas seguras sin frenarte: valores vacíos para secretos, generación con una tecla y enmascaramiento que puedes alternar cuando lo necesites.
 
+### v4.6.1 — Manejo de conexión Docker
+
+**Mensajes de error claros cuando Docker no es accesible.**
+
+Antes de v4.6.1, si Docker estaba detenido o no era accesible, CDD mostraba "No containers found" — un mensaje engañoso que hacía pensar que algo estaba mal con los contenedores. Ahora CDD detecta fallos de conexión y muestra una pantalla de error clara y accionable.
+
+- **Pantalla de error clara** — "Can't reach Docker" con detalles técnicos específicos
+- **Sugerencias accionables** — te dice exactamente cómo solucionarlo (`sudo systemctl start docker`, abrir Docker Desktop)
+- **Auto-reintento** — CDD sigue intentando conectarse cada 5 segundos en segundo plano
+- **Reintento manual** — presiona `R` para reintentar inmediatamente sin esperar
+- **Indicador de datos obsoletos** — al reconectarse, los datos antiguos de contenedores se atenuan visualmente hasta que llegan datos frescos
+- **Strings centralizados** — todo el texto de la UI se movió a `src/helpers/strings.js` para futura internacionalización
+
 ---
 
 ## Versiones anteriores
@@ -67,6 +80,7 @@ Así debería sentirse la experiencia de desarrollo.
 - ✨ **Asistente de creación interactivo** — configuración paso a paso con perfiles curados y búsqueda en Hub
 - 🪵 Streaming de logs en tiempo real para el contenedor seleccionado
 - 🐛 Panel de debug en vivo activable con la tecla `D`
+- 🚨 **Manejo inteligente de conexión** — pantalla de error clara con sugerencias accionables cuando Docker no es accesible
 
 ---
 
@@ -251,7 +265,8 @@ CDD_LOG_LEVEL=debug cdd > cdd-debug.log 2>&1
 
 ## Solución de problemas
 
-- **¿No ves contenedores?** Asegúrate de que Docker esté ejecutándose y de que tu usuario tenga acceso al socket de Docker.
+- **¿No ves contenedores?** Si Docker está ejecutándose pero no hay contenedores, puede que no tengas ninguno ejecutándose o creado. Presiona `C` para crear uno. Si Docker no es accesible, CDD ahora muestra una pantalla de error clara con instrucciones para solucionarlo.
+- **¿Error de conexión con Docker?** CDD mostrará "Can't reach Docker" con pasos específicos para resolverlo. Presiona `R` para reintentar después de solucionar el problema, o espera el reintento automático cada 5 segundos.
 - **¿Errores de permisos en Linux/macOS?** Prueba con `sudo cdd` o agrega tu usuario al grupo `docker`.
 - **¿Windows?** Ejecuta la terminal como Administrador.
 - **¿Falta el directorio `dist/`?** Ejecuta `npm run build` — está en `.gitignore` y no se incluye en el repositorio.
