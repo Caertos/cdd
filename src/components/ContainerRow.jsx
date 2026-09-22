@@ -3,11 +3,13 @@ import { Box, Text } from 'ink';
 import StatsBar from './StatsBar.jsx';
 import PropTypes from 'prop-types';
 import { useContainerStats } from '../hooks/useContainerStats.js';
+import { STRINGS } from '../helpers/strings.js';
 
 const stateText = (state) => {
-  if (state === 'running') return { text: '🟢 RUNNING', color: 'green' };
-  if (state === 'exited') return { text: '🔴 EXITED', color: 'red' };
-  if (state === 'paused') return { text: '🟠 PAUSED', color: 'yellow' };
+  if (state === 'running')
+    return { text: STRINGS.stateRunning, color: 'green' };
+  if (state === 'exited') return { text: STRINGS.stateExited, color: 'red' };
+  if (state === 'paused') return { text: STRINGS.statePaused, color: 'yellow' };
   return { text: state.toUpperCase(), color: 'gray' };
 };
 
@@ -16,13 +18,17 @@ const stateText = (state) => {
  *
  * @param {Object} props
  * @param {Object} props.container - Container object with id, name, image, state and ports
+ * @param {boolean} [props.isStale=false] - Whether the data is potentially outdated
  * @returns {JSX.Element}
  */
-export default function ContainerRow({ container, isSelected = false }) {
+export default function ContainerRow({
+  container,
+  isSelected = false,
+  isStale = false,
+}) {
   const { id, name, image, state } = container;
   const { stats, statsError } = useContainerStats(id, state);
 
-  // Format ports for display (no leading space to avoid layout shifts)
   const formatPorts = (ports) => {
     if (!ports || ports.length === 0) return '';
     if (Array.isArray(ports)) {
@@ -31,13 +37,14 @@ export default function ContainerRow({ container, isSelected = false }) {
     return `🔗 ${ports}`;
   };
 
-  // Helper to truncate long strings to a max length without adding trailing spaces
   const truncate = (s, max = 20) => {
     if (!s) return '';
     return s.length > max ? s.slice(0, max - 1) + '…' : s;
   };
 
   const stateInfo = stateText(state);
+  const dimColor = isStale ? 'gray' : undefined;
+
   return (
     <Box flexDirection="column" marginBottom={1}>
       <Box flexDirection="row" alignItems="center">
@@ -47,16 +54,24 @@ export default function ContainerRow({ container, isSelected = false }) {
           </Text>
         </Box>
         <Box width={18} flexShrink={1} paddingRight={1}>
-          <Text color="cyan">{truncate(name, 18)}</Text>
+          <Text color="cyan" dimColor={dimColor}>
+            {truncate(name, 18)}
+          </Text>
         </Box>
         <Box width={18} flexShrink={1} paddingRight={1}>
-          <Text color="gray">{truncate(image, 18)}</Text>
+          <Text color="gray" dimColor={dimColor}>
+            {truncate(image, 18)}
+          </Text>
         </Box>
         <Box width={14} minWidth={12} paddingRight={1}>
-          <Text color={stateInfo.color}>{stateInfo.text}</Text>
+          <Text color={stateInfo.color} dimColor={dimColor}>
+            {stateInfo.text}
+          </Text>
         </Box>
         <Box flexGrow={1} flexShrink={1} paddingLeft={0} paddingRight={1}>
-          <Text color="yellow">{formatPorts(container.ports)}</Text>
+          <Text color="yellow" dimColor={dimColor}>
+            {formatPorts(container.ports)}
+          </Text>
         </Box>
         <Box flexShrink={0} paddingLeft={1}>
           {state === 'running' ? (
@@ -81,4 +96,5 @@ ContainerRow.propTypes = {
     ports: PropTypes.oneOfType([PropTypes.array, PropTypes.string]),
   }).isRequired,
   isSelected: PropTypes.bool,
+  isStale: PropTypes.bool,
 };

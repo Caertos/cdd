@@ -33,6 +33,11 @@ export const TIMEOUTS = {
 };
 
 /**
+ * How often to retry connecting when Docker is unreachable (milliseconds).
+ */
+export const CONNECTION_RETRY_INTERVAL = 5000;
+
+/**
  * List of well-known database image names (without tags or registry prefixes).
  */
 export const DB_IMAGES = [
@@ -149,20 +154,13 @@ export const IMAGE_PROFILES = {
   mssql: {
     requiredEnv: ['ACCEPT_EULA', 'SA_PASSWORD'],
     defaultPort: '1433',
-    suggestedEnv: [
-      'ACCEPT_EULA=Y',
-      'SA_PASSWORD=',
-      'MSSQL_PID=Developer',
-    ],
+    suggestedEnv: ['ACCEPT_EULA=Y', 'SA_PASSWORD=', 'MSSQL_PID=Developer'],
     defaultTag: '2022-latest',
   },
   rabbitmq: {
     requiredEnv: [],
     defaultPort: '5672',
-    suggestedEnv: [
-      'RABBITMQ_DEFAULT_USER=guest',
-      'RABBITMQ_DEFAULT_PASS=',
-    ],
+    suggestedEnv: ['RABBITMQ_DEFAULT_USER=guest', 'RABBITMQ_DEFAULT_PASS='],
     defaultTag: '4-management-alpine',
   },
   kafka: {

@@ -388,9 +388,12 @@ export function useContainerCreation({
     }
   }
 
-  useEffect(() => () => {
-    clearTimeout(messageTimerRef.current);
-  }, []);
+  useEffect(
+    () => () => {
+      clearTimeout(messageTimerRef.current);
+    },
+    []
+  );
 
   /**
    * Updates the image name input and recalculates autocomplete suggestions.

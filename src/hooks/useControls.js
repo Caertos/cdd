@@ -434,6 +434,11 @@ export function useControls(containers = [], overrides = {}) {
     logs: logsViewer.logs,
     exitLogs: logsViewer.closeLogs,
     creatingContainer,
+    startCreation: () => {
+      backHintShownRef.current = false;
+      creation.resetCreation();
+      setCreatingContainer(true);
+    },
     creationStep: creation.step,
     imageNameInput: creation.imageName,
     containerNameInput: creation.containerName,

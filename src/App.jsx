@@ -20,10 +20,11 @@ import LogViewer from './components/LogViewer.jsx';
 import ContainerCreationPrompt from './components/ContainerCreationPrompt.jsx';
 import { KeyHUD } from './components/KeyHUD.jsx';
 import { HelpPanel } from './components/HelpPanel.jsx';
+import { ConnectionNotice } from './components/ConnectionNotice.jsx';
 import Footer from './components/Footer.jsx';
 
 export default function App() {
-  const { containers } = useContainers();
+  const { containers, connection } = useContainers();
   const controls = useControls(containers);
 
   if (controls.creatingContainer) {
@@ -61,6 +62,18 @@ export default function App() {
     );
   }
 
+  // Connection error with no cached data — show the connection screen
+  if (connection.status === 'error' && containers.length === 0) {
+    return (
+      <ConnectionNotice
+        error={connection.error}
+        nextRetryIn={5}
+        onRetry={connection.retry}
+        onExit={() => process.exit(0)}
+      />
+    );
+  }
+
   return (
     <>
       <Box
@@ -71,9 +84,15 @@ export default function App() {
       >
         <Header count={containers.length} />
         <Text> </Text>
+        {connection.isStale && (
+          <Text color="yellow">{'⚠ '}Lost connection to Docker — retrying</Text>
+        )}
         <ContainerSection
           containers={containers}
           selected={controls.selected}
+          connectionStatus={connection.status}
+          isStale={connection.isStale}
+          onCreate={() => controls.startCreation()}
         />
         <Spacer />
         <MessageFeedback

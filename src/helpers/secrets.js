@@ -135,8 +135,7 @@ export function generateSecret(length = 24) {
   // Avoids: 0/O/o, 1/l/I, quotes, backticks, backslash, dollar, exclamation
   // Also avoids shell/YAML-conflicting chars: @ # % ^ & * + = etc.
   // And ambiguous: i (looks like 1 in some fonts)
-  const alphabet =
-    'abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789_-';
+  const alphabet = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789_-';
   let result = '';
   for (let i = 0; i < length; i++) {
     // randomInt uses rejection sampling — uniform distribution, no bias
@@ -200,7 +199,11 @@ export function findWeakSecrets(envInput) {
     }
 
     // Also flag very short passwords (less than 4 chars)
-    if (value.length > 0 && value.length < 4 && !weak.some((w) => w.key === key)) {
+    if (
+      value.length > 0 &&
+      value.length < 4 &&
+      !weak.some((w) => w.key === key)
+    ) {
       weak.push({ key, reason: 'short' });
     }
   }
