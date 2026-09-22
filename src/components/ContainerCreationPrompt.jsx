@@ -85,8 +85,7 @@ export default function ContainerCreationPrompt(props) {
     step === 0 && (isSearchingHub || activeItems.length > 0);
   const hasSuggestions = suggestions?.length > 0 || hubResults?.length > 0;
   // Compute mask ranges for secret fields (step 3 = env vars)
-  const maskRanges =
-    step === 3 && !revealSecrets ? secretRanges(envInput) : [];
+  const maskRanges = step === 3 && !revealSecrets ? secretRanges(envInput) : [];
   return (
     <Box
       flexDirection="column"

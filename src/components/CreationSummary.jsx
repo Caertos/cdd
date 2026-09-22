@@ -43,23 +43,25 @@ export function CreationSummary({
               </Text>
               <Text bold>{row.label} </Text>
               <Text>
-                {row.values.map((v, vi) => {
-                  // For env rows, apply reveal logic
-                  if (row.key === 'env') {
-                    const eqIdx = v.indexOf('=');
-                    if (eqIdx !== -1) {
-                      const key = v.slice(0, eqIdx);
-                      if (isSecretKey(key)) {
-                        if (revealSecrets) {
-                          return v; // Show full value
+                {row.values
+                  .map((v, vi) => {
+                    // For env rows, apply reveal logic
+                    if (row.key === 'env') {
+                      const eqIdx = v.indexOf('=');
+                      if (eqIdx !== -1) {
+                        const key = v.slice(0, eqIdx);
+                        if (isSecretKey(key)) {
+                          if (revealSecrets) {
+                            return v; // Show full value
+                          }
+                          // Show masked with Ctrl+R hint
+                          return `${key}=\u2022\u2022\u2022\u2022\u2022\u2022 [^R]`;
                         }
-                        // Show masked with Ctrl+R hint
-                        return `${key}=\u2022\u2022\u2022\u2022\u2022\u2022 [^R]`;
                       }
                     }
-                  }
-                  return v;
-                }).join(', ')}
+                    return v;
+                  })
+                  .join(', ')}
               </Text>
             </Box>
             {row.origin && (
