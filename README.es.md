@@ -109,15 +109,15 @@ cdd
 ```bash
 git clone https://github.com/caertos/cdd.git
 cd cdd
-npm install
-npm run build
+pnpm install
+pnpm run build
 node dist/index.js
 ```
 
 Para usar como comando global durante el desarrollo:
 
 ```bash
-npm link
+pnpm link --global
 cdd
 ```
 
@@ -245,19 +245,19 @@ Escribe `exit` o presiona `Ctrl+D` para salir del shell y volver al dashboard de
 ## Desarrollo
 
 ```bash
-npm install
-npm run build        # compila src/ → dist/
+pnpm install
+pnpm run build        # compila src/ → dist/
 node dist/index.js   # ejecuta desde la salida compilada
 ```
 
-Vuelve a ejecutar `npm run build` después de cualquier cambio en el código fuente. Usa `npm link` para probar el comando global `cdd` localmente.
+Vuelve a ejecutar `pnpm run build` después de cualquier cambio en el código fuente. Usa `pnpm link --global` para probar el comando global `cdd` localmente.
 
 ---
 
 ## Tests
 
 ```bash
-npm test
+pnpm test
 ```
 
 Los tests están en `test/` y cubren helpers, servicios y hooks.
@@ -288,7 +288,7 @@ CDD_LOG_LEVEL=debug cdd > cdd-debug.log 2>&1
 - **¿Error de conexión con Docker?** CDD mostrará "Can't reach Docker" con pasos específicos para resolverlo. Presiona `R` para reintentar después de solucionar el problema, espera la cuenta atrás en vivo o presiona `Q` para salir.
 - **¿Errores de permisos en Linux/macOS?** Prueba con `sudo cdd` o agrega tu usuario al grupo `docker`.
 - **¿Windows?** Ejecuta la terminal como Administrador.
-- **¿Falta el directorio `dist/`?** Ejecuta `npm run build` — está en `.gitignore` y no se incluye en el repositorio.
+- **¿Falta el directorio `dist/`?** Ejecuta `pnpm run build` — está en `.gitignore` y no se incluye en el repositorio.
 - **¿La búsqueda del asistente no funciona?** Verifica tu conexión a internet. Los perfiles offline siempre funcionan sin acceso a la red.
 
 ---

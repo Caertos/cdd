@@ -109,15 +109,15 @@ cdd
 ```bash
 git clone https://github.com/caertos/cdd.git
 cd cdd
-npm install
-npm run build
+pnpm install
+pnpm run build
 node dist/index.js
 ```
 
 To use as a global command during development:
 
 ```bash
-npm link
+pnpm link --global
 cdd
 ```
 
@@ -245,19 +245,19 @@ Type `exit` or press `Ctrl+D` to leave the shell and return to the CDD dashboard
 ## Development
 
 ```bash
-npm install
-npm run build        # compile src/ → dist/
+pnpm install
+pnpm run build        # compile src/ → dist/
 node dist/index.js   # run from compiled output
 ```
 
-Re-run `npm run build` after any source changes. Use `npm link` to test the global `cdd` command locally.
+Re-run `pnpm run build` after any source changes. Use `pnpm link --global` to test the global `cdd` command locally.
 
 ---
 
 ## Tests
 
 ```bash
-npm test
+pnpm test
 ```
 
 Tests live in `test/` and cover helpers, services, and hooks.
@@ -288,7 +288,7 @@ CDD_LOG_LEVEL=debug cdd > cdd-debug.log 2>&1
 - **Docker connection error?** CDD will show "Can't reach Docker" with specific steps to resolve it. Press `R` to retry after fixing the issue, wait for the live countdown, or press `Q` to quit.
 - **Permission errors on Linux/macOS?** Try `sudo cdd` or add your user to the `docker` group.
 - **Windows?** Run your terminal as Administrator.
-- **`dist/` missing?** Run `npm run build` — it's in `.gitignore` and not committed.
+- **`dist/` missing?** Run `pnpm run build` — it's in `.gitignore` and not committed.
 - **Wizard search not working?** Check your internet connection. Offline profiles always work without network access.
 
 ---

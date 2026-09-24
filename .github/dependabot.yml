@@ -1,5 +1,6 @@
 version: 2
 updates:
+  # "npm" is the ecosystem for package.json; Dependabot supports pnpm-lock.yaml under this ecosystem.
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
