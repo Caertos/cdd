@@ -12,6 +12,8 @@ module.exports = {
     '/node_modules/(?!(ink|ink-testing-library|ansi-styles|chalk|cli-cursor|cli-spinners|is-unicode-supported|restore-cursor|signal-exit|slice-ansi|strip-ansi|wrap-ansi|yoga-layout-prebuilt)/)'
   ],
   moduleNameMapper: {
-    '^ink$': '<rootDir>/__mocks__/ink.cjs'
+    '^ink$': '<rootDir>/__mocks__/ink.cjs',
+    // Socket override is dual ESM/CJS; Jest require must hit index.cjs
+    '^indent-string$': '<rootDir>/__mocks__/indent-string.cjs'
   }
 };
