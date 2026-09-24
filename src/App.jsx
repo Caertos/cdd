@@ -67,7 +67,7 @@ export default function App() {
     return (
       <ConnectionNotice
         error={connection.error}
-        nextRetryIn={5}
+        nextRetryIn={connection.nextRetryIn}
         onRetry={connection.retry}
         onExit={() => process.exit(0)}
       />
