@@ -13,16 +13,16 @@ git checkout -b feat/my-feature
 2. Install dependencies and verify everything works before making changes:
 
 ```bash
-npm install
-npm test
-npm run build
+pnpm install
+pnpm test
+pnpm run build
 ```
 
 ## Guidelines
 
 - Keep changes small and focused — one concern per PR.
-- Write tests for any new behavior and ensure existing tests pass (`npm test`).
-- Run `npm run build` and verify the CLI starts (`node dist/index.js`) before opening a PR.
+- Write tests for any new behavior and ensure existing tests pass (`pnpm test`).
+- Run `pnpm run build` and verify the CLI starts (`node dist/index.js`) before opening a PR.
 - Use [Conventional Commits](https://www.conventionalcommits.org/) for commit messages.
 - For large or design-changing contributions, open an issue first to discuss the approach.
 

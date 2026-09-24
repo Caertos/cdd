@@ -28,7 +28,7 @@ AUDIT_REPORT.md
 # Atl temporary files
 .atl/
 
-# Generated docs (npm run docs — regenerable, not committed)
+# Generated docs (pnpm run docs — regenerable, not committed)
 docs/
 
 # Test coverage output (jest)
