@@ -78,7 +78,7 @@ async function completeCreationWizard(expose, imageName = 'nginx') {
   act(() => { expose.current.creation.nextStep(); }); // 1 → 2
   act(() => { expose.current.creation.nextStep(); }); // 2 → 3
   // 3 → 4 (review): prepareReview() is async (summary + warnings)
-  await act(async () => { expose.current.creation.nextStep(); });
+  await act(async () => { await expose.current.creation.nextStep(); });
   expect(expose.current.creation.step).toBe(4);
   // 4 (review) confirmed → onCreate
   await act(async () => { expose.current.creation.nextStep(); });
