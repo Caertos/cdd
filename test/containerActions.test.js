@@ -226,4 +226,28 @@ describe('containerActions service functions (mocked ESM imports)', () => {
     expect(stopMock).toHaveBeenCalled();
     expect(restartMock).toHaveBeenCalled();
   });
+
+  test('withTimeout leaves no pending timers when the promise wins the race', async () => {
+    jest.useFakeTimers();
+    try {
+      await jest.unstable_mockModule('../src/helpers/dockerService/dockerService.js', () => ({
+        docker: {
+          getContainer: jest.fn().mockReturnValue({
+            start: jest.fn().mockResolvedValue(undefined),
+          }),
+        },
+      }));
+      await jest.unstable_mockModule(
+        '../src/helpers/dockerService/serviceComponents/imageUtils.js',
+        () => ({ imageExists: jest.fn(), pullImage: jest.fn() })
+      );
+      const mod = await import(
+        '../src/helpers/dockerService/serviceComponents/containerActions.js'
+      );
+      await mod.startContainer('cid-1');
+      expect(jest.getTimerCount()).toBe(0);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
 });

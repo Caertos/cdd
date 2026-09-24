@@ -20,12 +20,11 @@ import {
  * @returns {Promise<T>} The original promise result or a rejection on timeout
  */
 function withTimeout(promise, ms = TIMEOUTS.CONTAINER_OP) {
-  return Promise.race([
-    promise,
-    new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('Operation timed out')), ms)
-    ),
-  ]);
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error('Operation timed out')), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
 }
 
 /**
