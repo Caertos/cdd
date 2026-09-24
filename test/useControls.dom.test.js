@@ -13,8 +13,10 @@ const triggerInput = (input, key = {}) => {
 await jest.unstable_mockModule('ink', () => ({
   Box: ({ children, ...props }) => React.createElement('div', props, children),
   Text: ({ children }) => React.createElement('span', null, children),
+  Spacer: () => React.createElement('div', null),
   useInput: (fn) => { _inputHandler = fn; },
   useApp: () => ({ exit: () => {} }),
+  render: () => ({ unmount: () => {}, waitUntilExit: () => Promise.resolve() }),
 }));
 
 // Mock containerActions — expose all named exports so dependents don't break
@@ -36,6 +38,28 @@ await jest.unstable_mockModule(
   () => ({ getLogsStream: () => {} })
 );
 
+// Break useControls → useShellMode → App.jsx → useContainers cycle under ESM
+await jest.unstable_mockModule('../src/hooks/useShellMode.js', () => ({
+  useShellMode: () => ({ openShell: jest.fn() }),
+}));
+
+// Review step (TASK-4) imports these dynamically; without mocks a unit test
+// would open the real Docker daemon socket.
+await jest.unstable_mockModule(
+  '../src/helpers/dockerService/dockerService.js',
+  () => ({
+    docker: { listContainers: jest.fn().mockResolvedValue([]) },
+  })
+);
+await jest.unstable_mockModule(
+  '../src/helpers/dockerService/serviceComponents/imageUtils.js',
+  () => ({
+    imageExists: jest.fn().mockResolvedValue(true),
+    pullImage: jest.fn().mockResolvedValue(undefined),
+    previewAutoPorts: jest.fn().mockResolvedValue(null),
+  })
+);
+
 const { useControls } = await import('../src/hooks/useControls.js');
 
 function HookTester({ containers, expose, overrides }) {
@@ -46,13 +70,17 @@ function HookTester({ containers, expose, overrides }) {
   return null;
 }
 
-// Helper: advance creation wizard to the final step and trigger onCreate
+// Helper: advance the full wizard and fire onCreate.
+// 5 steps since TASK-4: image → name → ports → env → review.
 async function completeCreationWizard(expose, imageName = 'nginx') {
   act(() => { expose.current.creation.setImageName(imageName); });
-  act(() => { expose.current.creation.nextStep(); }); // step 0 → 1
-  act(() => { expose.current.creation.nextStep(); }); // step 1 → 2
-  act(() => { expose.current.creation.nextStep(); }); // step 2 → 3
-  // step 3: call nextStep to trigger onCreate (async)
+  act(() => { expose.current.creation.nextStep(); }); // 0 → 1
+  act(() => { expose.current.creation.nextStep(); }); // 1 → 2
+  act(() => { expose.current.creation.nextStep(); }); // 2 → 3
+  // 3 → 4 (review): prepareReview() is async (summary + warnings)
+  await act(async () => { await expose.current.creation.nextStep(); });
+  expect(expose.current.creation.step).toBe(4);
+  // 4 (review) confirmed → onCreate
   await act(async () => { expose.current.creation.nextStep(); });
 }
 
@@ -237,14 +265,13 @@ describe('useControls — FR4/FR5/FR6 keyboard routing via processCreationInput'
   test('FR4 — ↑/↓ are ignored when step > 0 (no suggestions navigation on other steps)', () => {
     const expose = renderAndStartCreation();
 
-    // Advance to step 1 by typing an image name and pressing Enter
-    act(() => { triggerInput('n', {}); }); // type → imageName='n'
-    act(() => { triggerInput('g', {}); }); // type → imageName='ng', suggestions appear
-    // Clear suggestions by pressing Escape then re-enter (shortcut: directly set step)
-    // Instead, clear imageName and press Enter with no suggestions
-    // Set imageName via direct API, advance step
+    // Advance to step 1: type an image name (opens suggestion list), close it
+    // with Esc (context is wizard-list while open), then Enter to advance.
+    act(() => { triggerInput('n', {}); });
+    act(() => { triggerInput('g', {}); });
     act(() => { expose.current.creation.setImageName('nginx'); });
-    // Simulate Enter (\r) with no focused suggestion → should advance step
+    act(() => { triggerInput('', { escape: true }); });
+    expect(expose.current.creation.suggestions).toHaveLength(0);
     act(() => { triggerInput('\r', {}); });
     expect(expose.current.creation.step).toBe(1);
 
@@ -442,9 +469,7 @@ describe('useControls — success/error message clears after 4000ms', () => {
     const expose = { current: null };
     render(<HookTester containers={[]} expose={expose} />);
 
-    await act(async () => {
-      await completeCreationWizard(expose, 'nginx');
-    });
+    await completeCreationWizard(expose, 'nginx');
 
     // setTimedMessage must have scheduled a timeout to clear the message
     const clearCallArgs = timeoutSpy.mock.calls.find(
@@ -461,9 +486,7 @@ describe('useControls — success/error message clears after 4000ms', () => {
     const expose = { current: null };
     render(<HookTester containers={[]} expose={expose} />);
 
-    await act(async () => {
-      await completeCreationWizard(expose, 'badimage');
-    });
+    await completeCreationWizard(expose, 'badimage');
 
     const clearCallArgs = timeoutSpy.mock.calls.find(
       ([fn, delay]) => delay === 4000
@@ -492,13 +515,15 @@ describe('useControls — pressing C calls resetCreation BEFORE onStartCreate', 
     act(() => { triggerInput('c', {}); }); // enter creation mode
     act(() => { expose.current.creation.setImageName('dirty-state'); });
 
-    // Exit creation mode and re-enter via C to test reset order
+    // Esc with data opens discard confirmation — the app stays in the wizard
     act(() => {
-      // Press escape to cancel creation
       if (_inputHandler) _inputHandler('', { escape: true });
     });
+    expect(expose.current.confirmDiscard).toBe(true);
+    act(() => { triggerInput('y', {}); }); // confirm discard
+    expect(expose.current.creatingContainer).toBe(false);
 
-    // Now press C again — this should reset THEN show creation mode
+    // Re-enter via C — this should reset THEN show creation mode
     act(() => { triggerInput('c', {}); });
 
     // After pressing C: creatingContainer should be true AND imageName should be reset to ''
@@ -577,5 +602,71 @@ describe('useControls — D3 fix: hubResults navigation', () => {
     // Should have applied the suggestion
     expect(expose.current.creation.imageName).not.toBe('');
     expect(expose.current.creation.step).toBe(0);
+  });
+});
+
+describe('useControls — disconnected context wires R to connection.retry', () => {
+  test('context is disconnected and R calls connection.retry', () => {
+    const retry = jest.fn();
+    const expose = { current: null };
+    render(
+      <HookTester
+        containers={[]}
+        expose={expose}
+        overrides={{
+          connection: { status: 'error', error: null, retry, retryToken: 0 },
+        }}
+      />
+    );
+
+    expect(expose.current.context).toBe('disconnected');
+
+    act(() => {
+      triggerInput('r', {});
+    });
+
+    expect(retry).toHaveBeenCalledTimes(1);
+  });
+
+  test('context stays list when Docker is ok', () => {
+    const retry = jest.fn();
+    const expose = { current: null };
+    render(
+      <HookTester
+        containers={[{ id: 'c1', name: 'web', state: 'running' }]}
+        expose={expose}
+        overrides={{
+          connection: { status: 'ok', error: null, retry, retryToken: 0 },
+        }}
+      />
+    );
+
+    expect(expose.current.context).toBe('list');
+  });
+
+  test('Q quits directly without confirmation on connection screen', () => {
+    const retry = jest.fn();
+    const expose = { current: null };
+    render(
+      <HookTester
+        containers={[]}
+        expose={expose}
+        overrides={{
+          connection: { status: 'error', error: null, retry, retryToken: 0 },
+        }}
+      />
+    );
+
+    expect(expose.current.context).toBe('disconnected');
+    expect(expose.current.confirmQuit).toBe(false);
+
+    act(() => {
+      triggerInput('q', {});
+    });
+
+    // Direct exit path: no invisible confirmation, cleanup message set.
+    expect(expose.current.confirmQuit).toBe(false);
+    expect(expose.current.message).toBe('Exiting...');
+    expect(expose.current.context).toBe('disconnected');
   });
 });

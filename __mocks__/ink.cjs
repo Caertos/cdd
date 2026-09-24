@@ -15,3 +15,15 @@ exports.__triggerInput = (input, key = {}) => {
 exports.__resetInput = () => { _inputHandler = null; };
 
 exports.useApp = () => ({ exit: () => {} });
+
+// Under ESM, named exports are validated at link time: this mock must export
+// everything the app imports from 'ink', even if a test does not use it.
+exports.Spacer = () => React.createElement('div', { 'data-spacer': true });
+exports.Newline = () => React.createElement('br', null);
+exports.Static = ({ children }) => React.createElement('div', null, children);
+exports.render = () => ({
+  unmount: () => {},
+  rerender: () => {},
+  clear: () => {},
+  waitUntilExit: () => Promise.resolve(),
+});

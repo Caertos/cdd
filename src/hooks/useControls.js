@@ -25,9 +25,12 @@ import {
  * It coordinates the modular hooks and exposes a compact API consumed by the App.
  *
  * @param {Array<Object>} containers - Current list of Docker containers
+ * @param {Object} [overrides] - Test hooks and optional connection state
+ * @param {Object} [overrides.connection] - Docker connection state from useContainers
  * @returns {Object} controls - API for the App component
  */
 export function useControls(containers = [], overrides = {}) {
+  const connection = overrides.connection ?? null;
   const [creatingContainer, setCreatingContainer] = React.useState(false);
   const [showHelp, setShowHelp] = React.useState(false);
   const lastCreationRef = React.useRef(null);
@@ -183,6 +186,7 @@ export function useControls(containers = [], overrides = {}) {
       wizardStep: creation.step,
       isSecretField: creation.isCurrentFieldSecret(),
       hasSecrets: creation.hasSecretsInEnv(),
+      disconnected: connection?.status === 'error' && containers.length === 0,
     }),
     [
       eraseConfirmation.confirmErase,
@@ -198,6 +202,7 @@ export function useControls(containers = [], overrides = {}) {
       debugLogs.showDebugLogs,
       selection.selected,
       containers.length,
+      connection?.status,
     ]
   );
 
@@ -367,6 +372,12 @@ export function useControls(containers = [], overrides = {}) {
 
       // Debug context
       'debug.close': () => debugLogs.setShowDebugLogs(false),
+
+      // Disconnected context
+      'connection.retry': () => connection?.retry?.(),
+      // Connection screen has no visible message bar — quit directly
+      // instead of opening an invisible confirmation.
+      'connection.quit': () => exitHandler.handleExitCommand('q'),
     }),
     [
       containers,
@@ -381,6 +392,7 @@ export function useControls(containers = [], overrides = {}) {
       creation,
       debugLogs,
       exitHandler,
+      connection,
     ]
   );
 

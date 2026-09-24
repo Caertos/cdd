@@ -25,7 +25,7 @@ import Footer from './components/Footer.jsx';
 
 export default function App() {
   const { containers, connection } = useContainers();
-  const controls = useControls(containers);
+  const controls = useControls(containers, { connection });
 
   if (controls.creatingContainer) {
     return (
@@ -67,9 +67,7 @@ export default function App() {
     return (
       <ConnectionNotice
         error={connection.error}
-        nextRetryIn={5}
-        onRetry={connection.retry}
-        onExit={() => process.exit(0)}
+        nextRetryIn={connection.nextRetryIn}
       />
     );
   }

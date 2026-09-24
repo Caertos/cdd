@@ -10,7 +10,18 @@
 
 ---
 
-## 🎉 What's new in v4.6
+## 🎉 What's new in v4.7
+
+**Live retry countdown and connection-screen keys.**
+
+When Docker is unreachable, CDD no longer leaves you guessing. The connection screen counts down to the next automatic reconnect and gives you direct keys to act.
+
+- **Live countdown** — seconds until the next automatic reconnect attempt
+- **`R` retries immediately** — force a container fetch without waiting for the timer
+- **`Q` quits directly** — no confirmation prompt; the app is already in a degraded state
+- **Leaner notice** — `ConnectionNotice` only receives `{ error, nextRetryIn }`
+
+### v4.6 — Secret management
 
 **Secret management — passwords stay hidden.**
 
@@ -131,6 +142,14 @@ Use `↑` / `↓` to navigate containers. The **HUD** at the bottom shows availa
 | `D`       | Toggle live debug panel                                   |
 | `Q`       | Quit                                                      |
 | `?`       | Show help panel                                           |
+
+### Connection Screen
+
+| Key       | Action                                              |
+| --------- | --------------------------------------------------- |
+| `R`       | Retry container fetch immediately                   |
+| `Q`       | Quit CDD (no confirmation)                          |
+| —         | Auto-retry every 5 seconds (shown as a live countdown) |
 
 ### Creation Wizard
 
@@ -266,7 +285,7 @@ CDD_LOG_LEVEL=debug cdd > cdd-debug.log 2>&1
 ## Troubleshooting
 
 - **No containers visible?** If Docker is running but no containers appear, you may have none running or created. Press `C` to create one. If Docker is unreachable, CDD now shows a clear error screen with instructions to fix it.
-- **Docker connection error?** CDD will show "Can't reach Docker" with specific steps to resolve it. Press `R` to retry after fixing the issue, or wait for automatic retry every 5 seconds.
+- **Docker connection error?** CDD will show "Can't reach Docker" with specific steps to resolve it. Press `R` to retry after fixing the issue, wait for the live countdown, or press `Q` to quit.
 - **Permission errors on Linux/macOS?** Try `sudo cdd` or add your user to the `docker` group.
 - **Windows?** Run your terminal as Administrator.
 - **`dist/` missing?** Run `npm run build` — it's in `.gitignore` and not committed.

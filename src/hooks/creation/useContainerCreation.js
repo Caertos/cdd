@@ -673,14 +673,12 @@ export function useContainerCreation({
     // Returning from editing a field: skip to review directly
     if (returnToReviewRef.current) {
       returnToReviewRef.current = false;
-      prepareReview();
-      return;
+      return prepareReview();
     }
 
     // Step 3 goes to review (step 4), not directly to onCreate
     if (f.step === 3) {
-      prepareReview();
-      return;
+      return prepareReview();
     }
 
     // Step 4 (review) — confirmed: call onCreate

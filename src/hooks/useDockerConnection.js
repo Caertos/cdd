@@ -8,6 +8,7 @@ import { CONNECTION_RETRY_INTERVAL } from '../helpers/constants.js';
  * @property {import('../helpers/dockerErrors.js').DockerErrorInfo|null} error
  * @property {number} lastOkAt   - Timestamp of the last successful probe
  * @property {boolean} isStale   - true if there were containers before and now it fails
+ * @property {number} nextRetryIn - Seconds until the next automatic retry (0 when healthy)
  */
 
 /**
@@ -25,29 +26,32 @@ export function useDockerConnection(options = {}) {
   const [lastOkAt, setLastOkAt] = useState(0);
   const [isStale, setIsStale] = useState(false);
   const [retryToken, setRetryToken] = useState(0);
+  const [nextRetryIn, setNextRetryIn] = useState(0);
 
   const hadDataRef = useRef(false);
-  const timerRef = useRef(null);
 
-  // Automatic retry while in error state
+  // Automatic retry while in error state, with a live countdown.
+  // retryToken in deps: every auto or manual retry restarts the cycle.
   useEffect(() => {
     if (status !== 'error') {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
-      return;
+      setNextRetryIn(0);
+      return undefined;
     }
 
-    timerRef.current = setInterval(() => {
+    const totalSeconds = Math.ceil(retryIntervalMs / 1000);
+    setNextRetryIn(totalSeconds);
+
+    const retryTimer = setInterval(() => {
       setRetryToken((t) => t + 1);
     }, retryIntervalMs);
 
+    const tickTimer = setInterval(() => {
+      setNextRetryIn((s) => (s > 0 ? s - 1 : 0));
+    }, 1000);
+
     return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
+      clearInterval(retryTimer);
+      clearInterval(tickTimer);
     };
   }, [status, retryIntervalMs, retryToken]);
 
@@ -71,5 +75,14 @@ export function useDockerConnection(options = {}) {
     setRetryToken((t) => t + 1);
   }, []);
 
-  return { status, error, lastOkAt, isStale, reportResult, retry, retryToken };
+  return {
+    status,
+    error,
+    lastOkAt,
+    isStale,
+    reportResult,
+    retry,
+    retryToken,
+    nextRetryIn,
+  };
 }

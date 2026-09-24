@@ -405,7 +405,7 @@ export const KEYMAP = {
       priority: 90,
     },
     {
-      id: 'app.quit',
+      id: 'connection.quit',
       keys: ['q'],
       label: 'Q',
       help: 'Quit CDD',
@@ -426,6 +426,7 @@ export const KEYMAP = {
  * @param {boolean} [state.creatingContainer]
  * @param {boolean} [state.hasActiveList]
  * @param {boolean} [state.showDebugLogs]
+ * @param {boolean} [state.disconnected] - Docker unreachable with empty list
  * @returns {ContextId}
  */
 export function getActiveContext(state) {
@@ -438,6 +439,7 @@ export function getActiveContext(state) {
   if (state.creatingContainer) return 'wizard';
   if (state.showDebugLogs) return 'debug';
   if (state.confirmQuit) return 'confirm-quit';
+  if (state.disconnected) return 'disconnected';
   return 'list';
 }
 

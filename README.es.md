@@ -10,7 +10,18 @@
 
 ---
 
-## 🎉 Novedades en v4.6
+## 🎉 Novedades en v4.7
+
+**Cuenta atrás de reintento en vivo y teclas en la pantalla de conexión.**
+
+Cuando Docker no es accesible, CDD ya no te deja sin explicaciones. La pantalla de conexión muestra la cuenta atrás hasta el siguiente reintento automático y te da teclas directas para actuar.
+
+- **Cuenta atrás en vivo** — segundos hasta el siguiente intento de reconexión automática
+- **`R` reintenta al instante** — fuerza la carga de contenedores sin esperar al temporizador
+- **`Q` sale directamente** — sin confirmación; la app ya está en un estado degradado
+- **Aviso más simple** — `ConnectionNotice` solo recibe `{ error, nextRetryIn }`
+
+### v4.6 — Gestión de secretos
 
 **Gestión de secretos — las contraseñas permanecen ocultas.**
 
@@ -131,6 +142,14 @@ Usa `↑` / `↓` para navegar por los contenedores. El **HUD** en la parte infe
 | `D`       | Activar/desactivar panel de debug en vivo                   |
 | `Q`       | Salir                                                       |
 | `?`       | Mostrar panel de ayuda                                      |
+
+### Pantalla de Conexión
+
+| Tecla     | Acción                                                |
+| --------- | ----------------------------------------------------- |
+| `R`       | Reintentar la carga de contenedores al instante       |
+| `Q`       | Salir de CDD (sin confirmación)                       |
+| —         | Reintento automático cada 5 segundos (cuenta atrás)   |
 
 ### Asistente de Creación
 
@@ -266,7 +285,7 @@ CDD_LOG_LEVEL=debug cdd > cdd-debug.log 2>&1
 ## Solución de problemas
 
 - **¿No ves contenedores?** Si Docker está ejecutándose pero no hay contenedores, puede que no tengas ninguno ejecutándose o creado. Presiona `C` para crear uno. Si Docker no es accesible, CDD ahora muestra una pantalla de error clara con instrucciones para solucionarlo.
-- **¿Error de conexión con Docker?** CDD mostrará "Can't reach Docker" con pasos específicos para resolverlo. Presiona `R` para reintentar después de solucionar el problema, o espera el reintento automático cada 5 segundos.
+- **¿Error de conexión con Docker?** CDD mostrará "Can't reach Docker" con pasos específicos para resolverlo. Presiona `R` para reintentar después de solucionar el problema, espera la cuenta atrás en vivo o presiona `Q` para salir.
 - **¿Errores de permisos en Linux/macOS?** Prueba con `sudo cdd` o agrega tu usuario al grupo `docker`.
 - **¿Windows?** Ejecuta la terminal como Administrador.
 - **¿Falta el directorio `dist/`?** Ejecuta `npm run build` — está en `.gitignore` y no se incluye en el repositorio.

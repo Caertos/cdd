@@ -16,12 +16,7 @@ const mockError = {
 describe('ConnectionNotice', () => {
   test('renders title, detail, hints, and technical detail', () => {
     const { getByText } = render(
-      <ConnectionNotice
-        error={mockError}
-        nextRetryIn={5}
-        onRetry={() => {}}
-        onExit={() => {}}
-      />
+      <ConnectionNotice error={mockError} nextRetryIn={5} />
     );
     expect(getByText(mockError.title)).toBeTruthy();
     expect(getByText(mockError.detail)).toBeTruthy();
@@ -32,36 +27,21 @@ describe('ConnectionNotice', () => {
 
   test('shows countdown when nextRetryIn > 0', () => {
     const { getByText } = render(
-      <ConnectionNotice
-        error={mockError}
-        nextRetryIn={3}
-        onRetry={() => {}}
-        onExit={() => {}}
-      />
+      <ConnectionNotice error={mockError} nextRetryIn={3} />
     );
     expect(getByText(/Retrying in 3 s/)).toBeTruthy();
   });
 
   test('shows "Retrying..." when nextRetryIn is 0', () => {
     const { getByText } = render(
-      <ConnectionNotice
-        error={mockError}
-        nextRetryIn={0}
-        onRetry={() => {}}
-        onExit={() => {}}
-      />
+      <ConnectionNotice error={mockError} nextRetryIn={0} />
     );
     expect(getByText('Retrying...')).toBeTruthy();
   });
 
   test('renders retry and quit key hints', () => {
     const { getByText } = render(
-      <ConnectionNotice
-        error={mockError}
-        nextRetryIn={5}
-        onRetry={() => {}}
-        onExit={() => {}}
-      />
+      <ConnectionNotice error={mockError} nextRetryIn={5} />
     );
     expect(getByText('[R] retry now')).toBeTruthy();
     expect(getByText('[Q] quit')).toBeTruthy();

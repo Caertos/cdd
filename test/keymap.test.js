@@ -35,6 +35,18 @@ describe('getActiveContext — pure function', () => {
   test('list when only showDebugLogs is false', () => {
     expect(getActiveContext({ creatingContainer: false, showLogs: false })).toBe('list');
   });
+
+  test('disconnected when Docker is unreachable with empty list', () => {
+    expect(getActiveContext({ disconnected: true })).toBe('disconnected');
+  });
+
+  test('wizard wins over disconnected', () => {
+    expect(getActiveContext({ creatingContainer: true, disconnected: true })).toBe('wizard');
+  });
+
+  test('disconnected wins over list', () => {
+    expect(getActiveContext({ disconnected: true, creatingContainer: false })).toBe('disconnected');
+  });
 });
 
 describe('getBindings — filters and sorts', () => {

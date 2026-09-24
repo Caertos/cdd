@@ -12,6 +12,23 @@ jest.unstable_mockModule('../src/helpers/dockerHubService.js', () => ({
   formatHubResult: jest.fn((r) => r.name), // identity-like stub: returns name string
 }));
 
+// Review step (prepareReview) imports these dynamically; without mocks a unit
+// test would open the real Docker daemon socket and outlive the Jest environment.
+await jest.unstable_mockModule(
+  '../src/helpers/dockerService/dockerService.js',
+  () => ({
+    docker: { listContainers: jest.fn().mockResolvedValue([]) },
+  })
+);
+await jest.unstable_mockModule(
+  '../src/helpers/dockerService/serviceComponents/imageUtils.js',
+  () => ({
+    imageExists: jest.fn().mockResolvedValue(false),
+    pullImage: jest.fn().mockResolvedValue(undefined),
+    previewAutoPorts: jest.fn().mockResolvedValue(null),
+  })
+);
+
 // Dynamic import resolves AFTER jest.unstable_mockModule is registered
 const { useContainerCreation } = await import('../src/hooks/creation/useContainerCreation.js');
 const { searchDockerHub } = await import('../src/helpers/dockerHubService.js');
@@ -102,7 +119,7 @@ describe('useContainerCreation (DOM render)', () => {
       });
 
       await act(async () => {
-        expose.current.nextStep(); // env → review (step 4)
+        await expose.current.nextStep(); // env → review (step 4)
       });
 
       expect(expose.current.step).toBe(4);
@@ -149,7 +166,7 @@ describe('useContainerCreation (DOM render)', () => {
     act(() => { expose.current.nextStep(); }); // at step 3
 
     act(() => { expose.current.setEnvInput('MYSQL_ROOT_PASSWORD=secret'); });
-    await act(async () => { expose.current.nextStep(); }); // → review (step 4)
+    await act(async () => { await expose.current.nextStep(); }); // → review (step 4)
 
     expect(expose.current.step).toBe(4);
 
