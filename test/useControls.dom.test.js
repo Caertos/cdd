@@ -13,8 +13,10 @@ const triggerInput = (input, key = {}) => {
 await jest.unstable_mockModule('ink', () => ({
   Box: ({ children, ...props }) => React.createElement('div', props, children),
   Text: ({ children }) => React.createElement('span', null, children),
+  Spacer: () => React.createElement('div', null),
   useInput: (fn) => { _inputHandler = fn; },
   useApp: () => ({ exit: () => {} }),
+  render: () => ({ unmount: () => {}, waitUntilExit: () => Promise.resolve() }),
 }));
 
 // Mock containerActions — expose all named exports so dependents don't break

@@ -1,5 +1,8 @@
 module.exports = {
   testEnvironment: 'node',
+  // Without this, a .jsx is loaded as CJS and cannot import local .js helpers
+  // (package.json declares "type": "module").
+  extensionsToTreatAsEsm: ['.jsx'],
   setupFilesAfterEnv: ['./test/jest.setup.js'],
   transform: {
     '^.+\\.[tj]sx?$': 'babel-jest'
