@@ -641,4 +641,30 @@ describe('useControls — disconnected context wires R to connection.retry', () 
 
     expect(expose.current.context).toBe('list');
   });
+
+  test('Q quits directly without confirmation on connection screen', () => {
+    const retry = jest.fn();
+    const expose = { current: null };
+    render(
+      <HookTester
+        containers={[]}
+        expose={expose}
+        overrides={{
+          connection: { status: 'error', error: null, retry, retryToken: 0 },
+        }}
+      />
+    );
+
+    expect(expose.current.context).toBe('disconnected');
+    expect(expose.current.confirmQuit).toBe(false);
+
+    act(() => {
+      triggerInput('q', {});
+    });
+
+    // Direct exit path: no invisible confirmation, cleanup message set.
+    expect(expose.current.confirmQuit).toBe(false);
+    expect(expose.current.message).toBe('Exiting...');
+    expect(expose.current.context).toBe('disconnected');
+  });
 });

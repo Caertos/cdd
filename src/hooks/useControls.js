@@ -375,6 +375,9 @@ export function useControls(containers = [], overrides = {}) {
 
       // Disconnected context
       'connection.retry': () => connection?.retry?.(),
+      // Connection screen has no visible message bar — quit directly
+      // instead of opening an invisible confirmation.
+      'connection.quit': () => exitHandler.handleExitCommand('q'),
     }),
     [
       containers,

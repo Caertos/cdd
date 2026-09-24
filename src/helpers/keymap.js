@@ -405,7 +405,7 @@ export const KEYMAP = {
       priority: 90,
     },
     {
-      id: 'app.quit',
+      id: 'connection.quit',
       keys: ['q'],
       label: 'Q',
       help: 'Quit CDD',
