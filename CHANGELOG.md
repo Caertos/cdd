@@ -7,6 +7,55 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 - Nothing yet.
 
+## [4.7.0] - 2026-09-23
+
+### Added
+- **Live retry countdown** — connection screen shows seconds until the next automatic Docker reconnect attempt
+- `R` immediately retries fetching containers (no need to wait for the auto-retry interval)
+- `Q` quits CDD directly from the connection screen (no confirmation prompt — the app is already in a degraded state)
+
+### Changed
+- Connection screen keys (`R` retry, `Q` quit) are fully wired through `useControls` (`connection.retry` / `connection.quit`)
+- `useContainers` re-fetches when `retryToken` changes, so a manual `R` restarts both the fetch and the countdown
+- `ConnectionNotice` props reduced to `{ error, nextRetryIn }` — removed dead `onRetry` / `onExit`
+
+### Fixed
+- **D7 (part 2)**: disconnected keymap context now activates when Docker is unreachable, so `R`/`Q` reach their handlers
+
+## [4.6.1] - 2026-09-21
+
+### Added
+- **Docker connection error handling (D7)** — actionable empty states instead of unhandled rejections
+  - `ConnectionNotice` full-screen error with title, detail, platform-aware hints, and technical detail
+  - `EmptyState` invites pressing `C` when Docker is running but has no containers
+  - `useDockerConnection` hook with auto-retry (5s) and status routing in `App.jsx`
+  - `dockerErrors.js` classifier: `not-running` / `permission` / `timeout` / `unknown` with platform-specific suggestions (e.g. `docker` group on Linux)
+  - Stale-data banner + attenuated `ContainerRow` when Docker drops after a successful load
+  - UI strings centralized in `src/helpers/strings.js` (prep for i18n)
+
+### Changed
+- `IMAGE_PROFILES` default tags refreshed against Docker Hub (Sept 2026)
+
+### Security
+- Validate `containerId`, `containerName`, `imageName` inputs; protect secrets in memory
+- Improve `redactForLog` regex; DOCKER_HOST warning; shell command whitelist; Hub search debounce; port-range checks
+- Expand CI matrix; add Dependabot config
+
+## [4.6.0] - 2026-09-16
+
+### Added
+- **Secret management (TASK-5)** — generate, reveal, and mask sensitive env vars
+  - `secrets.js` helper module + unit tests
+  - `Ctrl+G` generates a value for the focused env var; `Ctrl+R` reveals/masks it
+  - Selective masking in `PromptField` via `maskRanges`
+  - `CreationSummary` masks secret values and flags weak passwords
+  - Debug logs redact secrets (`redactForLog`)
+  - Example placeholder values removed from `requiredEnv` image profiles
+
+### Fixed
+- Duplicate discard-confirmation message in the wizard
+- Unify discard keys and restore cursor correctly after Tab insert
+
 ## [4.5.0] - 2026-09-10
 
 ### Added
