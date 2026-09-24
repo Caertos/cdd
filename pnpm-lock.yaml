@@ -174,16 +174,16 @@ importers:
         version: 4.0.12(supports-color@8.1.1)
       ink:
         specifier: ^6.3.1
-        version: 6.8.0(react@19.2.7)
+        version: 6.8.0(react@19.3.0)
       prop-types:
         specifier: ^15.8.1
         version: 15.8.1
       react:
         specifier: ^19.2.0
-        version: 19.2.7
+        version: 19.3.0
       react-dom:
         specifier: ^19.2.0
-        version: 19.2.7(react@19.2.7)
+        version: 19.2.7(react@19.3.0)
     devDependencies:
       '@babel/cli':
         specifier: ^7.28.3
@@ -202,7 +202,7 @@ importers:
         version: 6.9.1
       '@testing-library/react':
         specifier: ^16.3.0
-        version: 16.3.2(@testing-library/dom@10.4.1)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+        version: 16.3.2(@testing-library/dom@10.4.1)(react-dom@19.2.7(react@19.3.0))(react@19.3.0)
       babel-jest:
         specifier: ^30.5.1
         version: 30.5.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1)
@@ -2945,8 +2945,8 @@ packages:
     peerDependencies:
       react: ^19.2.0
 
-  react@19.2.7:
-    resolution: {integrity: sha512-HNe9WslTbXmFK8o8cmwgAeJFSBvt1bPdHCVKtaaV+WlAN36mpT4hcRpwbf3fY56ar2oIXzsBpOAiIRHAdY0OlQ==}
+  react@19.3.0:
+    resolution: {integrity: sha512-E8LUcbtBWt20bbl2YoHfx4ZDBdxVTfOKtCZn9cDSJ4l6/nuoApcpIBcj47t2wZoVX8g2ZHuMHbiShgCR1T5Sog==}
     engines: {node: '>=0.10.0'}
 
   readable-stream@3.6.2:
@@ -4736,12 +4736,12 @@ snapshots:
       picocolors: 1.1.1
       redent: 3.0.0
 
-  '@testing-library/react@16.3.2(@testing-library/dom@10.4.1)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
+  '@testing-library/react@16.3.2(@testing-library/dom@10.4.1)(react-dom@19.2.7(react@19.3.0))(react@19.3.0)':
     dependencies:
       '@babel/runtime': 7.29.7
       '@testing-library/dom': 10.4.1
-      react: 19.2.7
-      react-dom: 19.2.7(react@19.2.7)
+      react: 19.3.0
+      react-dom: 19.2.7(react@19.3.0)
 
   '@tootallnate/once@2.0.1': {}
 
@@ -5905,7 +5905,7 @@ snapshots:
 
   inherits@2.0.4: {}
 
-  ink@6.8.0(react@19.2.7):
+  ink@6.8.0(react@19.3.0):
     dependencies:
       '@alcalzone/ansi-tokenize': 0.2.5
       ansi-escapes: 7.3.0
@@ -5920,8 +5920,8 @@ snapshots:
       indent-string: 5.0.0
       is-in-ci: 2.0.0
       patch-console: 2.0.0
-      react: 19.2.7
-      react-reconciler: 0.33.0(react@19.2.7)
+      react: 19.3.0
+      react-reconciler: 0.33.0(react@19.3.0)
       scheduler: 0.27.0
       signal-exit: 3.0.7
       slice-ansi: 8.0.0
@@ -6934,9 +6934,9 @@ snapshots:
 
   queue-microtask@1.2.3: {}
 
-  react-dom@19.2.7(react@19.2.7):
+  react-dom@19.2.7(react@19.3.0):
     dependencies:
-      react: 19.2.7
+      react: 19.3.0
       scheduler: 0.27.0
 
   react-is@16.13.1: {}
@@ -6945,12 +6945,12 @@ snapshots:
 
   react-is@18.3.1: {}
 
-  react-reconciler@0.33.0(react@19.2.7):
+  react-reconciler@0.33.0(react@19.3.0):
     dependencies:
-      react: 19.2.7
+      react: 19.3.0
       scheduler: 0.27.0
 
-  react@19.2.7: {}
+  react@19.3.0: {}
 
   readable-stream@3.6.2:
     dependencies:
