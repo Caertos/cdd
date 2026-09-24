@@ -602,3 +602,43 @@ describe('useControls — D3 fix: hubResults navigation', () => {
     expect(expose.current.creation.step).toBe(0);
   });
 });
+
+describe('useControls — disconnected context wires R to connection.retry', () => {
+  test('context is disconnected and R calls connection.retry', () => {
+    const retry = jest.fn();
+    const expose = { current: null };
+    render(
+      <HookTester
+        containers={[]}
+        expose={expose}
+        overrides={{
+          connection: { status: 'error', error: null, retry, retryToken: 0 },
+        }}
+      />
+    );
+
+    expect(expose.current.context).toBe('disconnected');
+
+    act(() => {
+      triggerInput('r', {});
+    });
+
+    expect(retry).toHaveBeenCalledTimes(1);
+  });
+
+  test('context stays list when Docker is ok', () => {
+    const retry = jest.fn();
+    const expose = { current: null };
+    render(
+      <HookTester
+        containers={[{ id: 'c1', name: 'web', state: 'running' }]}
+        expose={expose}
+        overrides={{
+          connection: { status: 'ok', error: null, retry, retryToken: 0 },
+        }}
+      />
+    );
+
+    expect(expose.current.context).toBe('list');
+  });
+});

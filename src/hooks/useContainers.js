@@ -27,14 +27,21 @@ export function useContainers() {
       }
     };
     fetch();
-    const ms =
-      connection.status === 'error' ? 5000 : REFRESH_INTERVALS.CONTAINER_LIST;
-    const timer = setInterval(fetch, ms);
+
+    // Normal mode: poll on an interval. Error mode: useDockerConnection
+    // bumps retryToken (auto every 5s, or immediately on manual R retry).
+    if (connection.status === 'error') {
+      return () => {
+        alive = false;
+      };
+    }
+
+    const timer = setInterval(fetch, REFRESH_INTERVALS.CONTAINER_LIST);
     return () => {
       alive = false;
       clearInterval(timer);
     };
-  }, [connection.status]);
+  }, [connection.status, connection.retryToken]);
 
   return { containers, connection };
 }

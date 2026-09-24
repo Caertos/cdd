@@ -25,7 +25,7 @@ import Footer from './components/Footer.jsx';
 
 export default function App() {
   const { containers, connection } = useContainers();
-  const controls = useControls(containers);
+  const controls = useControls(containers, { connection });
 
   if (controls.creatingContainer) {
     return (
