@@ -7,6 +7,16 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 - Nothing yet.
 
+## [4.7.1] - 2026-09-24
+
+### Security
+- Close **GHSA-w5hq-g745-h8pq** (`uuid` buffer bounds) by upgrading `dockerode` to `^5`
+- Close **GHSA-j3f2-48v5-ccww** (`protobufjs` DoS) with workspace override `protobufjs: ^7.6.5`
+- Raise CI security gate to `pnpm audit --prod --audit-level=moderate`
+
+### Changed
+- Apply Socket registry overrides for orphaned prod packages: `indent-string`, `object-assign`, `safe-buffer`, `safer-buffer`
+
 ## [4.7.0] - 2026-09-23
 
 ### Added

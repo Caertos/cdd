@@ -3,3 +3,10 @@ allowBuilds:
   cpu-features: true
   protobufjs: true
   ssh2: true
+
+overrides:
+  protobufjs: ^7.6.5
+  indent-string: 'npm:@socketregistry/indent-string@1.0.14'
+  object-assign: 'npm:@socketregistry/object-assign@1.0.5'
+  safe-buffer: 'npm:@socketregistry/safe-buffer@1.0.9'
+  safer-buffer: 'npm:@socketregistry/safer-buffer@1.0.10'
