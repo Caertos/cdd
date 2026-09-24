@@ -8,10 +8,8 @@ import PropTypes from 'prop-types';
  * @param {Object} props
  * @param {import('../helpers/dockerErrors.js').DockerErrorInfo} props.error
  * @param {number} props.nextRetryIn - Seconds until the next retry
- * @param {Function} props.onRetry - Force an immediate retry
- * @param {Function} props.onExit - Quit the application
  */
-export function ConnectionNotice({ error, nextRetryIn, onRetry: _onRetry, onExit: _onExit }) {
+export function ConnectionNotice({ error, nextRetryIn }) {
   return (
     <Box
       flexDirection="column"
@@ -57,6 +55,4 @@ ConnectionNotice.propTypes = {
     technical: PropTypes.string.isRequired,
   }).isRequired,
   nextRetryIn: PropTypes.number.isRequired,
-  onRetry: PropTypes.func.isRequired,
-  onExit: PropTypes.func.isRequired,
 };

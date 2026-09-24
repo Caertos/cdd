@@ -68,8 +68,6 @@ export default function App() {
       <ConnectionNotice
         error={connection.error}
         nextRetryIn={connection.nextRetryIn}
-        onRetry={connection.retry}
-        onExit={() => process.exit(0)}
       />
     );
   }
