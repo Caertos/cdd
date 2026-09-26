@@ -251,3 +251,149 @@ describe('containerActions service functions (mocked ESM imports)', () => {
     }
   });
 });
+
+describe('containerActions — validation and error paths', () => {
+  afterEach(() => jest.resetModules());
+
+  async function loadActions(imageUtilsMock, dockerMock) {
+    await jest.unstable_mockModule(
+      '../src/helpers/dockerService/serviceComponents/imageUtils.js',
+      () => imageUtilsMock
+    );
+    await jest.unstable_mockModule('../src/helpers/dockerService/dockerService.js', () => ({
+      docker: dockerMock,
+    }));
+    return import('../src/helpers/dockerService/serviceComponents/containerActions.js');
+  }
+
+  test('createContainer rejects an invalid image name before touching Docker', async () => {
+    const imageUtilsMock = { imageExists: jest.fn(), pullImage: jest.fn() };
+    const mod = await loadActions(imageUtilsMock, {
+      createContainer: jest.fn(),
+      listContainers: jest.fn(),
+    });
+
+    await expect(mod.createContainer('--rm')).rejects.toThrow('Invalid image name');
+    expect(imageUtilsMock.imageExists).not.toHaveBeenCalled();
+  });
+
+  test('createContainer rejects an invalid container name', async () => {
+    const imageUtilsMock = { imageExists: jest.fn(), pullImage: jest.fn() };
+    const mod = await loadActions(imageUtilsMock, {
+      createContainer: jest.fn(),
+      listContainers: jest.fn(),
+    });
+
+    await expect(
+      mod.createContainer('nginx', { name: 'con espacio' })
+    ).rejects.toThrow('Invalid container name');
+    expect(imageUtilsMock.imageExists).not.toHaveBeenCalled();
+  });
+
+  test('failed pull → "Could not pull image"', async () => {
+    const imageUtilsMock = {
+      imageExists: jest.fn().mockResolvedValue(false),
+      pullImage: jest.fn().mockRejectedValue(new Error('denied')),
+    };
+    const mod = await loadActions(imageUtilsMock, { listContainers: jest.fn() });
+
+    await expect(mod.createContainer('nginx')).rejects.toThrow(
+      'Could not pull image: denied'
+    );
+  });
+
+  test('failed listImages → "Error listing local images"', async () => {
+    const imageUtilsMock = {
+      imageExists: jest.fn().mockRejectedValue(new Error('boom')),
+      pullImage: jest.fn(),
+    };
+    const mod = await loadActions(imageUtilsMock, { listContainers: jest.fn() });
+
+    await expect(mod.createContainer('nginx')).rejects.toThrow(
+      'Error listing local images: boom'
+    );
+  });
+
+  test('user-defined ports are marked with source "user"', async () => {
+    const imageUtilsMock = {
+      imageExists: jest.fn().mockResolvedValue(true),
+      pullImage: jest.fn(),
+    };
+    const dockerMock = {
+      createContainer: jest.fn().mockResolvedValue({ id: 'cid-user' }),
+      getImage: jest.fn(),
+      listContainers: jest.fn(),
+    };
+    const mod = await loadActions(imageUtilsMock, dockerMock);
+
+    const r = await mod.createContainer('nginx', {
+      ExposedPorts: { '80/tcp': {} },
+      HostConfig: { PortBindings: { '80/tcp': [{ HostPort: '8080' }] } },
+    });
+
+    expect(r.ports).toEqual([
+      { containerPort: '80', hostPort: '8080', protocol: 'tcp', source: 'user' },
+    ]);
+    expect(dockerMock.getImage).not.toHaveBeenCalled();
+  });
+
+  test.each([
+    ['startContainer', 'start'],
+    ['stopContainer', 'stop'],
+    ['restartContainer', 'restart'],
+  ])('%s propagates the daemon error', async (fn, method) => {
+    const daemonError = new Error('daemon down');
+    const mod = await loadActions(
+      { imageExists: jest.fn(), pullImage: jest.fn() },
+      {
+        getContainer: jest.fn().mockReturnValue({
+          [method]: jest.fn().mockRejectedValue(daemonError),
+        }),
+      }
+    );
+
+    await expect(mod[fn]('cid')).rejects.toThrow('daemon down');
+  });
+
+  test('removeContainer wraps the error in "Error removing container"', async () => {
+    const mod = await loadActions(
+      { imageExists: jest.fn(), pullImage: jest.fn() },
+      {
+        getContainer: jest.fn().mockReturnValue({
+          remove: jest.fn().mockRejectedValue(new Error('nope')),
+        }),
+      }
+    );
+
+    await expect(mod.removeContainer('cid')).rejects.toThrow(
+      'Error removing container: nope'
+    );
+  });
+
+  test('env vars are redacted in the log (password not leaked)', async () => {
+    const mod = await loadActions(
+      {
+        imageExists: jest.fn().mockResolvedValue(true),
+        pullImage: jest.fn(),
+      },
+      {
+        createContainer: jest.fn().mockResolvedValue({ id: 'cid-redact' }),
+        getImage: jest.fn().mockReturnValue({
+          inspect: jest.fn().mockResolvedValue({ Config: { ExposedPorts: {} } }),
+        }),
+        listContainers: jest.fn().mockResolvedValue([]),
+      }
+    );
+    const { logger } = await import('../src/helpers/logger.js');
+    const debug = jest.spyOn(logger, 'debug').mockImplementation(() => {});
+
+    try {
+      await mod.createContainer('nginx', { Env: ['POSTGRES_PASSWORD=s3cr3t'] });
+      const line = debug.mock.calls.flat().join(' ');
+      expect(line).not.toContain('s3cr3t');
+      expect(line).toContain('***');
+    } finally {
+      debug.mockRestore();
+    }
+  });
+});
