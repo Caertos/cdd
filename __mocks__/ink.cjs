@@ -1,8 +1,8 @@
 const React = require('react');
 exports.Box = ({ children, ...props }) =>
   React.createElement('div', { ...props }, children);
-exports.Text = ({ children, color }) =>
-  React.createElement('span', { 'data-color': color }, children);
+exports.Text = ({ children, color, dimColor }) =>
+  React.createElement('span', { 'data-color': color, 'data-dim': dimColor }, children);
 
 // Capture the last registered useInput handler so tests can simulate keypresses.
 let _inputHandler = null;
