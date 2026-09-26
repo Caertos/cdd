@@ -125,3 +125,71 @@ describe('useDockerConnection — live retry countdown', () => {
     expect(expose.current.nextRetryIn).toBe(5);
   });
 });
+
+describe('useDockerConnection — status and stale', () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  test('starts in "connecting" with no error', () => {
+    const expose = { current: null };
+    render(<HookTester expose={expose} />);
+    expect(expose.current.status).toBe('connecting');
+    expect(expose.current.error).toBeNull();
+    expect(expose.current.isStale).toBe(false);
+  });
+
+  test('reportResult() without error → "ok" and stamps lastOkAt', () => {
+    const expose = { current: null };
+    render(<HookTester expose={expose} />);
+    act(() => expose.current.reportResult());
+    expect(expose.current.status).toBe('ok');
+    expect(expose.current.lastOkAt).toBeGreaterThan(0);
+  });
+
+  test('reportResult(err) → "error" with classified error', () => {
+    const expose = { current: null };
+    render(<HookTester expose={expose} />);
+    const err = Object.assign(new Error('connect ENOENT'), { code: 'ENOENT' });
+    act(() => expose.current.reportResult(err));
+    expect(expose.current.status).toBe('error');
+    expect(expose.current.error.kind).toBe('not-running');
+  });
+
+  test('does not mark stale if there was never data', () => {
+    const expose = { current: null };
+    render(<HookTester expose={expose} />);
+    act(() => expose.current.reportResult(new Error('x')));
+    expect(expose.current.isStale).toBe(false);
+  });
+
+  test('marks stale after a prior successful connection', () => {
+    const expose = { current: null };
+    render(<HookTester expose={expose} />);
+    act(() => expose.current.reportResult());
+    act(() => expose.current.reportResult(new Error('x')));
+    expect(expose.current.isStale).toBe(true);
+  });
+
+  test('recovery clears stale and error', () => {
+    const expose = { current: null };
+    render(<HookTester expose={expose} />);
+    act(() => expose.current.reportResult());
+    act(() => expose.current.reportResult(new Error('x')));
+    act(() => expose.current.reportResult());
+    expect(expose.current.isStale).toBe(false);
+    expect(expose.current.error).toBeNull();
+  });
+
+  test('retry() increments retryToken', () => {
+    const expose = { current: null };
+    render(<HookTester expose={expose} />);
+    const before = expose.current.retryToken;
+    act(() => expose.current.retry());
+    expect(expose.current.retryToken).toBe(before + 1);
+  });
+});
