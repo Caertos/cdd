@@ -8,6 +8,9 @@ import {
   generateSecret,
   redactForLog,
   findWeakSecrets,
+  secretToBuffer,
+  clearBuffer,
+  timingSafeEqual,
 } from '../src/helpers/secrets.js';
 
 describe('isSecretKey', () => {
@@ -256,5 +259,49 @@ describe('findWeakSecrets', () => {
   test('handles empty input', () => {
     expect(findWeakSecrets('')).toEqual([]);
     expect(findWeakSecrets(null)).toEqual([]);
+  });
+});
+
+describe('secretToBuffer / clearBuffer / timingSafeEqual', () => {
+  test('secretToBuffer returns a Buffer with the content', () => {
+    const b = secretToBuffer('hola');
+    expect(Buffer.isBuffer(b)).toBe(true);
+    expect(b.toString('utf8')).toBe('hola');
+  });
+
+  test('clearBuffer zeroes the buffer', () => {
+    const b = secretToBuffer('hola');
+    clearBuffer(b);
+    expect([...b]).toEqual([0, 0, 0, 0]);
+  });
+
+  test('clearBuffer with non-Buffer does not throw', () => {
+    expect(() => clearBuffer('texto')).not.toThrow();
+    expect(() => clearBuffer(null)).not.toThrow();
+  });
+
+  test.each([
+    [secretToBuffer('abc'), secretToBuffer('abc'), true],
+    [secretToBuffer('abc'), secretToBuffer('abd'), false],
+    [secretToBuffer('abc'), secretToBuffer('abcd'), false],
+    ['abc', secretToBuffer('abc'), false],
+    [secretToBuffer('abc'), null, false],
+  ])('timingSafeEqual(%p, %p) → %p', (a, b, expected) => {
+    expect(timingSafeEqual(a, b)).toBe(expected);
+  });
+});
+
+describe('isSecretKey — patterns not covered yet', () => {
+  test.each([
+    'DB_PASSWD',
+    'SERVICE_APIKEY',
+    'MY_PRIVATE_KEY',
+    'S3_ACCESS_KEY',
+    'GH_CREDENTIAL',
+    'BASIC_AUTH',
+  ])('%s is detected as a secret', (k) => expect(isSecretKey(k)).toBe(true));
+
+  test('lowercase also (case-insensitive)', () => {
+    expect(isSecretKey('db_password')).toBe(true);
   });
 });

@@ -147,3 +147,36 @@ describe('KEYMAP integrity — no duplicate keys per context', () => {
     expect(uniqueKeys.size).toBe(allKeys.length);
   });
 });
+
+describe('KEYMAP — coverage gaps', () => {
+  test.each([
+    'wizard-discard',
+    'wizard-review',
+    'confirm-quit',
+    'disconnected',
+    'debug',
+    'confirm',
+  ])('context %s has bindings', (ctx) => {
+    expect(getBindings(ctx, {}).length).toBeGreaterThan(0);
+  });
+
+  test('Tab exists in the wizard and only on steps 0 and 3', () => {
+    expect(getBindings('wizard', { wizardStep: 0 }).map((b) => b.id)).toContain('wizard.tab');
+    expect(getBindings('wizard', { wizardStep: 3 }).map((b) => b.id)).toContain('wizard.tab');
+    expect(getBindings('wizard', { wizardStep: 1 }).map((b) => b.id)).not.toContain('wizard.tab');
+  });
+
+  test('every binding has id, keys and label', () => {
+    for (const b of Object.values(KEYMAP).flat()) {
+      expect(b.id).toBeTruthy();
+      expect(Array.isArray(b.keys) && b.keys.length).toBeTruthy();
+      expect(b.label).toBeTruthy();
+    }
+  });
+
+  test('getActiveContext resolves the discard, review and quit contexts', () => {
+    expect(getActiveContext({ creatingContainer: true, wizardStep: 4 })).toBe('wizard-review');
+    expect(getActiveContext({ creatingContainer: true, confirmDiscard: true })).toBe('wizard-discard');
+    expect(getActiveContext({ confirmQuit: true })).toBe('confirm-quit');
+  });
+});
