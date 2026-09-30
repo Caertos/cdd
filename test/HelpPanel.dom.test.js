@@ -4,6 +4,8 @@
 import React from 'react';
 import { render } from '@testing-library/react';
 import HelpPanel from '../src/components/HelpPanel.jsx';
+import { KEYMAP } from '../src/helpers/keymap.js';
+import { STRINGS } from '../src/helpers/strings.js';
 
 const binding = (id, keys, extra) => ({ id, keys, ...extra });
 
@@ -39,5 +41,17 @@ describe('HelpPanel', () => {
     expect(getByText('Exit viewer')).toBeTruthy();
     expect(getByText('[space]')).toBeTruthy();
     expect(getByText('Pause stream')).toBeTruthy();
+  });
+
+  // §5.5 (D16) — fixed by TASK-19.
+  test.failing('every keymap context has a label in STRINGS.contextLabels', () => {
+    const missing = Object.keys(KEYMAP).filter((ctx) => !STRINGS.contextLabels[ctx]);
+    expect(missing).toEqual([]); // today: wizard-discard, wizard-review, confirm-quit
+  });
+
+  // §5.5 (D16) — fixed by TASK-19. HelpPanel keeps a private copy without 'disconnected'.
+  test.failing('titles come from STRINGS.contextLabels', () => {
+    const { getByText } = render(<HelpPanel context="disconnected" bindings={[]} />);
+    expect(getByText(`Help — ${STRINGS.contextLabels.disconnected}`)).toBeTruthy();
   });
 });

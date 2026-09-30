@@ -36,3 +36,16 @@ test('ink mock exports every named import used under src/', async () => {
   const missing = used.filter((name) => !(name in mock.default ?? mock));
   expect(missing).toEqual([]);
 });
+
+// Contract: every Text prop a component relies on must reach the DOM as data-*,
+// or tests silently lose it (it happened with dimColor, then with inverse).
+test('ink mock Text forwards color, dimColor and inverse as data-*', async () => {
+  const mock = await import('../__mocks__/ink.cjs');
+  const { Text } = mock.default ?? mock;
+  const el = Text({ children: 'x', color: 'red', dimColor: true, inverse: true });
+  expect(el.props).toMatchObject({
+    'data-color': 'red',
+    'data-dim': 'true',
+    'data-inverse': 'true',
+  });
+});

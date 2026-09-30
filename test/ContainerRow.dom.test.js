@@ -113,4 +113,15 @@ describe('ContainerRow', () => {
     const stopped = render(<Row container={{ ...base, state: 'exited' }} />);
     expect(stopped.container.textContent).not.toContain('CPU:');
   });
+
+  // §5.8 (D12) — fixed by TASK-7 (stateText rewrite). Control: 'unknown state renders uppercased'.
+  test.failing('missing state renders without throwing', async () => {
+    const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      const { container } = await renderRow({ container: { ...base, state: undefined } });
+      expect(container.textContent).toContain('web');
+    } finally {
+      spy.mockRestore();
+    }
+  });
 });

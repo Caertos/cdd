@@ -48,11 +48,15 @@ describe('findAvailablePort — non-numeric base', () => {
   });
 });
 
-describe('findAvailablePort — known limits', () => {
-  // Documents current behaviour: does NOT clamp to 65535.
-  // If clamping is decided, change this test together with the code.
-  test('from occupied 65535 returns 65536, outside valid TCP range', () => {
-    const used = new Set(['65535']);
-    expect(findAvailablePort('65535', used)).toBe('65536');
+describe('findAvailablePort — upper bound', () => {
+  // Control: the top valid port is still handed out when free.
+  test('65535 is returned when free', () => {
+    expect(findAvailablePort('65535', new Set())).toBe('65535');
+  });
+
+  // D20 — fixed by TASK-19. Never hand out a port outside 1..65535.
+  test.failing('never returns a port above 65535', () => {
+    const result = findAvailablePort('65535', new Set(['65535']));
+    expect(result === null || Number(result) <= 65535).toBe(true); // today: '65536'
   });
 });

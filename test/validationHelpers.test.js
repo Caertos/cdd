@@ -196,7 +196,20 @@ describe('validatePorts — range', () => {
     (p) => expect(validatePorts(p)).toBe(true)
   );
 
-  // see §5.7 for the two cases that pass today and should not
+  // §5.7 (D18) — fixed by TASK-19. Controls: '1:1' and '65535:65535' above.
+  test.failing('rejects decimal host port', () => {
+    expect(validatePorts('80.5:80')).toBe(false);
+  });
+
+  // §5.7 (D18) — fixed by TASK-19.
+  test.failing('rejects hex host port', () => {
+    expect(validatePorts('0x50:80')).toBe(false);
+  });
+
+  // §5.7 (D18) — fixed by TASK-19.
+  test.failing('rejects exponent notation', () => {
+    expect(validatePorts('1e3:80')).toBe(false);
+  });
 });
 
 describe('validateEnvVars extras', () => {

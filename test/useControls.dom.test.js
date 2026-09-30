@@ -461,38 +461,42 @@ describe('useControls — FR7 Tab triggers hub search on step 0', () => {
 });
 
 describe('useControls — success/error message clears after 4000ms', () => {
+  // Fake only the timer APIs: React's act() and the async wizard still need
+  // the real microtask queue, nextTick and setImmediate.
+  beforeEach(() => {
+    jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate', 'queueMicrotask'] });
+  });
+  afterEach(() => {
+    jest.useRealTimers();
+  });
 
-  test('success message from container creation is scheduled to clear (setTimedMessage called)', async () => {
-    const timeoutSpy = jest.spyOn(global, 'setTimeout');
+  test('success message from container creation clears after 4000ms', async () => {
     mockSvcCreateContainer.mockResolvedValue({ id: 'cid-timer', ports: [] });
 
     const expose = { current: null };
     render(<HookTester containers={[]} expose={expose} />);
 
     await completeCreationWizard(expose, 'nginx');
+    expect(expose.current.actions.message).toBe('Created container cid-timer');
 
-    // setTimedMessage must have scheduled a timeout to clear the message
-    const clearCallArgs = timeoutSpy.mock.calls.find(
-      ([fn, delay]) => delay === 4000
-    );
-    expect(clearCallArgs).toBeDefined();
-    timeoutSpy.mockRestore();
+    act(() => { jest.advanceTimersByTime(3999); });
+    expect(expose.current.actions.message).toBe('Created container cid-timer');
+
+    act(() => { jest.advanceTimersByTime(1); });
+    expect(expose.current.actions.message).toBe('');
   });
 
-  test('error message from container creation is scheduled to clear (setTimedMessage called)', async () => {
-    const timeoutSpy = jest.spyOn(global, 'setTimeout');
+  test('error message from container creation clears after 4000ms', async () => {
     mockSvcCreateContainer.mockRejectedValue(new Error('not found'));
 
     const expose = { current: null };
     render(<HookTester containers={[]} expose={expose} />);
 
     await completeCreationWizard(expose, 'badimage');
+    expect(expose.current.actions.message).toContain('not found');
 
-    const clearCallArgs = timeoutSpy.mock.calls.find(
-      ([fn, delay]) => delay === 4000
-    );
-    expect(clearCallArgs).toBeDefined();
-    timeoutSpy.mockRestore();
+    act(() => { jest.advanceTimersByTime(4000); });
+    expect(expose.current.actions.message).toBe('');
   });
 });
 
