@@ -5,6 +5,8 @@
   "main": "dist/index.js",
   "scripts": {
     "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand",
+    "test:coverage": "node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --coverage",
+    "test:coverage:helpers": "node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --coverage --collectCoverageFrom=src/helpers/**/*.js",
     "build": "NODE_ENV=production babel src --out-dir dist --extensions .js,.jsx && node fix-imports.cjs",
     "changes": "pnpm run build && node dist/index.js",
     "lint": "eslint src --ext .js,.jsx",
