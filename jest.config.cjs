@@ -4,6 +4,10 @@ module.exports = {
   // (package.json declares "type": "module").
   extensionsToTreatAsEsm: ['.jsx'],
   setupFilesAfterEnv: ['./test/jest.setup.js'],
+  coverageDirectory: 'coverage',
+  coverageReporters: ['text-summary', 'lcov', 'json-summary'],
+  // index.js and App.jsx are bootstrap/composition with no logic of their own.
+  collectCoverageFrom: ['src/**/*.{js,jsx}', '!src/index.js', '!src/App.jsx'],
   transform: {
     '^.+\\.[tj]sx?$': 'babel-jest'
   },
