@@ -4,6 +4,9 @@ module.exports = {
   // (package.json declares "type": "module").
   extensionsToTreatAsEsm: ['.jsx'],
   setupFilesAfterEnv: ['./test/jest.setup.js'],
+  // E2E tests live in test/e2e/ and run against a REAL Docker daemon via
+  // jest.config.e2e.cjs; keep them out of the fast unit suite (`pnpm test`).
+  testPathIgnorePatterns: ['/node_modules/', '<rootDir>/test/e2e/'],
   coverageDirectory: 'coverage',
   coverageReporters: ['text-summary', 'lcov', 'json-summary'],
   // index.js and App.jsx are bootstrap/composition with no logic of their own.

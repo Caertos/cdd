@@ -1,0 +1,42 @@
+name: E2E
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest # the runner already ships a Docker daemon
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          # Ink 7 requires Node >=22; the E2E suite runs only on this version.
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Preload images (avoids pulls inside the tests)
+        run: |
+          docker pull nginx:1.27-alpine
+          docker pull busybox:1.36
+
+      - name: Verify Docker daemon
+        run: docker info
+
+      - name: Run E2E tests
+        run: pnpm run test:e2e
+
+      - name: Clean up leftover containers
+        if: always()
+        run: docker ps -aq --filter "name=cdd-e2e-" | xargs -r docker rm -f
