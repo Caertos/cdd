@@ -32,6 +32,7 @@ await jest.unstable_mockModule(
 // Dynamic import resolves AFTER jest.unstable_mockModule is registered
 const { useContainerCreation } = await import('../src/hooks/creation/useContainerCreation.js');
 const { searchDockerHub } = await import('../src/helpers/dockerHubService.js');
+const { docker } = await import('../src/helpers/dockerService/dockerService.js');
 
 function HookTester({ onCreate, onCancel, dbImages, imageProfiles, expose }) {
   const hook = useContainerCreation({ onCreate, onCancel, dbImages, imageProfiles });
@@ -590,5 +591,51 @@ describe('useContainerCreation — message auto-clear after timeout', () => {
     });
 
     expect(expose.current.message).toBe('');
+  });
+});
+
+describe('useContainerCreation — review warnings against real containers', () => {
+  // Raw shape returned by docker.listContainers({ all: true }).
+  const rawWeb = {
+    Id: 'a'.repeat(64),
+    Names: ['/web'],
+    Image: 'nginx',
+    State: 'running',
+    Status: 'Up 1 minute',
+    Ports: [{ PublicPort: 8080, PrivatePort: 80, Type: 'tcp' }],
+  };
+
+  afterEach(() => {
+    docker.listContainers.mockResolvedValue([]);
+  });
+
+  async function reachReview(expose, containerName) {
+    act(() => { expose.current.setImageName('redis'); });
+    act(() => { expose.current.nextStep(); }); // → name
+    act(() => { expose.current.setContainerName(containerName); });
+    act(() => { expose.current.nextStep(); }); // → ports
+    act(() => { expose.current.nextStep(); }); // → env
+    await act(async () => { await expose.current.nextStep(); }); // → review
+  }
+
+  // Control: the harness reaches the review and computes warnings.
+  test('with no containers the review has warnings but no name-taken', async () => {
+    const expose = { current: null };
+    render(<HookTester onCreate={() => {}} onCancel={() => {}} dbImages={[]} expose={expose} />);
+    await reachReview(expose, 'web');
+    expect(expose.current.step).toBe(4);
+    const kinds = expose.current.reviewWarnings.map((w) => w.kind);
+    expect(kinds).toContain('image-pull');
+    expect(kinds).not.toContain('name-taken');
+  });
+
+  // D22 — fixed by TASK-19. prepareReview() hands raw API objects to buildCreationWarnings.
+  test.failing('warns about a container name already in use', async () => {
+    docker.listContainers.mockResolvedValue([rawWeb]);
+    const expose = { current: null };
+    render(<HookTester onCreate={() => {}} onCancel={() => {}} dbImages={[]} expose={expose} />);
+    await reachReview(expose, 'web');
+    expect(expose.current.step).toBe(4);
+    expect(expose.current.reviewWarnings.map((w) => w.kind)).toContain('name-taken');
   });
 });
