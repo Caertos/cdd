@@ -145,7 +145,18 @@ describe('previewAutoPorts', () => {
     await expect(previewAutoPorts('nginx:alpine', [{}])).resolves.toHaveLength(1);
   });
 
-  // Deferred with §5.3 (previewAutoPorts collision avoidance): the test
-  // 'avoids an already-used port when given normalized containers' fails
-  // today and must land together with that fix.
+  // §5.3 (D15) — fixed by TASK-19. prepareReview() passes raw listContainers().
+  test.failing('avoids a host port used by a raw API container', async () => {
+    const { previewAutoPorts } = await loadImageUtils(withImage({ '80/tcp': {} }));
+    const raw = [{ Ports: [{ PublicPort: 80, PrivatePort: 80, Type: 'tcp' }] }];
+    const [row] = await previewAutoPorts('nginx:alpine', raw);
+    expect(row.hostPort).toBe('81'); // today: '80'
+  });
+
+  // §5.3 (D15) — fixed by TASK-19.
+  test.failing('avoids a host port used by a normalized "host:container" entry', async () => {
+    const { previewAutoPorts } = await loadImageUtils(withImage({ '80/tcp': {} }));
+    const [row] = await previewAutoPorts('nginx:alpine', [{ ports: ['80:80'] }]);
+    expect(row.hostPort).toBe('81'); // today: '80'
+  });
 });
