@@ -72,8 +72,15 @@ describe('detectShell', () => {
     await expect(detectShell('a'.repeat(64))).resolves.toBe('sh');
   });
 
-  // Deferred to §5.1: detectShell still leaves a 30s setTimeout uncleared,
-  // so "no pending timers after resolving" fails until that fix lands.
+  // §5.1-residual (D14) — fixed by TASK-19. Flip to test() with the fix.
+  test.failing('leaves no pending timers after resolving', async () => {
+    const exec = jest.fn((opts, cb) =>
+      cb(null, { start: (o, sc) => sc(null, fakeStream('/bin/bash\n')) })
+    );
+    const { detectShell } = await loadExec(exec);
+    await detectShell('a'.repeat(64));
+    expect(jest.getTimerCount()).toBe(0); // today: 1 (the 30 s race timer)
+  });
 });
 
 describe('execInteractive', () => {
@@ -180,6 +187,35 @@ describe('execCommand', () => {
     const p = execCommand('cid', ['x']);
     s.emit('error', new Error('reset'));
     await expect(p).rejects.toThrow('Stream error: reset');
+  });
+
+  // Control for the D14 case below: same harness, resolves normally.
+  test('command with timeout option still resolves', async () => {
+    jest.useFakeTimers({ doNotFake: ['setImmediate'] });
+    const exec = jest.fn((opts, cb) =>
+      cb(null, {
+        start: (o, sc) => sc(null, fakeStream('ok')),
+        inspect: (icb) => icb(null, { ExitCode: 0 }),
+      })
+    );
+    const { execCommand } = await loadExec(exec);
+    await expect(execCommand('cid', ['x'], { timeout: 5000 })).resolves.toMatchObject({
+      stdout: 'ok',
+    });
+  });
+
+  // §5.1-residual (D14) — fixed by TASK-19. Flip to test() with the fix.
+  test.failing('clears the timeout timer when the command resolves first', async () => {
+    jest.useFakeTimers({ doNotFake: ['setImmediate'] });
+    const exec = jest.fn((opts, cb) =>
+      cb(null, {
+        start: (o, sc) => sc(null, fakeStream('ok')),
+        inspect: (icb) => icb(null, { ExitCode: 0 }),
+      })
+    );
+    const { execCommand } = await loadExec(exec);
+    await execCommand('cid', ['x'], { timeout: 5000 });
+    expect(jest.getTimerCount()).toBe(0); // today: 1 (the rejection timer)
   });
 
   // Documents a known limitation (see §5.6 note on multiplexed streams).

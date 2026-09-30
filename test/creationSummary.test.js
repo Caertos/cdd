@@ -141,6 +141,20 @@ describe('detectPortConflicts', () => {
     const conflicts = detectPortConflicts('8080:80,5432:5432', containers);
     expect(conflicts).toHaveLength(2);
   });
+
+  // D22 — fixed by TASK-19. Real normalized ports are "host:container".
+  test.failing('detects a conflict against a published "host:container" port', () => {
+    const conflicts = detectPortConflicts('8080:80', [
+      { name: 'web', id: 'a', ports: ['8080:80'] },
+    ]);
+    expect(conflicts).toEqual([{ hostPort: '8080', takenBy: 'web' }]);
+  });
+
+  // D22 — fixed by TASK-19. An unpublished private port is not a host port.
+  test.failing('ignores an exposed-but-unpublished private port', () => {
+    const conflicts = detectPortConflicts('80:80', [{ name: 'web', id: 'a', ports: ['80'] }]);
+    expect(conflicts).toEqual([]);
+  });
 });
 
 describe('buildCreationWarnings', () => {
