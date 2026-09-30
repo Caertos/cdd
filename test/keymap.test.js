@@ -1,6 +1,8 @@
 /**
  * @jest-environment jsdom
  */
+import fs from 'fs';
+import path from 'path';
 import { getActiveContext, getBindings, resolveKey, keyNameOf, KEYMAP } from '../src/helpers/keymap.js';
 
 describe('getActiveContext — pure function', () => {
@@ -178,5 +180,22 @@ describe('KEYMAP — coverage gaps', () => {
     expect(getActiveContext({ creatingContainer: true, wizardStep: 4 })).toBe('wizard-review');
     expect(getActiveContext({ creatingContainer: true, confirmDiscard: true })).toBe('wizard-discard');
     expect(getActiveContext({ confirmQuit: true })).toBe('confirm-quit');
+  });
+});
+
+describe('keymap ↔ useControls handlers', () => {
+  const src = fs.readFileSync(path.resolve('src/hooks/useControls.js'), 'utf8');
+  const hasHandler = (id) => src.includes(`'${id}':`);
+
+  // Control: the source scan finds handlers that do exist.
+  test('scan finds existing handlers (logs.close, app.quit)', () => {
+    expect(hasHandler('logs.close')).toBe(true);
+    expect(hasHandler('app.quit')).toBe(true);
+  });
+
+  // §5.4 (D21) — fixed by TASK-10 (log viewer scroll).
+  test.failing('every keymap binding has a handler in useControls', () => {
+    const ids = [...new Set(Object.values(KEYMAP).flat().map((b) => b.id))];
+    expect(ids.filter((id) => !hasHandler(id))).toEqual([]); // today: logs.up/down/pageup/pagedown/follow
   });
 });
