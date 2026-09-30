@@ -8,6 +8,14 @@ module.exports = {
   coverageReporters: ['text-summary', 'lcov', 'json-summary'],
   // index.js and App.jsx are bootstrap/composition with no logic of their own.
   collectCoverageFrom: ['src/**/*.{js,jsx}', '!src/index.js', '!src/App.jsx'],
+  // Floors = coverage measured on 2026-09-30 (rounded down), so it cannot drop.
+  // Only enforced by `pnpm test:coverage`; plain `pnpm test` does not collect.
+  // With a path entry, Jest measures `global` over everything outside it
+  // (components + hooks here).
+  coverageThreshold: {
+    global: { statements: 71, branches: 68, functions: 65, lines: 72 },
+    './src/helpers/': { statements: 96, branches: 91, functions: 96, lines: 98 },
+  },
   transform: {
     '^.+\\.[tj]sx?$': 'babel-jest'
   },
