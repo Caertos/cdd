@@ -2,7 +2,13 @@ const React = require('react');
 exports.Box = ({ children, ...props }) =>
   React.createElement('div', { ...props }, children);
 exports.Text = ({ children, color, dimColor }) =>
-  React.createElement('span', { 'data-color': color, 'data-dim': dimColor }, children);
+  React.createElement(
+    'span',
+    // React drops boolean true on data-* attributes; coerce so tests can
+    // assert <Text dimColor> (e.g. LogViewer's placeholder).
+    { 'data-color': color, 'data-dim': dimColor === true ? 'true' : dimColor },
+    children
+  );
 
 // Capture the last registered useInput handler so tests can simulate keypresses.
 let _inputHandler = null;
