@@ -1,12 +1,17 @@
 const React = require('react');
 exports.Box = ({ children, ...props }) =>
   React.createElement('div', { ...props }, children);
-exports.Text = ({ children, color, dimColor }) =>
+exports.Text = ({ children, color, dimColor, inverse }) =>
   React.createElement(
     'span',
     // React drops boolean true on data-* attributes; coerce so tests can
-    // assert <Text dimColor> (e.g. LogViewer's placeholder).
-    { 'data-color': color, 'data-dim': dimColor === true ? 'true' : dimColor },
+    // assert <Text dimColor> (LogViewer's placeholder) and <Text inverse>
+    // (TextField's cursor).
+    {
+      'data-color': color,
+      'data-dim': dimColor === true ? 'true' : dimColor,
+      'data-inverse': inverse === true ? 'true' : inverse,
+    },
     children
   );
 
