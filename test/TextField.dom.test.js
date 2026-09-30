@@ -86,4 +86,18 @@ describe('TextField', () => {
     expect(container.textContent).toContain('a');
     expect(container.textContent).toContain('bc');
   });
+
+  test('only the character under the cursor is inverted', () => {
+    const { container } = render(<TextField label="Name:" value="abc" cursor={1} />);
+    const inverted = container.querySelectorAll('[data-inverse="true"]');
+    expect(inverted).toHaveLength(1);
+    expect(inverted[0].textContent).toBe('b');
+  });
+
+  test('cursor at the end is an inverted space (block cursor)', () => {
+    const { container } = render(<TextField label="Name:" value="abc" cursor={3} />);
+    const inverted = container.querySelectorAll('[data-inverse="true"]');
+    expect(inverted).toHaveLength(1);
+    expect(inverted[0].textContent).toBe(' ');
+  });
 });
