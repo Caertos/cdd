@@ -8,7 +8,8 @@
 
 import { existsSync as fsExistsSync } from 'node:fs';
 import path from 'node:path';
-import { execFile } from 'node:child_process';
+import { execFile, spawn } from 'node:child_process';
+import { withTerminalHandover } from './terminalHandover.js';
 
 /**
  * @typedef {Object} LaunchMethod
@@ -214,4 +215,65 @@ export async function detectLaunchMethod(
     default:
       return null;
   }
+}
+
+/**
+ * Launch Docker without needing privileges (Windows, macOS, Linux rootless).
+ * Resolves once the process has been spawned, NOT when Docker is ready.
+ *
+ * @param {LaunchMethod} method
+ * @returns {Promise<{ started: boolean, error?: string }>}
+ */
+export async function launchDocker(method) {
+  try {
+    const child = spawn(method.command, method.args, {
+      detached: true,
+      stdio: 'ignore',
+      windowsHide: false,
+    });
+    child.unref();
+    return { started: true };
+  } catch (err) {
+    return { started: false, error: err.message };
+  }
+}
+
+/**
+ * Spawn a command in the inherited terminal and resolve with its exit code.
+ *
+ * Internal helper, exported only so tests can inject a fake `spawn`. It
+ * reports the raw exit code and deliberately does NOT interpret what a
+ * non-zero exit means (e.g. a wrong sudo password) — that judgement belongs
+ * to the caller.
+ *
+ * @param {LaunchMethod} method
+ * @param {typeof spawn} [spawnFn] - Injectable spawn (defaults to `node:child_process` spawn)
+ * @returns {Promise<{ started: boolean, exitCode: number|null }>}
+ */
+export function runElevatedCommand(method, spawnFn = spawn) {
+  return new Promise((resolve) => {
+    let child;
+    try {
+      child = spawnFn(method.command, method.args, { stdio: 'inherit' });
+    } catch {
+      resolve({ started: false, exitCode: null });
+      return;
+    }
+
+    child.once('error', () => resolve({ started: false, exitCode: null }));
+    child.once('close', (code) => {
+      resolve({ started: code === 0, exitCode: code });
+    });
+  });
+}
+
+/**
+ * Launch Docker handing the terminal over so sudo can prompt for a password.
+ * Reuses the same unmount/remount mechanism as shell mode.
+ *
+ * @param {LaunchMethod} method
+ * @returns {Promise<{ started: boolean, exitCode: number|null }>}
+ */
+export async function launchDockerElevated(method) {
+  return withTerminalHandover(() => runElevatedCommand(method));
 }
