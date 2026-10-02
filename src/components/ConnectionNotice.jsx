@@ -1,6 +1,7 @@
 import React from 'react';
 import { Box, Text } from 'ink';
 import PropTypes from 'prop-types';
+import { DockerLauncher } from './DockerLauncher.jsx';
 
 /**
  * Connection error screen shown when Docker is unreachable.
@@ -8,8 +9,11 @@ import PropTypes from 'prop-types';
  * @param {Object} props
  * @param {import('../helpers/dockerErrors.js').DockerErrorInfo} props.error
  * @param {number} props.nextRetryIn - Seconds until the next retry
+ * @param {Object} [props.launcher] - Docker launcher state (optional)
  */
-export function ConnectionNotice({ error, nextRetryIn }) {
+export function ConnectionNotice({ error, nextRetryIn, launcher }) {
+  const showStartHint = launcher?.canLaunch && launcher.status === 'idle';
+
   return (
     <Box
       flexDirection="column"
@@ -38,10 +42,19 @@ export function ConnectionNotice({ error, nextRetryIn }) {
           {nextRetryIn > 0 ? `Retrying in ${nextRetryIn} s...` : 'Retrying...'}
         </Text>
         <Box columnGap={2}>
+          {showStartHint && <Text color="cyan">[S] start Docker</Text>}
           <Text color="cyan">[R] retry now</Text>
           <Text color="cyan">[Q] quit</Text>
         </Box>
       </Box>
+      {launcher && (
+        <DockerLauncher
+          method={launcher.method}
+          status={launcher.status}
+          elapsedMs={launcher.elapsedMs}
+          error={launcher.error}
+        />
+      )}
     </Box>
   );
 }
@@ -55,4 +68,11 @@ ConnectionNotice.propTypes = {
     technical: PropTypes.string.isRequired,
   }).isRequired,
   nextRetryIn: PropTypes.number.isRequired,
+  launcher: PropTypes.shape({
+    method: PropTypes.object,
+    canLaunch: PropTypes.bool,
+    status: PropTypes.string,
+    elapsedMs: PropTypes.number,
+    error: PropTypes.string,
+  }),
 };

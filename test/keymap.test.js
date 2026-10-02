@@ -144,9 +144,23 @@ describe('KEYMAP integrity — no duplicate keys per context', () => {
 
   test.each(contexts)('context "%s" has no duplicate key names', (ctx) => {
     const bindings = KEYMAP[ctx];
-    const allKeys = bindings.flatMap((b) => b.keys);
-    const uniqueKeys = new Set(allKeys);
-    expect(uniqueKeys.size).toBe(allKeys.length);
+
+    // Unconditional (always-active) bindings must have unique keys: they are
+    // always resolved, so a collision there is genuinely ambiguous.
+    const unconditional = bindings.filter((b) => !b.when);
+    const unconditionalKeys = unconditional.flatMap((b) => b.keys);
+    expect(new Set(unconditionalKeys).size).toBe(unconditionalKeys.length);
+
+    // A `when`-guarded binding may share keys with OTHER guarded bindings
+    // (their guards are mutually exclusive by UI state — e.g. the launcher's
+    // Enter/Esc per status), but never with an unconditional binding.
+    const unconditionalKeySet = new Set(unconditionalKeys);
+    for (const binding of bindings) {
+      if (!binding.when) continue;
+      for (const key of binding.keys) {
+        expect(unconditionalKeySet.has(key)).toBe(false);
+      }
+    }
   });
 });
 
