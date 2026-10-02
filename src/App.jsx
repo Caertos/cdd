@@ -9,10 +9,11 @@
  * // Render the app
  * <App />
  */
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Box, Text, Spacer } from 'ink';
 import { useContainers } from './hooks/useContainers.js';
 import { useControls } from './hooks/useControls.js';
+import { useDockerLauncher } from './hooks/useDockerLauncher.js';
 import ContainerSection from './components/ContainerSection.jsx';
 import MessageFeedback from './components/MessageFeedback.jsx';
 import Header from './components/Header.jsx';
@@ -25,7 +26,16 @@ import Footer from './components/Footer.jsx';
 
 export default function App() {
   const { containers, connection } = useContainers();
-  const controls = useControls(containers, { connection });
+  const launcher = useDockerLauncher();
+  const controls = useControls(containers, { connection, launcher });
+
+  // When the daemon answers after a launch, re-probe and reload the list.
+  useEffect(() => {
+    if (launcher.status === 'ready') {
+      connection.retry();
+      launcher.reset();
+    }
+  }, [launcher.status, connection.retry, launcher.reset]);
 
   if (controls.creatingContainer) {
     return (
@@ -68,6 +78,7 @@ export default function App() {
       <ConnectionNotice
         error={connection.error}
         nextRetryIn={connection.nextRetryIn}
+        launcher={launcher}
       />
     );
   }

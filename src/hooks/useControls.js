@@ -19,6 +19,18 @@ import {
   resolveKey,
 } from '../helpers/keymap.js';
 
+// No-op launcher stub so tests and callers without a real launcher keep
+// working: `canLaunch: false` hides the S key and every transition is inert.
+const NOOP_LAUNCHER = {
+  canLaunch: false,
+  status: 'idle',
+  start: () => {},
+  confirm: () => {},
+  cancelWait: () => {},
+  keepWaiting: () => {},
+  reset: () => {},
+};
+
 // Principal hook to manage user inputs and control the app state
 /**
  * Main hook that wires user input, creation, actions and logs viewing.
@@ -31,6 +43,7 @@ import {
  */
 export function useControls(containers = [], overrides = {}) {
   const connection = overrides.connection ?? null;
+  const launcher = overrides.launcher ?? NOOP_LAUNCHER;
   const [creatingContainer, setCreatingContainer] = React.useState(false);
   const [showHelp, setShowHelp] = React.useState(false);
   const lastCreationRef = React.useRef(null);
@@ -187,6 +200,8 @@ export function useControls(containers = [], overrides = {}) {
       isSecretField: creation.isCurrentFieldSecret(),
       hasSecrets: creation.hasSecretsInEnv(),
       disconnected: connection?.status === 'error' && containers.length === 0,
+      canLaunch: launcher.canLaunch,
+      launchStatus: launcher.status,
     }),
     [
       eraseConfirmation.confirmErase,
@@ -203,6 +218,8 @@ export function useControls(containers = [], overrides = {}) {
       selection.selected,
       containers.length,
       connection?.status,
+      launcher.canLaunch,
+      launcher.status,
     ]
   );
 
@@ -378,6 +395,16 @@ export function useControls(containers = [], overrides = {}) {
       // Connection screen has no visible message bar — quit directly
       // instead of opening an invisible confirmation.
       'connection.quit': () => exitHandler.handleExitCommand('q'),
+      'connection.launch': () => launcher.start(),
+      'connection.launch-confirm': () => launcher.confirm(),
+      'connection.launch-cancel': () => launcher.reset(),
+      'connection.launch-wait-cancel': () => launcher.cancelWait(),
+      'connection.launch-keep-waiting': () => launcher.keepWaiting(),
+      'connection.launch-timeout-cancel': () => {
+        launcher.cancelWait();
+        launcher.reset();
+      },
+      'connection.launch-failed-ack': () => launcher.reset(),
     }),
     [
       containers,
@@ -393,6 +420,7 @@ export function useControls(containers = [], overrides = {}) {
       debugLogs,
       exitHandler,
       connection,
+      launcher,
     ]
   );
 

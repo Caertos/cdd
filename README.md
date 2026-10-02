@@ -148,9 +148,23 @@ Use `↑` / `↓` to navigate containers. The **HUD** at the bottom shows availa
 
 | Key       | Action                                              |
 | --------- | --------------------------------------------------- |
+| `S`       | Start Docker (only when CDD knows how)              |
 | `R`       | Retry container fetch immediately                   |
 | `Q`       | Quit CDD (no confirmation)                          |
 | —         | Auto-retry every 5 seconds (shown as a live countdown) |
+
+### Starting Docker from the connection screen
+
+When Docker is unreachable, CDD checks whether it knows how to start it. If it does, the `S` key appears and walks you through launching Docker without leaving the terminal.
+
+- **Windows** — CDD finds Docker Desktop in its standard install locations and starts it directly, with no password. This is the primary platform.
+- **macOS** — opens Docker Desktop with `open -a Docker`.
+- **Linux (rootless)** — starts the user service (`systemctl --user start docker`) without a password.
+- **Linux (system service)** — hands the terminal over to `sudo systemctl start docker` so you can type your password.
+
+After starting, CDD waits for the daemon to respond, then reloads your containers automatically. On Windows, a slow start usually means the WSL2 engine is still initializing — CDD offers to keep waiting.
+
+`S` only appears when CDD knows how to start Docker, and CDD never offers to stop Docker.
 
 ### Creation Wizard
 

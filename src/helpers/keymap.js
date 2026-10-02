@@ -411,6 +411,62 @@ export const KEYMAP = {
       help: 'Quit CDD',
       priority: 80,
     },
+    {
+      id: 'connection.launch',
+      keys: ['s'],
+      label: 'S',
+      help: 'Start Docker for me',
+      priority: 88,
+      when: (s) => s.canLaunch && s.launchStatus === 'idle',
+    },
+    {
+      id: 'connection.launch-confirm',
+      keys: ['y', 'Y', 'enter'],
+      label: 'Enter',
+      help: 'Confirm and run the command',
+      priority: 95,
+      when: (s) => s.launchStatus === 'confirming',
+    },
+    {
+      id: 'connection.launch-cancel',
+      keys: ['escape', 'n', 'N'],
+      label: 'Esc',
+      help: 'Cancel',
+      priority: 85,
+      when: (s) => s.launchStatus === 'confirming',
+    },
+    {
+      id: 'connection.launch-wait-cancel',
+      keys: ['escape'],
+      label: 'Esc',
+      help: 'Stop waiting (Docker keeps starting)',
+      priority: 95,
+      when: (s) => s.launchStatus === 'waiting',
+    },
+    {
+      id: 'connection.launch-keep-waiting',
+      keys: ['enter', 'y', 'Y'],
+      label: 'Enter',
+      help: 'Keep waiting',
+      priority: 95,
+      when: (s) => s.launchStatus === 'timeout',
+    },
+    {
+      id: 'connection.launch-timeout-cancel',
+      keys: ['escape', 'n', 'N'],
+      label: 'Esc',
+      help: 'Give up waiting (Docker keeps starting)',
+      priority: 85,
+      when: (s) => s.launchStatus === 'timeout',
+    },
+    {
+      id: 'connection.launch-failed-ack',
+      keys: ['enter', 'escape'],
+      label: 'Esc',
+      help: 'Back',
+      priority: 90,
+      when: (s) => s.launchStatus === 'failed',
+    },
   ],
 };
 
@@ -427,6 +483,8 @@ export const KEYMAP = {
  * @param {boolean} [state.hasActiveList]
  * @param {boolean} [state.showDebugLogs]
  * @param {boolean} [state.disconnected] - Docker unreachable with empty list
+ * @param {boolean} [state.canLaunch] - A Docker launch method was detected
+ * @param {string} [state.launchStatus] - Launcher state: 'idle'|'confirming'|'launching'|'waiting'|'ready'|'failed'|'timeout'
  * @returns {ContextId}
  */
 export function getActiveContext(state) {
