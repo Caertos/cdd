@@ -36,3 +36,6 @@ coverage/
 
 # Ruta de trabajo interna (documentos de diseño, no publicables)
 ruta/
+
+# CodeGraph local index (per-machine, never committed)
+.codegraph/
