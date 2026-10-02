@@ -7,6 +7,20 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 - Nothing yet.
 
+## [4.8.0] - 2026-10-01
+
+### Added
+- **Start Docker from the connection screen** — new `S` key launches Docker when CDD detects a known way to start it
+  - **Windows (primary)** — Docker Desktop detected in standard install locations and started directly, no password
+  - **macOS** — opens Docker Desktop (`open -a Docker`)
+  - **Linux rootless** — starts the user service (`systemctl --user start docker`), no password
+  - **Linux system service** — hands the terminal over for `sudo systemctl start docker` (you type your password)
+  - Waits for the daemon to respond, with a "keep waiting" path for slow starts (WSL2 hint on Windows)
+- `S` only appears when CDD knows how to start Docker — it never offers to stop Docker
+
+### Changed
+- Launcher flow wired into the connection screen: `S` starts the flow, `Enter`/`Esc` confirm/cancel, and a ready daemon re-probes the container list
+
 ## [4.7.1] - 2026-09-24
 
 ### Security

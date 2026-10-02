@@ -148,9 +148,23 @@ Usa `↑` / `↓` para navegar por los contenedores. El **HUD** en la parte infe
 
 | Tecla     | Acción                                                |
 | --------- | ----------------------------------------------------- |
+| `S`       | Iniciar Docker (solo cuando CDD sabe cómo)            |
 | `R`       | Reintentar la carga de contenedores al instante       |
 | `Q`       | Salir de CDD (sin confirmación)                       |
 | —         | Reintento automático cada 5 segundos (cuenta atrás)   |
+
+### Iniciar Docker desde la pantalla de conexión
+
+Cuando Docker no es accesible, CDD comprueba si sabe cómo iniciarlo. Si lo sabe, aparece la tecla `S` y te guía para lanzar Docker sin salir de la terminal.
+
+- **Windows** — CDD encuentra Docker Desktop en sus ubicaciones de instalación estándar y lo inicia directamente, sin contraseña. Es la plataforma principal.
+- **macOS** — abre Docker Desktop con `open -a Docker`.
+- **Linux (rootless)** — inicia el servicio de usuario (`systemctl --user start docker`) sin contraseña.
+- **Linux (servicio del sistema)** — cede la terminal a `sudo systemctl start docker` para que escribas tu contraseña.
+
+Después de iniciarlo, CDD espera a que el daemon responda y recarga tus contenedores automáticamente. En Windows, un arranque lento suele significar que el motor WSL2 todavía se está inicializando; CDD ofrece seguir esperando.
+
+`S` solo aparece cuando CDD sabe cómo iniciar Docker, y CDD nunca ofrece detener Docker.
 
 ### Asistente de Creación
 
