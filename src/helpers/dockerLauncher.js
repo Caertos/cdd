@@ -8,7 +8,9 @@
 
 import { existsSync as fsExistsSync } from 'node:fs';
 import path from 'node:path';
-import { execFile } from 'node:child_process';
+import { execFile, spawn } from 'node:child_process';
+import { withTerminalHandover } from './terminalHandover.js';
+import { docker } from './dockerService/dockerService.js';
 
 /**
  * @typedef {Object} LaunchMethod
@@ -214,4 +216,132 @@ export async function detectLaunchMethod(
     default:
       return null;
   }
+}
+
+/**
+ * Launch Docker without needing privileges (Windows, macOS, Linux rootless).
+ * Resolves once the process has been spawned, NOT when Docker is ready.
+ *
+ * @param {LaunchMethod} method
+ * @returns {Promise<{ started: boolean, error?: string }>}
+ */
+export async function launchDocker(method) {
+  try {
+    const child = spawn(method.command, method.args, {
+      detached: true,
+      stdio: 'ignore',
+      windowsHide: false,
+    });
+    child.unref();
+    return { started: true };
+  } catch (err) {
+    return { started: false, error: err.message };
+  }
+}
+
+/**
+ * Spawn a command in the inherited terminal and resolve with its exit code.
+ *
+ * Internal helper, exported only so tests can inject a fake `spawn`. It
+ * reports the raw exit code and deliberately does NOT interpret what a
+ * non-zero exit means (e.g. a wrong sudo password) — that judgement belongs
+ * to the caller.
+ *
+ * @param {LaunchMethod} method
+ * @param {typeof spawn} [spawnFn] - Injectable spawn (defaults to `node:child_process` spawn)
+ * @returns {Promise<{ started: boolean, exitCode: number|null }>}
+ */
+export function runElevatedCommand(method, spawnFn = spawn) {
+  return new Promise((resolve) => {
+    let child;
+    try {
+      child = spawnFn(method.command, method.args, { stdio: 'inherit' });
+    } catch {
+      resolve({ started: false, exitCode: null });
+      return;
+    }
+
+    child.once('error', () => resolve({ started: false, exitCode: null }));
+    child.once('close', (code) => {
+      resolve({ started: code === 0, exitCode: code });
+    });
+  });
+}
+
+/**
+ * Launch Docker handing the terminal over so sudo can prompt for a password.
+ * Reuses the same unmount/remount mechanism as shell mode.
+ *
+ * @param {LaunchMethod} method
+ * @returns {Promise<{ started: boolean, exitCode: number|null }>}
+ */
+export async function launchDockerElevated(method) {
+  return withTerminalHandover(() => runElevatedCommand(method));
+}
+
+/**
+ * Wait for Docker to respond, polling. The only reliable signal that the
+ * daemon is ready is that it answers a probe — a launch exit code of 0 only
+ * means the app was started, not that Docker is ready.
+ *
+ * @param {Object} [options]
+ * @param {number} [options.timeoutMs=90000]
+ * @param {number} [options.pollMs=2000]
+ * @param {(elapsedMs: number) => void} [options.onTick]
+ * @param {AbortSignal} [options.signal]
+ * @param {() => Promise<void>} [options.ping] - probe; defaults to the shared `docker.ping()`
+ * @returns {Promise<{ ready: boolean, elapsedMs: number, reason?: 'timeout'|'aborted' }>}
+ */
+export async function waitForDocker(options = {}) {
+  const {
+    timeoutMs = 90000,
+    pollMs = 2000,
+    onTick,
+    signal,
+    ping = docker.ping.bind(docker),
+  } = options;
+
+  const start = Date.now();
+
+  return new Promise((resolve) => {
+    let timer = null;
+    let settled = false;
+
+    const finish = (result) => {
+      if (settled) return;
+      settled = true;
+      if (timer !== null) {
+        clearTimeout(timer);
+        timer = null;
+      }
+      resolve(result);
+    };
+
+    const tick = async () => {
+      const elapsedMs = Date.now() - start;
+
+      if (signal && signal.aborted) {
+        finish({ ready: false, elapsedMs, reason: 'aborted' });
+        return;
+      }
+
+      if (elapsedMs >= timeoutMs) {
+        finish({ ready: false, elapsedMs, reason: 'timeout' });
+        return;
+      }
+
+      if (onTick) onTick(elapsedMs);
+
+      try {
+        await ping();
+        const finalElapsed = Date.now() - start;
+        if (onTick) onTick(finalElapsed);
+        finish({ ready: true, elapsedMs: finalElapsed });
+      } catch {
+        timer = setTimeout(tick, pollMs);
+      }
+    };
+
+    tick();
+  });
 }
