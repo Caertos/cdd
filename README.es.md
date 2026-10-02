@@ -4,7 +4,7 @@
   <img src="https://img.shields.io/npm/v/cdd-cli?color=blue&label=npm%20package" alt="npm version"/>
   <img src="https://img.shields.io/npm/dt/cdd-cli?color=green&label=downloads" alt="npm downloads"/>
   <a href="https://github.com/Caertos/cdd/actions/workflows/ci.yml"><img src="https://github.com/Caertos/cdd/actions/workflows/ci.yml/badge.svg" alt="tests"/></a>
-  <a href="https://deepwiki.com/Caertos/cdd"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki"></a>
+  <a href="https://deepwiki.com/Caertos/cdd"><img src="https://img.shields.io/badge/DeepWiki-Ask-2f6feb?logo=data%3Aimage%2Fpng%3Bbase64%2CiVBORw0KGgoAAAANSUhEUgAAACwAAAAyCAMAAAAQhsnYAAAAG1BMVEX%2F%2F%2F8qbs0qbc4pbc4ewZsdwpwdwZwYleEXluKUtKvnAAAAAXRSTlMAQObYZgAAAQtJREFUSMfVltsSwiAMRLlsoP%2F%2FxQICDSS0dPRB91HPbDZhZ9QYTdZsy7qkTdS7Ir9ru4kz1jn7H7C%2Fh22%2Fq1NgEM2z%2FRyiwqCQRFrMQYUNVRCDB99sHJjUyf7MQBzGBPdgdbcrWLTh6zAaHO5htLviFq4EGYxsmNogzEZjXh4rUiZ%2FGtn6MFZJSf0i4M1sbcScsuDQ%2BwxhfCHIlYTicRUDNKBZqwXBh7zRpKicuZ%2BORvZtvn6UjDO2eDccGDuXo3DjmjtDUIukwWdHt%2BBF%2BT%2BAYztQ3IAzFNmQCTbHUvM55lcRY4wo%2F%2FnVoWwgyt83UuB8bb2sKrxS%2FEH49uf4gTHH494fgwdoia5%2B%2BgJ3fRfe3V5gGAAAAABJRU5ErkJggg%3D%3D" alt="Ask DeepWiki"/>
 </p>
 
 > **Un dashboard de Docker para la terminal — monitorea, gestiona y crea contenedores sin salir del teclado.**
