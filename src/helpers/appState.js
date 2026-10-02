@@ -1,7 +1,8 @@
 /**
- * Shared reference to the Ink render instance.
- * Set once in index.js after render(<App />) and read by useShellMode
- * to unmount/remount the UI around interactive shell sessions.
+ * Shared references to the Ink runtime, bridged from the React tree to
+ * plain (non-hook) helpers. `inkApp` is set once in index.js after
+ * render(<App />); `suspendTerminal` is registered by App itself because it
+ * is only reachable via useApp() inside the tree.
  *
  * @module appState
  */
@@ -23,4 +24,27 @@ export function setInkApp(app) {
  */
 export function getInkApp() {
   return inkApp;
+}
+
+/**
+ * Ink's `useApp().suspendTerminal` — hands the real terminal to a child
+ * process (raw mode off, alternate screen exited) and restores it on resume.
+ * @type {((callback?: () => Promise<void>) => Promise<{resume: () => Promise<void>}> | undefined) | null}
+ */
+let suspendTerminalFn = null;
+
+/**
+ * Register the suspendTerminal function from inside the React tree.
+ * @param {Function | null} fn
+ */
+export function setSuspendTerminal(fn) {
+  suspendTerminalFn = fn;
+}
+
+/**
+ * Get the suspendTerminal function, if the app is mounted.
+ * @returns {Function | null}
+ */
+export function getSuspendTerminal() {
+  return suspendTerminalFn;
 }

@@ -10,7 +10,8 @@
  * <App />
  */
 import React, { useEffect } from 'react';
-import { Box, Text, Spacer } from 'ink';
+import { Box, Text, Spacer, useApp } from 'ink';
+import { setSuspendTerminal } from './helpers/appState.js';
 import { useContainers } from './hooks/useContainers.js';
 import { useControls } from './hooks/useControls.js';
 import { useDockerLauncher } from './hooks/useDockerLauncher.js';
@@ -25,9 +26,16 @@ import { ConnectionNotice } from './components/ConnectionNotice.jsx';
 import Footer from './components/Footer.jsx';
 
 export default function App() {
+  const { suspendTerminal } = useApp();
   const { containers, connection } = useContainers();
   const launcher = useDockerLauncher();
   const controls = useControls(containers, { connection, launcher });
+
+  // Expose suspendTerminal to plain helpers (terminalHandover) via appState.
+  useEffect(() => {
+    setSuspendTerminal(suspendTerminal);
+    return () => setSuspendTerminal(null);
+  }, [suspendTerminal]);
 
   // When the daemon answers after a launch, re-probe and reload the list.
   useEffect(() => {
