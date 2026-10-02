@@ -81,6 +81,28 @@ export const STRINGS = {
     staleWarning: 'Lost connection to Docker — retrying',
   },
 
+  // ── DockerLauncher ──
+  dockerLauncher: {
+    confirmingTitle: 'Start Docker?',
+    confirmingExplain: 'This will run:',
+    passwordPrompt: 'You will be asked for your password.',
+    passwordWhy:
+      'The command is shown because you should never type an admin password without seeing what runs.',
+    confirmHint: '[Enter] confirm  ·  [Esc] cancel',
+    launching: 'Starting Docker...',
+    waitingStarted: (s) => `Started ${s}s ago.`,
+    waitingNote: (s) => `This usually takes up to ${s} seconds.`,
+    waitingCancel: '[Esc] stop waiting (Docker keeps starting)',
+    ready: 'Docker is ready.',
+    failedHint: 'Try again.',
+    timeoutExplain: 'Docker started but is not responding yet.',
+    timeoutWsl2:
+      'On Windows this is usually the WSL2 engine still initializing.',
+    timeoutKeepWaiting: '[Enter] keep waiting',
+    timeoutGiveUp: '[Esc] give up waiting (Docker keeps starting)',
+    launchFailed: 'Failed to start Docker.',
+  },
+
   // ── HelpPanel ──
   helpTitle: 'Help',
   helpClose: 'Press ? or Esc to close',
