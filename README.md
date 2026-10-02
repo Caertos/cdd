@@ -11,7 +11,19 @@
 
 ---
 
-## 🎉 What's new in v4.7
+## 🎉 What's new in v4.8
+
+**Start Docker without leaving the terminal.**
+
+When Docker is unreachable, CDD checks whether it knows how to start it. If it does, the `S` key appears on the connection screen and walks you through launching Docker.
+
+- **Windows** — finds Docker Desktop in its standard install locations and starts it directly, no password (primary platform)
+- **macOS** — opens Docker Desktop with `open -a Docker`
+- **Linux (rootless)** — starts the user service without a password
+- **Linux (system service)** — hands the terminal over to `sudo` so you can type your password
+- **Live wait** — shows elapsed time and the typical wait, then reloads your containers automatically when Docker is ready
+
+### v4.7 — Connection-screen keys
 
 **Live retry countdown and connection-screen keys.**
 

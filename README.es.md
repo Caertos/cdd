@@ -11,7 +11,19 @@
 
 ---
 
-## 🎉 Novedades en v4.7
+## 🎉 Novedades en v4.8
+
+**Arranca Docker sin salir de la terminal.**
+
+Cuando Docker no es accesible, CDD comprueba si sabe cómo iniciarlo. Si lo sabe, aparece la tecla `S` en la pantalla de conexión y te guía para lanzar Docker.
+
+- **Windows** — encuentra Docker Desktop en sus ubicaciones de instalación estándar y lo inicia directamente, sin contraseña (plataforma principal)
+- **macOS** — abre Docker Desktop con `open -a Docker`
+- **Linux (rootless)** — inicia el servicio de usuario sin contraseña
+- **Linux (servicio del sistema)** — cede la terminal a `sudo` para que escribas tu contraseña
+- **Espera en vivo** — muestra el tiempo transcurrido y la espera típica, y recarga tus contenedores automáticamente cuando Docker está listo
+
+### v4.7 — Teclas en la pantalla de conexión
 
 **Cuenta atrás de reintento en vivo y teclas en la pantalla de conexión.**
 
