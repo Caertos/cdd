@@ -10,6 +10,7 @@ import { existsSync as fsExistsSync } from 'node:fs';
 import path from 'node:path';
 import { execFile, spawn } from 'node:child_process';
 import { withTerminalHandover } from './terminalHandover.js';
+import { docker } from './dockerService/dockerService.js';
 
 /**
  * @typedef {Object} LaunchMethod
@@ -276,4 +277,71 @@ export function runElevatedCommand(method, spawnFn = spawn) {
  */
 export async function launchDockerElevated(method) {
   return withTerminalHandover(() => runElevatedCommand(method));
+}
+
+/**
+ * Wait for Docker to respond, polling. The only reliable signal that the
+ * daemon is ready is that it answers a probe — a launch exit code of 0 only
+ * means the app was started, not that Docker is ready.
+ *
+ * @param {Object} [options]
+ * @param {number} [options.timeoutMs=90000]
+ * @param {number} [options.pollMs=2000]
+ * @param {(elapsedMs: number) => void} [options.onTick]
+ * @param {AbortSignal} [options.signal]
+ * @param {() => Promise<void>} [options.ping] - probe; defaults to the shared `docker.ping()`
+ * @returns {Promise<{ ready: boolean, elapsedMs: number, reason?: 'timeout'|'aborted' }>}
+ */
+export async function waitForDocker(options = {}) {
+  const {
+    timeoutMs = 90000,
+    pollMs = 2000,
+    onTick,
+    signal,
+    ping = docker.ping.bind(docker),
+  } = options;
+
+  const start = Date.now();
+
+  return new Promise((resolve) => {
+    let timer = null;
+    let settled = false;
+
+    const finish = (result) => {
+      if (settled) return;
+      settled = true;
+      if (timer !== null) {
+        clearTimeout(timer);
+        timer = null;
+      }
+      resolve(result);
+    };
+
+    const tick = async () => {
+      const elapsedMs = Date.now() - start;
+
+      if (signal && signal.aborted) {
+        finish({ ready: false, elapsedMs, reason: 'aborted' });
+        return;
+      }
+
+      if (elapsedMs >= timeoutMs) {
+        finish({ ready: false, elapsedMs, reason: 'timeout' });
+        return;
+      }
+
+      if (onTick) onTick(elapsedMs);
+
+      try {
+        await ping();
+        const finalElapsed = Date.now() - start;
+        if (onTick) onTick(finalElapsed);
+        finish({ ready: true, elapsedMs: finalElapsed });
+      } catch {
+        timer = setTimeout(tick, pollMs);
+      }
+    };
+
+    tick();
+  });
 }
