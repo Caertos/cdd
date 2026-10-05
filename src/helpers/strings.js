@@ -37,10 +37,21 @@ export const STRINGS = {
   },
 
   // ── Diagnostics (TASK-8) ──
-  // Copy for the diagnosis engine: what each rule says, and what the button
-  // that applies its fix is called. Panel chrome (title, headings) belongs
-  // to DiagnosticPanel and is added with it.
+  // Copy for the diagnosis engine and its panel. Panel chrome lives here too
+  // so that every sentence CDD shows about a failure is rewordable in one
+  // place, and so the "I don't recognise it" wording is never improvised in a
+  // component.
   diagnostics: {
+    panelTitle: (name) => `Diagnosis: ${name}`,
+    likelyCause: 'Likely cause:',
+    // The most important sentence in the feature. Saying "I don't know" plus
+    // the evidence is useful; inventing a plausible cause is not.
+    notRecognized:
+      "I don't recognise it. This is the last thing the container said before it died:",
+    lastLines: 'Last lines:',
+    readingLog: 'Reading the log...',
+    noOutput: 'The container wrote nothing to its log.',
+    viewFullLog: '[L] Full log',
     // Fix labels — shown on the key that applies them.
     fix: {
       addEnv: (key) => `Recreate with ${key}`,

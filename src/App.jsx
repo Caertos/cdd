@@ -14,6 +14,7 @@ import { Box, Text, Spacer, useApp } from 'ink';
 import { setSuspendTerminal } from './helpers/appState.js';
 import { useContainers } from './hooks/useContainers.js';
 import { useContainerHealth } from './hooks/useContainerHealth.js';
+import { useDiagnostics } from './hooks/useDiagnostics.js';
 import { useControls } from './hooks/useControls.js';
 import { useDockerLauncher } from './hooks/useDockerLauncher.js';
 import ContainerSection from './components/ContainerSection.jsx';
@@ -21,6 +22,7 @@ import MessageFeedback from './components/MessageFeedback.jsx';
 import Header from './components/Header.jsx';
 import LogViewer from './components/LogViewer.jsx';
 import ContainerCreationPrompt from './components/ContainerCreationPrompt.jsx';
+import { DiagnosticPanel } from './components/DiagnosticPanel.jsx';
 import { KeyHUD } from './components/KeyHUD.jsx';
 import { HelpPanel } from './components/HelpPanel.jsx';
 import { ConnectionNotice } from './components/ConnectionNotice.jsx';
@@ -33,6 +35,12 @@ export default function App() {
   const { health } = useContainerHealth(containers);
   const launcher = useDockerLauncher();
   const controls = useControls(containers, { connection, launcher });
+
+  const selectedContainer = containers[controls.selected] ?? null;
+  const diagnostics = useDiagnostics(
+    selectedContainer,
+    selectedContainer ? (health.get(selectedContainer.id) ?? null) : null
+  );
 
   // Expose suspendTerminal to plain helpers (terminalHandover) via appState.
   useEffect(() => {
@@ -118,6 +126,15 @@ export default function App() {
           isStale={connection.isStale}
           onCreate={() => controls.startCreation()}
         />
+        {/* The panel takes room only when a container is failing and we have
+            something to say about it — a deliberate stop gets nothing. */}
+        {(diagnostics.diagnosis || diagnostics.isLoading) && (
+          <DiagnosticPanel
+            diagnosis={diagnostics.diagnosis}
+            containerName={selectedContainer?.name ?? ''}
+            isLoading={diagnostics.isLoading}
+          />
+        )}
         <Spacer />
         <MessageFeedback
           message={controls.message}
