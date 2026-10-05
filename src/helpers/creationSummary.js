@@ -1,5 +1,6 @@
 import { normalizeImageName } from './imageNameUtils.js';
 import { isSecretKey, findWeakSecrets } from './secrets.js';
+import { hostPortsOf } from './portUtils.js';
 
 /**
  * @typedef {Object} SummaryRow
@@ -131,7 +132,7 @@ export function detectPortConflicts(portInput, containers) {
     const [hostPort] = pair.split(':');
     if (!hostPort) continue;
     for (const container of containers) {
-      if (container.ports?.includes(hostPort)) {
+      if (hostPortsOf(container).includes(hostPort)) {
         conflicts.push({ hostPort, takenBy: container.name || container.id });
       }
     }

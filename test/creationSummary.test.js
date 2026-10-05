@@ -128,9 +128,10 @@ describe('buildCreationSummary', () => {
 });
 
 describe('detectPortConflicts', () => {
+  // The real getContainers() shape: published ports are "host:container".
   const containers = [
-    { name: 'web', id: 'abc', ports: ['8080', '443'] },
-    { name: 'db', id: 'def', ports: ['5432'] },
+    { name: 'web', id: 'abc', ports: ['8080:80', '443:443'] },
+    { name: 'db', id: 'def', ports: ['5432:5432'] },
   ];
 
   test('detects host port conflict', () => {
@@ -155,16 +156,8 @@ describe('detectPortConflicts', () => {
     expect(conflicts).toHaveLength(2);
   });
 
-  // D22 — fixed by TASK-19. Real normalized ports are "host:container".
-  test.failing('detects a conflict against a published "host:container" port', () => {
-    const conflicts = detectPortConflicts('8080:80', [
-      { name: 'web', id: 'a', ports: ['8080:80'] },
-    ]);
-    expect(conflicts).toEqual([{ hostPort: '8080', takenBy: 'web' }]);
-  });
-
-  // D22 — fixed by TASK-19. An unpublished private port is not a host port.
-  test.failing('ignores an exposed-but-unpublished private port', () => {
+  // D22. An exposed-but-unpublished port is not a host port.
+  test('ignores an exposed-but-unpublished private port', () => {
     const conflicts = detectPortConflicts('80:80', [{ name: 'web', id: 'a', ports: ['80'] }]);
     expect(conflicts).toEqual([]);
   });
@@ -198,7 +191,7 @@ describe('buildCreationWarnings', () => {
   test('port-taken warning when host port is in use', () => {
     const warnings = buildCreationWarnings(
       { imageName: 'nginx', containerName: '', portInput: '8080:80', envInput: '' },
-      { containers: [{ name: 'web', ports: ['8080'] }], imageIsLocal: true, imageProfiles: profiles }
+      { containers: [{ name: 'web', ports: ['8080:80'] }], imageIsLocal: true, imageProfiles: profiles }
     );
     expect(warnings.some((w) => w.kind === 'port-taken')).toBe(true);
   });
@@ -238,7 +231,7 @@ describe('buildCreationWarnings', () => {
   test('multiple warnings at once', () => {
     const warnings = buildCreationWarnings(
       { imageName: 'postgres', containerName: 'db', portInput: '5432:5432', envInput: 'SECRET_KEY=abc' },
-      { containers: [{ name: 'db', ports: ['5432'] }], imageIsLocal: false, imageProfiles: profiles }
+      { containers: [{ name: 'db', ports: ['5432:5432'] }], imageIsLocal: false, imageProfiles: profiles }
     );
     const kinds = warnings.map((w) => w.kind);
     expect(kinds).toContain('image-pull');
