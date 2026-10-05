@@ -47,22 +47,24 @@ describeE2E('E2E — initial app render', () => {
     const { id, name } = await createTestContainer('render-running');
     try {
       ui = renderApp(<App />);
+      // A just-started container reads "starting" for the first 5 s;
+      // wait for the steady RUNNING verdict.
+      await ui.waitForText('RUNNING'); // STRINGS.health.running
       // ContainerRow.truncate(s, 18) paints 17 chars + '…' when name exceeds 18.
-      await ui.waitForText(name.slice(0, 17));
-      expect(ui.frame()).toContain('RUNNING'); // STRINGS.stateRunning
+      expect(ui.frame()).toContain(name.slice(0, 17));
     } finally {
       await removeTestContainer(id);
     }
   });
 
-  test('a stopped container is rendered as EXITED', async () => {
+  test('a stopped container is rendered as stopped (grey, not red)', async () => {
     const { id } = await createTestContainer('render-exited', {
       image: TINY_IMAGE,
       create: { Cmd: ['true'], Tty: false },
     });
     try {
       ui = renderApp(<App />);
-      await ui.waitForText('EXITED'); // STRINGS.stateExited
+      await ui.waitForText('stopped'); // STRINGS.health.stopped
     } finally {
       await removeTestContainer(id);
     }

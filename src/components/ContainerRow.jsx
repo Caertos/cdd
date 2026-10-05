@@ -4,8 +4,12 @@ import StatsBar from './StatsBar.jsx';
 import PropTypes from 'prop-types';
 import { useContainerStats } from '../hooks/useContainerStats.js';
 import { STRINGS } from '../helpers/strings.js';
+import { levelStyle } from '../helpers/health.js';
 
 const stateText = (state) => {
+  if (!state || typeof state !== 'string') {
+    return { text: STRINGS.health.unknown, color: 'gray' };
+  }
   if (state === 'running')
     return { text: STRINGS.stateRunning, color: 'green' };
   if (state === 'exited') return { text: STRINGS.stateExited, color: 'red' };
@@ -13,16 +17,23 @@ const stateText = (state) => {
   return { text: state.toUpperCase(), color: 'gray' };
 };
 
+const verdictText = (verdict) => {
+  const { symbol, color } = levelStyle(verdict.level);
+  return { text: `${symbol} ${verdict.headline}`, color };
+};
+
 /**
  * Row component that renders information and live stats for a container.
  *
  * @param {Object} props
  * @param {Object} props.container - Container object with id, name, image, state and ports
+ * @param {Object} [props.verdict] - Health verdict from useContainerHealth
  * @param {boolean} [props.isStale=false] - Whether the data is potentially outdated
  * @returns {JSX.Element}
  */
 export default function ContainerRow({
   container,
+  verdict,
   isSelected = false,
   isStale = false,
 }) {
@@ -42,7 +53,7 @@ export default function ContainerRow({
     return s.length > max ? s.slice(0, max - 1) + '…' : s;
   };
 
-  const stateInfo = stateText(state);
+  const stateInfo = verdict ? verdictText(verdict) : stateText(state);
   const dimColor = isStale ? 'gray' : undefined;
 
   return (
@@ -64,7 +75,7 @@ export default function ContainerRow({
           </Text>
         </Box>
         <Box width={14} minWidth={12} paddingRight={1}>
-          <Text color={stateInfo.color} dimColor={dimColor}>
+          <Text color={stateInfo.color} dimColor={dimColor} wrap="truncate-end">
             {stateInfo.text}
           </Text>
         </Box>
@@ -95,6 +106,12 @@ ContainerRow.propTypes = {
     state: PropTypes.string,
     ports: PropTypes.oneOfType([PropTypes.array, PropTypes.string]),
   }).isRequired,
+  verdict: PropTypes.shape({
+    code: PropTypes.string,
+    level: PropTypes.string,
+    headline: PropTypes.string,
+    facts: PropTypes.object,
+  }),
   isSelected: PropTypes.bool,
   isStale: PropTypes.bool,
 };

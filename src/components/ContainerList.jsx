@@ -5,6 +5,7 @@
  * @param {Object} props - Component props
  * @param {Array} props.containers - Containers to display
  * @param {number} [props.selected] - Index of the currently selected container
+ * @param {Map} [props.health] - Health verdicts keyed by container id
  * @param {boolean} [props.isStale=false] - Whether the data is potentially outdated
  * @returns {JSX.Element} Rendered list
  */
@@ -16,6 +17,7 @@ import ContainerRow from './ContainerRow.jsx';
 export default function ContainerList({
   containers,
   selected,
+  health,
   isStale = false,
 }) {
   return (
@@ -24,6 +26,7 @@ export default function ContainerList({
         <Box key={container.id} flexDirection="row" paddingLeft={1}>
           <ContainerRow
             container={container}
+            verdict={health?.get(container.id)}
             isSelected={i === selected}
             isStale={isStale}
           />
@@ -36,5 +39,6 @@ export default function ContainerList({
 ContainerList.propTypes = {
   containers: PropTypes.arrayOf(PropTypes.object).isRequired,
   selected: PropTypes.number,
+  health: PropTypes.object,
   isStale: PropTypes.bool,
 };

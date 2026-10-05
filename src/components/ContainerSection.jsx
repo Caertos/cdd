@@ -11,6 +11,7 @@ import { STRINGS } from '../helpers/strings.js';
  * @param {Object} props
  * @param {Array<Object>} props.containers - Array of container objects to display
  * @param {number} [props.selected] - Index of the currently selected container
+ * @param {Map} [props.health] - Health verdicts keyed by container id
  * @param {'connecting'|'ok'|'error'} [props.connectionStatus] - Docker connection status
  * @param {boolean} [props.isStale=false] - Whether the data is potentially outdated
  * @param {Function} [props.onCreate] - Open the creation wizard
@@ -19,6 +20,7 @@ import { STRINGS } from '../helpers/strings.js';
 export default function ContainerSection({
   containers,
   selected,
+  health,
   connectionStatus,
   isStale = false,
   onCreate,
@@ -33,6 +35,7 @@ export default function ContainerSection({
     <ContainerList
       containers={containers}
       selected={selected}
+      health={health}
       isStale={isStale}
     />
   );
@@ -41,6 +44,7 @@ export default function ContainerSection({
 ContainerSection.propTypes = {
   containers: PropTypes.array.isRequired,
   selected: PropTypes.number,
+  health: PropTypes.object,
   connectionStatus: PropTypes.string,
   isStale: PropTypes.bool,
   onCreate: PropTypes.func,
