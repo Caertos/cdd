@@ -7,6 +7,22 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 - Nothing yet.
 
+## [4.9.0] - 2026-10-05
+
+### Added
+- **Health verdicts per container** — CDD now reads Docker's own `inspect` data to tell "I stopped it" apart from "it crashed"
+  - Verdicts: running, starting, stopped, crashed, crash-loop, restarting, unhealthy, paused
+  - Each verdict carries the raw facts (exit code, uptime, restart count, OOM) that the upcoming diagnostics view will explain
+- Inspection is lazy and cached: a container is only inspected when its summary changes, and at most 5 run at once
+- `labels` and `createdAt` are now exposed from the container list (prep for grouping by project)
+
+### Changed
+- **Stopped containers are now grey, not red** — red is reserved for real failures. This is the first thing you will notice.
+- The container row shows a short health headline (e.g. `died 2s`, `exit 1`, `restart ×4`) instead of the raw Docker state
+
+### Fixed
+- **D12**: `stateText` no longer calls `state.toUpperCase()` on a missing or non-string state — the row degrades to `UNKNOWN` instead of throwing
+
 ## [4.8.0] - 2026-10-01
 
 ### Added
