@@ -13,6 +13,7 @@ import React, { useEffect } from 'react';
 import { Box, Text, Spacer, useApp } from 'ink';
 import { setSuspendTerminal } from './helpers/appState.js';
 import { useContainers } from './hooks/useContainers.js';
+import { useContainerHealth } from './hooks/useContainerHealth.js';
 import { useControls } from './hooks/useControls.js';
 import { useDockerLauncher } from './hooks/useDockerLauncher.js';
 import ContainerSection from './components/ContainerSection.jsx';
@@ -28,6 +29,7 @@ import Footer from './components/Footer.jsx';
 export default function App() {
   const { suspendTerminal } = useApp();
   const { containers, connection } = useContainers();
+  const { health } = useContainerHealth(containers);
   const launcher = useDockerLauncher();
   const controls = useControls(containers, { connection, launcher });
 
@@ -107,6 +109,7 @@ export default function App() {
         <ContainerSection
           containers={containers}
           selected={controls.selected}
+          health={health}
           connectionStatus={connection.status}
           isStale={connection.isStale}
           onCreate={() => controls.startCreation()}
