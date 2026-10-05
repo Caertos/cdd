@@ -323,3 +323,87 @@ describe('catalog and engine agree', () => {
     expect(Math.max(...top)).toBe(100);
   });
 });
+
+describe('describeWhat — every code', () => {
+  test('paused is never framed as a failure', () => {
+    expect(describeWhat(verdictOf('paused'))).toBe('It is paused.');
+  });
+
+  test('starting is not yet a failure either', () => {
+    expect(describeWhat(verdictOf('starting'))).toBe(
+      'It is still starting up.'
+    );
+  });
+
+  test('running says so', () => {
+    expect(describeWhat(verdictOf('running'))).toBe('It is running.');
+  });
+
+  test('crash-loop mentions how long it survived when we know', () => {
+    expect(
+      describeWhat(verdictOf('crash-loop', { exitCode: 1, uptimeMs: 3000 }))
+    ).toBe('It keeps dying after 3s and Docker restarts it.');
+  });
+
+  test('a crash with no uptime still reads as a sentence', () => {
+    expect(describeWhat(verdictOf('crashed', { exitCode: 1 }))).toBe(
+      'It died with exit code 1.'
+    );
+  });
+
+  test('a crash with no exit code does not print "null"', () => {
+    expect(describeWhat(verdictOf('crashed'))).toContain('unknown');
+    expect(describeWhat(verdictOf('crashed'))).not.toContain('null');
+  });
+
+  test('an unknown code falls back to the row headline', () => {
+    const v = verdictOf('unknown');
+    v.headline = 'DEAD';
+    expect(describeWhat(v)).toBe('Its state is DEAD.');
+  });
+
+  test('a verdict with no headline and no code says so', () => {
+    expect(describeWhat({ code: 'weird', facts: {} })).toBe(
+      'Nothing is known about this container.'
+    );
+  });
+
+  test('restarting without a count does not say "undefined times"', () => {
+    expect(describeWhat(verdictOf('restarting'))).toContain('0 times');
+  });
+});
+
+describe('diagnose — rules without declared needles', () => {
+  test('a rule with a priority of 0 would still sort', () => {
+    const zero = [
+      { id: 'zero', priority: 0, match: () => false, explain: () => 'x' },
+      {
+        id: 'unset',
+        match: () => true,
+        explain: () => 'Matched a rule with no priority at all.',
+      },
+    ];
+    const result = diagnose(ctx(), zero);
+    expect(result.ruleId).toBe('unset');
+  });
+
+  test('a null rule set returns the honest answer', () => {
+    const result = diagnose(ctx({ logLines: ['permission denied'] }), null);
+    expect(result.why).toBeNull();
+    expect(result.tail).toEqual(['permission denied']);
+  });
+
+  test('evidence is capped at three lines', () => {
+    const logLines = Array.from({ length: 6 }, () => 'permission denied');
+    const result = diagnose(ctx({ logLines }));
+    expect(result.evidence).toHaveLength(3);
+  });
+
+  test('evidence matching ignores case', () => {
+    const result = diagnose(
+      ctx({ logLines: ['PERMISSION DENIED while writing to /data'] })
+    );
+    expect(result.ruleId).toBe('volume-permission-denied');
+    expect(result.evidence).toHaveLength(1);
+  });
+});

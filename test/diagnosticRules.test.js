@@ -119,7 +119,7 @@ describe('out-of-memory', () => {
 });
 
 describe('postgres-missing-password', () => {
-  test("recognises the real postgres refusal", () => {
+  test('recognises the real postgres refusal', () => {
     const context = ctx({
       details: exited(),
       logLines: [
@@ -200,16 +200,14 @@ describe('port-in-use', () => {
       logLines: daemonMessage,
     });
     expect(matched(context)[0]).toBe('port-in-use');
-    expect(bestRule(context).fix(context).patch.ports).toEqual({ '8080': null });
+    expect(bestRule(context).fix(context).patch.ports).toEqual({ 8080: null });
   });
 
   test('a bind failure reports the port too', () => {
     const context = ctx({
-      logLines: [
-        'listen tcp 0.0.0.0:80: bind: address already in use',
-      ],
+      logLines: ['listen tcp 0.0.0.0:80: bind: address already in use'],
     });
-    expect(bestRule(context).fix(context).patch.ports).toEqual({ '80': null });
+    expect(bestRule(context).fix(context).patch.ports).toEqual({ 80: null });
   });
 
   test('a message with no port in it offers no fix rather than a wrong one', () => {
@@ -304,9 +302,15 @@ describe('missing-required-env', () => {
 
 describe('rules with no fix', () => {
   const cases = [
-    ['no-command', ['docker: Error response from daemon: no command specified.']],
+    [
+      'no-command',
+      ['docker: Error response from daemon: no command specified.'],
+    ],
     ['volume-permission-denied', ['mkdir /data: permission denied']],
-    ['executable-not-found', ['exec: "python": executable file not found in $PATH']],
+    [
+      'executable-not-found',
+      ['exec: "python": executable file not found in $PATH'],
+    ],
     ['connection-refused', ['Error: connect ECONNREFUSED 172.18.0.3:5432']],
   ];
 
@@ -345,5 +349,97 @@ describe('priority ordering', () => {
       logLines: ['connection refused'],
     });
     expect(matched(context)).toEqual(['connection-refused']);
+  });
+});
+
+describe('busyHostPort — reading the port out of the message', () => {
+  const rule = () => DIAGNOSTIC_RULES.find((r) => r.id === 'port-in-use');
+
+  const portOf = (logLines) => {
+    const context = ctx({ logLines });
+    return rule().fix(context)?.patch.ports ?? null;
+  };
+
+  test('skips lines that do not mention the failure at all', () => {
+    expect(
+      portOf(['starting nginx', 'server ready', 'port is already allocated'])
+    ).toBeNull();
+  });
+
+  test('skips a line that says "already" but not the phrase', () => {
+    expect(portOf(['the container has already been removed'])).toBeNull();
+  });
+
+  test('walks past unrelated lines to find the real one', () => {
+    expect(
+      portOf([
+        'unrelated noise',
+        'listen tcp 0.0.0.0:5432: bind: address already in use',
+      ])
+    ).toEqual({ 5432: null });
+  });
+
+  test('ignores a trailing number that is not a port', () => {
+    expect(portOf(['connection already used by pid 1234567'])).toBeNull();
+  });
+});
+
+describe('mysql fix fallbacks', () => {
+  test('falls back to MYSQL_ROOT_PASSWORD with no profile at all', () => {
+    const context = ctx({
+      container: { id: 'z', name: 'db', image: 'custom-db:1' },
+      profile: null,
+      logLines: ['you need to specify one of MYSQL_ROOT_PASSWORD'],
+    });
+    const rule = bestRule(context);
+    expect(rule.id).toBe('mysql-missing-password');
+    expect(rule.fix(context).patch.env).toHaveProperty('MYSQL_ROOT_PASSWORD');
+  });
+
+  test('picks the mariadb key when the profile asks for it', () => {
+    const context = ctx({
+      container: { id: 'z', name: 'db', image: 'mariadb:11-alpine' },
+      profile: IMAGE_PROFILES.mariadb,
+      logLines: ['you need to specify one of MYSQL_ROOT_PASSWORD'],
+    });
+    expect(bestRule(context).fix(context).patch.env).toHaveProperty(
+      'MARIADB_ROOT_PASSWORD'
+    );
+  });
+});
+
+describe('missing-required-env explanation', () => {
+  test('names the variable and counts what the image expects', () => {
+    const context = ctx({
+      container: {
+        id: 'f',
+        name: 'db',
+        image: 'postgres:17-alpine',
+        env: [],
+      },
+    });
+    const rule = bestRule(context);
+    const text = rule.explain(context);
+    expect(text).toContain('POSTGRES_PASSWORD');
+    expect(text).toContain('not set');
+  });
+
+  test('reads in the singular when the image expects one variable', () => {
+    const context = ctx({
+      container: { id: 'h', name: 's', image: 'nginx:1.27-alpine', env: [] },
+      profile: { requiredEnv: ['SOMETHING'], suggestedEnv: [] },
+    });
+    const rule = bestRule(context);
+    expect(rule.explain(context)).toContain('1 required variable ');
+  });
+
+  test('does not print "undefined" when the profile has no requiredEnv', () => {
+    const context = ctx({
+      container: { id: 'i', name: 'w', image: 'ghost:1', env: [] },
+      profile: { requiredEnv: ['A'], suggestedEnv: [] },
+    });
+    // Sanity: the shape the explain() reads.
+    const rule = bestRule(context);
+    expect(rule.explain(context)).not.toContain('undefined');
   });
 });

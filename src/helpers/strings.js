@@ -37,21 +37,14 @@ export const STRINGS = {
   },
 
   // ── Diagnostics (TASK-8) ──
-  // User-facing prose for the diagnosis panel. Kept here so rules.js stays
-  // free of copy and so every sentence can be reworded in one place.
+  // Copy for the diagnosis engine: what each rule says, and what the button
+  // that applies its fix is called. Panel chrome (title, headings) belongs
+  // to DiagnosticPanel and is added with it.
   diagnostics: {
-    panelTitle: (name) => `Diagnosis: ${name}`,
-    likelyCause: 'Likely cause:',
-    notRecognized:
-      "I don't recognise it. This is the last thing the container said before it died:",
-    lastLines: 'Last lines:',
-    noRulesMatched: 'No known cause matched.',
-    viewFullLog: 'Full log',
-    // Fix labels — shown as the key that applies it.
+    // Fix labels — shown on the key that applies them.
     fix: {
       addEnv: (key) => `Recreate with ${key}`,
       changePort: (port) => `Recreate with another host port (${port} is busy)`,
-      none: 'No automatic fix',
     },
     // One explanation per rule id. Plain language, no jargon.
     explain: {
