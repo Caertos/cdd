@@ -7,6 +7,16 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 - Nothing yet.
 
+## [4.9.2] - 2026-10-05
+
+### Fixed
+- Review step now warns when the container name or a host port is already in use.
+- Auto-assigned host ports no longer collide with ports already published.
+- Port validation rejects decimal, hexadecimal and exponent values (e.g. `80.5`, `0x50`).
+- Help panel shows a readable title in every context.
+- Auto port mapping never proposes a port above 65535.
+- Failed start/stop/restart/erase messages read correctly ("Failed to stop container").
+
 ## [4.9.1] - 2026-10-05
 
 ### Changed
