@@ -57,7 +57,7 @@ describe('getContainerDetails', () => {
   test('defaults missing inspect fields without throwing', async () => {
     const mod = await load({
       getContainer: jest.fn(() => ({
-        inspect: jest.fn().mockResolvedValue({ Id: 'bare', State: {} }),
+        inspect: jest.fn().mockResolvedValue({ Id: 'bare' }),
       })),
     });
 
@@ -134,5 +134,21 @@ describe('getManyContainerDetails', () => {
     const mod = await load({ getContainer: jest.fn() });
     const map = await mod.getManyContainerDetails([]);
     expect(map.size).toBe(0);
+  });
+
+  test('non-array ids → empty map (no throw)', async () => {
+    const mod = await load({ getContainer: jest.fn() });
+    const map = await mod.getManyContainerDetails(null);
+    expect(map.size).toBe(0);
+  });
+
+  test('a concurrency of 0 is floored to 1', async () => {
+    const mod = await load({
+      getContainer: jest.fn(() => ({
+        inspect: jest.fn().mockResolvedValue(inspectPayload),
+      })),
+    });
+    const map = await mod.getManyContainerDetails(['x'], { concurrency: 0 });
+    expect(map.size).toBe(1);
   });
 });
