@@ -1,6 +1,7 @@
 import React from 'react';
 import { Text } from 'ink';
 import PropTypes from 'prop-types';
+import { STRINGS } from '../helpers/strings.js';
 
 /**
  * Log viewer overlay component. Shows the most recent lines.
@@ -17,11 +18,9 @@ export default function LogViewer({ logs, onExit: _onExit, container }) {
 
   return (
     <>
-      <Text color="green">
-        {container?.name ?? 'Container'} logs, press ESC to exit
-      </Text>
+      <Text color="green">{STRINGS.logsTitle(container?.name)}</Text>
       {visibleLogs.length === 0 ? (
-        <Text dimColor>No logs...</Text>
+        <Text dimColor>{STRINGS.noLogs}</Text>
       ) : (
         visibleLogs.map((line, idx) => <Text key={idx}>{line}</Text>)
       )}

@@ -15,27 +15,23 @@ test('src/components/ContainerSection.jsx uses STRINGS.noContainers', () => {
   expect(read('src/components/ContainerSection.jsx')).toContain('STRINGS.noContainers');
 });
 
-// §5.6 (D17) — fixed by TASK-19. One test per consumer/key.
-test.failing('src/components/LogViewer.jsx uses STRINGS.logsTitle', () => {
+// §5.6 (D17). One test per consumer/key.
+test('src/components/LogViewer.jsx uses STRINGS.logsTitle', () => {
   expect(read('src/components/LogViewer.jsx')).toContain('STRINGS.logsTitle(');
 });
 
-// §5.6 (D17) — fixed by TASK-19.
-test.failing('src/components/LogViewer.jsx uses STRINGS.noLogs', () => {
+test('src/components/LogViewer.jsx uses STRINGS.noLogs', () => {
   expect(read('src/components/LogViewer.jsx')).toContain('STRINGS.noLogs');
 });
 
-// §5.6 (D17) — fixed by TASK-19.
-test.failing('src/App.jsx uses STRINGS.debugTitle', () => {
+test('src/App.jsx uses STRINGS.debugTitle', () => {
   expect(read('src/App.jsx')).toContain('STRINGS.debugTitle');
 });
 
-// §5.6 (D17) — fixed by TASK-19.
-test.failing('src/App.jsx uses STRINGS.debugEmpty', () => {
+test('src/App.jsx uses STRINGS.debugEmpty', () => {
   expect(read('src/App.jsx')).toContain('STRINGS.debugEmpty');
 });
 
-// §5.6 (D17) — fixed by TASK-19.
-test.failing('src/App.jsx uses STRINGS.connection.staleWarning', () => {
+test('src/App.jsx uses STRINGS.connection.staleWarning', () => {
   expect(read('src/App.jsx')).toContain('STRINGS.connection.staleWarning');
 });
