@@ -39,6 +39,9 @@ import { STRINGS } from '../strings.js';
  * @property {number} priority - Higher wins when several rules match
  * @property {(ctx: DiagnosticContext) => boolean} match
  * @property {(ctx: DiagnosticContext) => string} explain
+ * @property {string[]} [needles] - Lowercase substrings this rule looks for in
+ *   the log, so the panel can quote the lines that triggered it. Omitted by
+ *   rules driven by inspect facts, which have no log evidence to quote.
  * @property {(ctx: DiagnosticContext) => FixSuggestion|null} [fix]
  */
 
@@ -110,6 +113,7 @@ export const DIAGNOSTIC_RULES = [
         'superuser password is not specified',
         'database is uninitialized and superuser password is not specified'
       ),
+    needles: ['superuser password is not specified'],
     explain: () => STRINGS.diagnostics.explain['postgres-missing-password'],
     fix: () => ({
       kind: 'add-env',
@@ -133,6 +137,10 @@ export const DIAGNOSTIC_RULES = [
         ) || profilePointsAtMysql
       );
     },
+    needles: [
+      'you need to specify one of mysql_root_password',
+      'you need to specify one of mariadb_root_password',
+    ],
     explain: () => STRINGS.diagnostics.explain['mysql-missing-password'],
     fix: (ctx) => {
       const key =
@@ -159,6 +167,10 @@ export const DIAGNOSTIC_RULES = [
         'accept_eula',
         'mssql: this is an unattended environment'
       ),
+    needles: [
+      'the microsoft software license terms must be accepted',
+      'accept_eula',
+    ],
     explain: () => STRINGS.diagnostics.explain['mssql-missing-eula'],
     fix: () => ({
       kind: 'add-env',
@@ -177,6 +189,7 @@ export const DIAGNOSTIC_RULES = [
         'address already in use',
         'bind: address already in use'
       ),
+    needles: ['port is already allocated', 'address already in use'],
     explain: () => STRINGS.diagnostics.explain['port-in-use'],
     // The concrete free port is chosen later, by applyFix, which owns the
     // lookup against the real container list.
@@ -236,12 +249,18 @@ export const DIAGNOSTIC_RULES = [
         'no entrypoint specified',
         'no cmd / entrypoint specified'
       ),
+    needles: [
+      'no command specified',
+      'no entrypoint specified',
+      'no cmd / entrypoint specified',
+    ],
     explain: () => STRINGS.diagnostics.explain['no-command'],
   },
   {
     id: 'volume-permission-denied',
     priority: 50,
     match: (ctx) => logHas(ctx, 'permission denied'),
+    needles: ['permission denied'],
     explain: () => STRINGS.diagnostics.explain['volume-permission-denied'],
   },
   {
@@ -253,6 +272,7 @@ export const DIAGNOSTIC_RULES = [
         'executable file not found',
         'is not recognized as an internal'
       ),
+    needles: ['executable file not found', 'is not recognized as an internal'],
     explain: () => STRINGS.diagnostics.explain['executable-not-found'],
   },
   {
@@ -267,6 +287,11 @@ export const DIAGNOSTIC_RULES = [
         'could not connect to server',
         'econnrefused'
       ),
+    needles: [
+      'connection refused',
+      'could not connect to server',
+      'econnrefused',
+    ],
     explain: () => STRINGS.diagnostics.explain['connection-refused'],
   },
 ];
