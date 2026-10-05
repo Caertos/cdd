@@ -127,6 +127,10 @@ export function getLogsStream(containerId, onData, onEnd, onError) {
  * every failing container the user moves over, and D9 is exactly this bug in
  * the logs viewer.
  *
+ * `follow: false` is what keeps this bounded. A followed stream on a
+ * `restarting` container never ends, and the panel diagnoses those too, so
+ * following would hang rather than return.
+ *
  * Never rejects. A container with no output, a vanished container or a broken
  * socket all resolve to an empty array, which the panel renders as "nothing to
  * show" instead of crashing. Same contract as getContainerDetails.
@@ -135,16 +139,35 @@ export function getLogsStream(containerId, onData, onEnd, onError) {
  * @param {number} [lines=50] - How many lines to read
  * @returns {Promise<string[]>}
  */
+/**
+ * Normalise whatever docker-modem handed us into bytes.
+ *
+ * With `follow: false` and a callback, docker-modem does not give us a stream:
+ * it collects the whole response, sniffs it for JSON, and passes either the
+ * parsed value or the raw Buffer. The sniff means a container whose last log
+ * line happens to be a single JSON document arrives as an object, so
+ * stringifying it back is what keeps that case readable.
+ *
+ * A real stream is still accepted, in case a future version streams instead.
+ *
+ * @param {unknown} payload
+ * @returns {Buffer}
+ */
+function toBuffer(payload) {
+  if (Buffer.isBuffer(payload)) return payload;
+  if (typeof payload === 'string') return Buffer.from(payload, 'utf8');
+  if (payload === null || payload === undefined) return Buffer.alloc(0);
+  return Buffer.from(JSON.stringify(payload) ?? '', 'utf8');
+}
+
 export function getLogsTail(containerId, lines = DEFAULT_TAIL_LINES) {
   return new Promise((resolve) => {
     const wanted =
       Number.isFinite(lines) && lines > 0
         ? Math.floor(lines)
         : DEFAULT_TAIL_LINES;
-    const chunks = [];
 
-    function finish() {
-      const combined = Buffer.concat(chunks);
+    function finish(combined) {
       const demuxed = demultiplexLogStream(combined);
       const text = demuxed
         ? `${demuxed.stdout}${demuxed.stderr}`
@@ -164,7 +187,7 @@ export function getLogsTail(containerId, lines = DEFAULT_TAIL_LINES) {
       );
       container.logs(
         { follow: false, stdout: true, stderr: true, tail: wanted },
-        (err, stream) => {
+        (err, payload) => {
           if (err) {
             logger.error(
               'Failed to read logs for container %s',
@@ -174,17 +197,23 @@ export function getLogsTail(containerId, lines = DEFAULT_TAIL_LINES) {
             resolve([]);
             return;
           }
-          stream.on('data', (chunk) => chunks.push(Buffer.from(chunk)));
-          stream.on('end', finish);
-          stream.on('error', (streamErr) => {
-            // Keep whatever arrived before the break.
-            logger.error(
-              'Log read for container %s ended early',
-              containerId,
-              streamErr
-            );
-            finish();
-          });
+          if (payload && typeof payload.on === 'function') {
+            const chunks = [];
+            const collect = () => finish(Buffer.concat(chunks));
+            payload.on('data', (chunk) => chunks.push(toBuffer(chunk)));
+            payload.on('end', collect);
+            payload.on('error', (streamErr) => {
+              // Keep whatever arrived before the break.
+              logger.error(
+                'Log read for container %s ended early',
+                containerId,
+                streamErr
+              );
+              collect();
+            });
+            return;
+          }
+          finish(toBuffer(payload));
         }
       );
     } catch (err) {

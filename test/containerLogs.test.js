@@ -325,6 +325,39 @@ describe('getLogsTail', () => {
     await expect(getLogsTail('cid')).resolves.toEqual(['partial']);
   });
 
+  test('docker-modem hands us a buffered payload, not a stream', async () => {
+    // follow:false makes docker-modem collect the whole response and pass a
+    // Buffer. Reading it as a stream threw "stream.on is not a function",
+    // which only a real Docker daemon could have told us.
+    const { getLogsTail } = await loadLogs((opts, cb) =>
+      cb(null, Buffer.from('from a buffer\n'))
+    );
+    await expect(getLogsTail('cid')).resolves.toEqual(['from a buffer']);
+  });
+
+  test('a payload that docker-modem parsed as JSON is stringified back', async () => {
+    // docker-modem sniffs the body for JSON before deciding what to pass on,
+    // so a single JSON log line arrives as an object.
+    const { getLogsTail } = await loadLogs((opts, cb) =>
+      cb(null, { level: 'info', msg: 'started' })
+    );
+    const lines = await getLogsTail('cid');
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toContain('started');
+  });
+
+  test('a null payload is an empty log, not a crash', async () => {
+    const { getLogsTail } = await loadLogs((opts, cb) => cb(null, null));
+    await expect(getLogsTail('cid')).resolves.toEqual([]);
+  });
+
+  test('a payload that is already a string is read as text', async () => {
+    const { getLogsTail } = await loadLogs((opts, cb) =>
+      cb(null, 'plain string payload\n')
+    );
+    await expect(getLogsTail('cid')).resolves.toEqual(['plain string payload']);
+  });
+
   test('a nonsense line count falls back to the default', async () => {
     let seen = null;
     const { getLogsTail } = await withTail([Buffer.from('a\n')], (opts) => {
