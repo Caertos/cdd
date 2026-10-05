@@ -8,6 +8,20 @@ export const REFRESH_INTERVALS = {
   CONTAINER_STATS: 1500,
 };
 
+/**
+ * Health engine thresholds (milliseconds, except where noted).
+ * - CRASH_LOOP_MAX_UPTIME: died before this → crash-loop
+ * - STARTING_GRACE: just started → starting
+ * - RESTART_WINDOW: window in which restarts count as a loop
+ * - RESTART_COUNT_ALERT: restarts within the window → restarting
+ */
+export const HEALTH_THRESHOLDS = {
+  CRASH_LOOP_MAX_UPTIME: 10_000,
+  STARTING_GRACE: 5_000,
+  RESTART_WINDOW: 60_000,
+  RESTART_COUNT_ALERT: 3,
+};
+
 /** Number of steps in the container creation wizard. 5 since TASK-4 (review step). */
 export const WIZARD_STEP_COUNT = 5;
 
