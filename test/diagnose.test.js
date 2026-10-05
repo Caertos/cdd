@@ -407,3 +407,45 @@ describe('diagnose — rules without declared needles', () => {
     expect(result.evidence).toHaveLength(1);
   });
 });
+
+describe('a running container is never told it finished', () => {
+  // Regression: Docker reports State.ExitCode as 0 while a container runs, so
+  // on facts alone a container inspected within FAST_EXIT_MS of starting was
+  // diagnosed as "it finished its work and exited on purpose" — a confident,
+  // completely false claim about a container that was still alive.
+  const justStarted = (code) => verdictOf(code, { exitCode: 0, uptimeMs: 400 });
+
+  test.each([['running'], ['starting']])(
+    'shouldDiagnose says no for %s',
+    (code) => {
+      expect(shouldDiagnose(justStarted(code))).toBe(false);
+    }
+  );
+
+  test.each([['running'], ['starting']])(
+    'describeWhat does not say "finished" for %s',
+    (code) => {
+      expect(describeWhat(justStarted(code))).not.toContain('finished');
+    }
+  );
+
+  test.each([['running'], ['starting']])(
+    'the clean-exit rule does not fire for %s',
+    (code) => {
+      expect(diagnose(ctx({ verdict: justStarted(code) })).ruleId).toBeNull();
+    }
+  );
+
+  test('a genuinely finished job is still diagnosed', () => {
+    const finished = verdictOf('stopped', { exitCode: 0, uptimeMs: 400 });
+    expect(shouldDiagnose(finished)).toBe(true);
+    expect(describeWhat(finished)).toContain('finished');
+    expect(diagnose(ctx({ verdict: finished })).ruleId).toBe('clean-exit');
+  });
+
+  test('a long-running container stopped by hand is not a finished job', () => {
+    const stopped = verdictOf('stopped', { exitCode: 0, uptimeMs: 600_000 });
+    expect(shouldDiagnose(stopped)).toBe(false);
+    expect(describeWhat(stopped)).toBe('It is stopped.');
+  });
+});

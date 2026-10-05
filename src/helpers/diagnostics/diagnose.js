@@ -34,6 +34,30 @@ const DIAGNOSABLE_CODES = new Set([
 ]);
 
 /**
+ * Did the container succeed quickly — a job, not a service?
+ *
+ * The `code` guard is load-bearing. Docker reports `ExitCode: 0` as the
+ * default for a container that is *running*, so on facts alone a container
+ * inspected within FAST_EXIT_MS of starting would be diagnosed as "it
+ * finished its work and exited on purpose" — a confident, completely false
+ * claim about a container that is still alive. TASK-7 only reaches the
+ * `stopped` verdict after ruling out running and starting, so requiring it
+ * here is what keeps the answer true.
+ *
+ * @param {import('../health.js').HealthVerdict|null} verdict
+ * @returns {boolean}
+ */
+export function isCleanQuickExit(verdict) {
+  if (!verdict || verdict.code !== 'stopped') return false;
+  const { exitCode, uptimeMs } = verdict.facts ?? {};
+  return (
+    exitCode === 0 &&
+    typeof uptimeMs === 'number' &&
+    uptimeMs < HEALTH_THRESHOLDS.FAST_EXIT_MS
+  );
+}
+
+/**
  * Translate a health verdict into the "what happened" sentence.
  *
  * @param {import('../health.js').HealthVerdict|null} verdict
@@ -64,7 +88,7 @@ export function describeWhat(verdict) {
     return 'Its own health check reports it as unhealthy.';
   }
 
-  if (exitsCleanlyFast(facts)) {
+  if (isCleanQuickExit(verdict)) {
     return 'It finished and exited on its own, almost immediately.';
   }
 
@@ -90,22 +114,6 @@ export function describeWhat(verdict) {
 }
 
 /**
- * True when the container succeeded quickly — a job, not a service.
- * Reads the verdict's facts rather than the code, because TASK-7 reports
- * this as a plain `stopped`, the same as a deliberate `docker stop`.
- *
- * @param {{exitCode: number|null, uptimeMs: number|null}} facts
- * @returns {boolean}
- */
-function exitsCleanlyFast(facts) {
-  return (
-    facts?.exitCode === 0 &&
-    typeof facts.uptimeMs === 'number' &&
-    facts.uptimeMs < HEALTH_THRESHOLDS.FAST_EXIT_MS
-  );
-}
-
-/**
  * Does this verdict deserve a diagnosis panel?
  *
  * Decided by `code`, never by `level`: TASK-7 puts `paused` at `warn` even
@@ -119,7 +127,7 @@ function exitsCleanlyFast(facts) {
 export function shouldDiagnose(verdict) {
   if (!verdict) return false;
   if (DIAGNOSABLE_CODES.has(verdict.code)) return true;
-  return exitsCleanlyFast(verdict.facts);
+  return isCleanQuickExit(verdict);
 }
 
 /**

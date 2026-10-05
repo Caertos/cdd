@@ -227,6 +227,19 @@ describe('clean-exit', () => {
     expect(matched(context)[0]).toBe('clean-exit');
   });
 
+  test('a running container is not a finished job', () => {
+    // Docker keeps State.ExitCode at 0 while a container runs.
+    const context = ctx({
+      container: { id: 'e', name: 'live', image: 'alpine:3' },
+      verdict: evaluateHealth(
+        { state: 'running', status: 'Up Less than a second' },
+        { ...exited({ exitCode: 0, uptimeMs: 400 }), state: 'running' },
+        NOW
+      ),
+    });
+    expect(matched(context)).not.toContain('clean-exit');
+  });
+
   test('exit 0 after a long run is a normal stop, not a diagnosis', () => {
     const context = ctx({
       details: exited({ exitCode: 0, uptimeMs: 60_000 }),

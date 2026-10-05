@@ -206,9 +206,13 @@ export const DIAGNOSTIC_RULES = [
   },
   {
     // A verdict fact rather than a log message: the container succeeded.
+    // The code guard matters as much as the exit code — Docker reports
+    // ExitCode 0 while a container runs, so facts alone would call a container
+    // that just started "a job that finished on purpose".
     id: 'clean-exit',
     priority: 80,
     match: (ctx) => {
+      if (ctx.verdict?.code !== 'stopped') return false;
       const { exitCode, uptimeMs } = factsOf(ctx);
       return (
         exitCode === 0 &&
