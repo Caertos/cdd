@@ -63,6 +63,49 @@ describe('containerActions service functions (mocked ESM imports)', () => {
     expect(port).toHaveProperty('source');
   });
 
+  test('createContainer leaves the port unpublished when no host port is free', async () => {
+    const imageUtilsMock = {
+      imageExists: jest.fn().mockResolvedValue(true),
+      pullImage: jest.fn()
+    };
+
+    // The only port the image exposes is already taken on the host.
+    const inspectMock = jest
+      .fn()
+      .mockResolvedValue({ Config: { ExposedPorts: { '65535/tcp': {} } } });
+    const dockerMock = {
+      createContainer: jest.fn().mockResolvedValue({ id: 'cid-nofree' }),
+      getImage: jest.fn().mockReturnValue({ inspect: inspectMock }),
+      listContainers: jest
+        .fn()
+        .mockResolvedValue([{ Ports: [{ PublicPort: 65535 }] }])
+    };
+
+    await jest.unstable_mockModule('../src/helpers/dockerService/serviceComponents/imageUtils.js', () => ({
+      ...imageUtilsMock
+    }));
+
+    await jest.unstable_mockModule('../src/helpers/dockerService/dockerService.js', () => ({
+      docker: dockerMock
+    }));
+
+    const mod = await import('../src/helpers/dockerService/serviceComponents/containerActions.js');
+    const { logger } = await import('../src/helpers/logger.js');
+    const warn = jest.spyOn(logger, 'warn').mockImplementation(() => {});
+    const result = await mod.createContainer('nginx:latest', {});
+
+    // The container is still created, just without a host binding.
+    const options = dockerMock.createContainer.mock.calls[0][0];
+    expect(options.HostConfig?.PortBindings?.['65535/tcp']).toBeUndefined();
+    expect(result.ports).toEqual([]);
+    // Never silently drop a port: it is logged.
+    expect(warn).toHaveBeenCalledWith(
+      'No free host port at or above %s for %s',
+      '65535',
+      '65535/tcp'
+    );
+  });
+
   test('createContainer uses IMAGE_PROFILES defaultPort as fallback when ExposedPorts empty', async () => {
     const imageUtilsMock = {
       imageExists: jest.fn().mockResolvedValue(true),
@@ -202,6 +245,31 @@ describe('containerActions service functions (mocked ESM imports)', () => {
     const ds = await import('../src/helpers/dockerService/dockerService.js');
     expect(ds.docker.getContainer).toHaveBeenCalledWith('abc');
     expect(removeMock).toHaveBeenCalledWith({ force: true });
+  });
+
+  test('removeContainer gives up instead of hanging when Docker never answers', async () => {
+    jest.useFakeTimers({ doNotFake: ['setImmediate', 'nextTick'] });
+    try {
+      const dockerMock = {
+        getContainer: jest
+          .fn()
+          .mockReturnValue({ remove: jest.fn().mockReturnValue(new Promise(() => {})) }),
+      };
+
+      await jest.unstable_mockModule('../src/helpers/dockerService/dockerService.js', () => ({ docker: dockerMock }));
+      await jest.unstable_mockModule('../src/helpers/dockerService/serviceComponents/imageUtils.js', () => ({ imageExists: jest.fn(), pullImage: jest.fn() }));
+
+      const mod = await import('../src/helpers/dockerService/serviceComponents/containerActions.js');
+
+      const pending = mod.removeContainer('abc');
+      const assertion = expect(pending).rejects.toThrow(
+        'Error removing container: Operation timed out'
+      );
+      await jest.advanceTimersByTimeAsync(30_000);
+      await assertion;
+    } finally {
+      jest.useRealTimers();
+    }
   });
 
   test('start/stop/restart call respective container methods', async () => {

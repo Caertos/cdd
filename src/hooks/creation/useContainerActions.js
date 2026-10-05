@@ -36,11 +36,18 @@ export function useContainerActions({ containers, onAction }) {
   /**
    * Handles a generic container action and sets feedback.
    * @param {Function} actionFn - The async action function (start, stop, etc)
-   * @param {string} actionLabel - Action label for feedback
+   * @param {string} actionLabel - Gerund shown while it runs ('Stopping')
+   * @param {string} actionVerb - Infinitive used in the failure message ('stop')
    * @param {number} selected - Index of selected container
    * @param {Function} [stateCheck] - Optional function to check state before action
    */
-  async function handleAction({ actionFn, actionLabel, selected, stateCheck }) {
+  async function handleAction({
+    actionFn,
+    actionLabel,
+    actionVerb,
+    selected,
+    stateCheck,
+  }) {
     const container = containers[selected];
     if (!container) return;
     if (stateCheck) {
@@ -59,7 +66,7 @@ export function useContainerActions({ containers, onAction }) {
       safeCall(onAction);
     } catch (err) {
       setTimedMessage(
-        `Failed to ${actionLabel.toLowerCase()} container: ${err.message}`,
+        `Failed to ${actionVerb ?? actionLabel} container: ${err.message}`,
         'red'
       );
     }

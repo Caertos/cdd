@@ -1,5 +1,6 @@
 import { normalizeImageName } from './imageNameUtils.js';
 import { isSecretKey, findWeakSecrets } from './secrets.js';
+import { hostPortsOf } from './portUtils.js';
 
 /**
  * @typedef {Object} SummaryRow
@@ -69,7 +70,10 @@ export function buildCreationSummary(values, ctx) {
     });
   } else if (previewedPorts && previewedPorts.length > 0) {
     const portLines = previewedPorts.map(
-      (p) => `${p.hostPort}\u2192${p.containerPort}/${p.protocol}`
+      (p) =>
+        `${p.hostPort ?? '(no free host port)'}→${p.containerPort}/${
+          p.protocol
+        }`
     );
     rows.push({
       key: 'ports',
@@ -128,7 +132,7 @@ export function detectPortConflicts(portInput, containers) {
     const [hostPort] = pair.split(':');
     if (!hostPort) continue;
     for (const container of containers) {
-      if (container.ports?.includes(hostPort)) {
+      if (hostPortsOf(container).includes(hostPort)) {
         conflicts.push({ hostPort, takenBy: container.name || container.id });
       }
     }

@@ -576,16 +576,23 @@ export function useContainerCreation({
     });
     setReviewRows(rows);
 
+    // One read of the container list, already normalized. buildCreationWarnings
+    // and detectPortConflicts both need `name`/`id`/`ports`, which the raw
+    // docker.listContainers() shape does not carry — so it could never fire.
+    let containers = [];
+    try {
+      const { getContainers } =
+        await import('../../helpers/dockerService/serviceComponents/containerList.js');
+      containers = await getContainers();
+    } catch {
+      // Docker not available — warnings will be partial
+    }
+
     // Preview auto-ports if user left ports empty
     let previewedPorts = null;
     if (!currentValues.portInput.trim()) {
       setIsLoadingPreview(true);
       try {
-        const { docker } =
-          await import('../../helpers/dockerService/dockerService.js');
-        const containers = await docker
-          .listContainers({ all: true })
-          .catch(() => []);
         previewedPorts = await previewAutoPorts(
           currentValues.imageName,
           containers,
@@ -608,16 +615,11 @@ export function useContainerCreation({
     }
 
     // Build warnings (pure, needs container list + image check)
-    let containers = [];
     let imageIsLocal = null;
     try {
       const { imageExists } =
         await import('../../helpers/dockerService/serviceComponents/imageUtils.js');
       imageIsLocal = await imageExists(currentValues.imageName);
-      // We need container list for port/name conflict detection
-      const { docker } =
-        await import('../../helpers/dockerService/dockerService.js');
-      containers = await docker.listContainers({ all: true });
     } catch {
       // Docker not available — warnings will be partial
     }

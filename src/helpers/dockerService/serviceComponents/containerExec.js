@@ -52,10 +52,13 @@ export async function detectShell(containerId) {
       );
     });
 
+  let timer;
   try {
     const hasBash = await Promise.race([
       tryShell('bash'),
-      new Promise((r) => setTimeout(() => r(false), TIMEOUTS.CONTAINER_OP)),
+      new Promise((r) => {
+        timer = setTimeout(() => r(false), TIMEOUTS.CONTAINER_OP);
+      }),
     ]);
     if (hasBash) {
       logger.debug('Detected bash in container %s', containerId);
@@ -63,6 +66,10 @@ export async function detectShell(containerId) {
     }
   } catch {
     // ignore
+  } finally {
+    // Otherwise the 30s race timer outlives the detection and keeps the
+    // event loop alive for nothing.
+    clearTimeout(timer);
   }
 
   logger.debug('Falling back to sh in container %s', containerId);
@@ -154,6 +161,16 @@ export function execCommand(containerId, cmd, options = {}) {
             return reject(new Error(`Exec start failed: ${startErr.message}`));
           }
 
+          // Every exit clears the timeout: without this the timer would
+          // reject an already-settled promise 30s later.
+          let timer;
+          const settle = (fn) => (value) => {
+            clearTimeout(timer);
+            fn(value);
+          };
+          const ok = settle(resolve);
+          const fail = settle(reject);
+
           let stdout = '';
           let stderr = '';
 
@@ -166,7 +183,7 @@ export function execCommand(containerId, cmd, options = {}) {
 
           stream.on('end', () => {
             exec.inspect((inspectErr, info) => {
-              resolve({
+              ok({
                 stdout: stdout.trim(),
                 stderr: stderr.trim(),
                 exitCode: info?.ExitCode ?? -1,
@@ -175,12 +192,12 @@ export function execCommand(containerId, cmd, options = {}) {
           });
 
           stream.on('error', (streamErr) => {
-            reject(new Error(`Stream error: ${streamErr.message}`));
+            fail(new Error(`Stream error: ${streamErr.message}`));
           });
 
           if (options.timeout) {
-            setTimeout(() => {
-              reject(new Error('Command timed out'));
+            timer = setTimeout(() => {
+              fail(new Error('Command timed out'));
             }, options.timeout);
           }
         });

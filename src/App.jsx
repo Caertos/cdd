@@ -25,6 +25,7 @@ import { KeyHUD } from './components/KeyHUD.jsx';
 import { HelpPanel } from './components/HelpPanel.jsx';
 import { ConnectionNotice } from './components/ConnectionNotice.jsx';
 import Footer from './components/Footer.jsx';
+import { STRINGS } from './helpers/strings.js';
 
 export default function App() {
   const { suspendTerminal } = useApp();
@@ -104,7 +105,10 @@ export default function App() {
         <Header count={containers.length} />
         <Text> </Text>
         {connection.isStale && (
-          <Text color="yellow">{'⚠ '}Lost connection to Docker — retrying</Text>
+          <Text color="yellow">
+            {'⚠ '}
+            {STRINGS.connection.staleWarning}
+          </Text>
         )}
         <ContainerSection
           containers={containers}
@@ -128,12 +132,9 @@ export default function App() {
             borderColor="gray"
             padding={1}
           >
-            <Text color="cyan">Debug log — press D or ESC to close</Text>
+            <Text color="cyan">{STRINGS.debugTitle}</Text>
             {controls.debugLogs.length === 0 ? (
-              <Text dimColor>
-                No debug entries yet. Run with CDD_LOG_LEVEL=debug for verbose
-                output.
-              </Text>
+              <Text dimColor>{STRINGS.debugEmpty}</Text>
             ) : (
               controls.debugLogs.slice(-15).map((line, idx) => (
                 <Text key={idx} color="gray">

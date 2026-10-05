@@ -1,15 +1,6 @@
 import React from 'react';
 import { Box, Text } from 'ink';
-
-const CONTEXT_LABELS = {
-  list: 'Container List',
-  wizard: 'Creation Wizard',
-  'wizard-list': 'Suggestion List',
-  logs: 'Logs Viewer',
-  confirm: 'Confirmation',
-  help: 'Help',
-  debug: 'Debug Panel',
-};
+import { STRINGS } from '../helpers/strings.js';
 
 /**
  * Full help panel for the current context.
@@ -21,7 +12,7 @@ const CONTEXT_LABELS = {
  * @param {import('../helpers/keymap.js').Binding[]} props.bindings
  */
 export function HelpPanel({ context, bindings }) {
-  const title = CONTEXT_LABELS[context] ?? context;
+  const title = STRINGS.contextLabels[context] ?? context;
 
   return (
     <Box

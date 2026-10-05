@@ -1,7 +1,7 @@
 /**
  * @jest-environment node
  */
-import { findAvailablePort } from '../src/helpers/portUtils.js';
+import { findAvailablePort, hostPortsOf } from '../src/helpers/portUtils.js';
 
 describe('findAvailablePort — numeric base', () => {
   test('free base port is returned as-is', () => {
@@ -54,9 +54,49 @@ describe('findAvailablePort — upper bound', () => {
     expect(findAvailablePort('65535', new Set())).toBe('65535');
   });
 
-  // D20 — fixed by TASK-19. Never hand out a port outside 1..65535.
-  test.failing('never returns a port above 65535', () => {
+  // D20. Never hand out a port outside 1..65535.
+  test('never returns a port above 65535', () => {
     const result = findAvailablePort('65535', new Set(['65535']));
-    expect(result === null || Number(result) <= 65535).toBe(true); // today: '65536'
+    expect(result).toBeNull();
+  });
+
+  test('does not mutate the Set when no port is available', () => {
+    const used = new Set(['65535']);
+    findAvailablePort('65535', used);
+    expect(used.has('65536')).toBe(false);
+  });
+});
+
+describe('hostPortsOf', () => {
+  test('reads the raw Docker API shape', () => {
+    expect(
+      hostPortsOf({ Ports: [{ PublicPort: 8080, PrivatePort: 80 }] })
+    ).toEqual(['8080']);
+  });
+
+  test('reads the normalized "host:container" shape', () => {
+    expect(hostPortsOf({ ports: ['8080:80', '443:443'] })).toEqual([
+      '8080',
+      '443',
+    ]);
+  });
+
+  test('an exposed but unpublished port is not a host port', () => {
+    expect(hostPortsOf({ ports: ['80'] })).toEqual([]);
+  });
+
+  test('a container without ports → empty', () => {
+    expect(hostPortsOf({})).toEqual([]);
+    expect(hostPortsOf(null)).toEqual([]);
+  });
+
+  test('duplicates across both shapes collapse', () => {
+    expect(
+      hostPortsOf({ Ports: [{ PublicPort: 80 }], ports: ['80:80', '81:81'] })
+    ).toEqual(['80', '81']);
+  });
+
+  test('a private port with no PublicPort is skipped', () => {
+    expect(hostPortsOf({ Ports: [{ PrivatePort: 80 }] })).toEqual([]);
   });
 });

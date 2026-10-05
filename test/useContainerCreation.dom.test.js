@@ -609,11 +609,12 @@ describe('useContainerCreation — review warnings against real containers', () 
     docker.listContainers.mockResolvedValue([]);
   });
 
-  async function reachReview(expose, containerName) {
+  async function reachReview(expose, containerName, portInput = '') {
     act(() => { expose.current.setImageName('redis'); });
     act(() => { expose.current.nextStep(); }); // → name
     act(() => { expose.current.setContainerName(containerName); });
     act(() => { expose.current.nextStep(); }); // → ports
+    act(() => { expose.current.setPortInput(portInput); });
     act(() => { expose.current.nextStep(); }); // → env
     await act(async () => { await expose.current.nextStep(); }); // → review
   }
@@ -629,13 +630,34 @@ describe('useContainerCreation — review warnings against real containers', () 
     expect(kinds).not.toContain('name-taken');
   });
 
-  // D22 — fixed by TASK-19. prepareReview() hands raw API objects to buildCreationWarnings.
-  test.failing('warns about a container name already in use', async () => {
+  // D22. prepareReview() handed raw API objects to buildCreationWarnings.
+  test('warns about a container name already in use', async () => {
     docker.listContainers.mockResolvedValue([rawWeb]);
     const expose = { current: null };
     render(<HookTester onCreate={() => {}} onCancel={() => {}} dbImages={[]} expose={expose} />);
     await reachReview(expose, 'web');
     expect(expose.current.step).toBe(4);
     expect(expose.current.reviewWarnings.map((w) => w.kind)).toContain('name-taken');
+  });
+
+  test('warns about a host port already published', async () => {
+    docker.listContainers.mockResolvedValue([rawWeb]);
+    const expose = { current: null };
+    render(<HookTester onCreate={() => {}} onCancel={() => {}} dbImages={[]} expose={expose} />);
+    await reachReview(expose, 'other', '8080:80');
+    expect(expose.current.step).toBe(4);
+    const warning = expose.current.reviewWarnings.find((w) => w.kind === 'port-taken');
+    expect(warning).toBeDefined();
+    expect(warning.text).toContain('8080');
+    expect(warning.text).toContain('web');
+  });
+
+  test('reads the container list once for the whole review', async () => {
+    docker.listContainers.mockClear();
+    docker.listContainers.mockResolvedValue([]);
+    const expose = { current: null };
+    render(<HookTester onCreate={() => {}} onCancel={() => {}} dbImages={[]} expose={expose} />);
+    await reachReview(expose, 'web');
+    expect(docker.listContainers).toHaveBeenCalledTimes(1);
   });
 });

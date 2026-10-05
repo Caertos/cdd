@@ -3,7 +3,7 @@ import { imageExists, pullImage } from './imageUtils.js';
 import { TIMEOUTS, IMAGE_PROFILES } from '../../constants.js';
 import { logger } from '../../logger.js';
 import { normalizeImageName } from '../../imageNameUtils.js';
-import { findAvailablePort } from '../../portUtils.js';
+import { findAvailablePort, hostPortsOf } from '../../portUtils.js';
 import { redactForLog } from '../../secrets.js';
 import {
   validateImageName,
@@ -117,10 +117,8 @@ export async function createContainer(
               TIMEOUTS.CONTAINER_OP
             );
             containers.forEach((container) => {
-              (container.Ports || []).forEach((portInfo) => {
-                if (portInfo && portInfo.PublicPort) {
-                  usedHostPorts.add(String(portInfo.PublicPort));
-                }
+              hostPortsOf(container).forEach((port) => {
+                usedHostPorts.add(port);
               });
             });
           } catch (err) {
@@ -172,6 +170,16 @@ export async function createContainer(
               const containerPort = parts[0];
               const protocol = parts[1] || 'tcp';
               const hostPort = pickNextAvailablePort(containerPort);
+              if (hostPort === null) {
+                // No free host port left. Leave the port unpublished rather
+                // than binding something Docker would reject.
+                logger.warn(
+                  'No free host port at or above %s for %s',
+                  containerPort,
+                  portKey
+                );
+                return;
+              }
               createOpts.HostConfig.PortBindings[portKey] = [
                 { HostPort: hostPort },
               ];

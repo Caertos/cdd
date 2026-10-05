@@ -1,14 +1,14 @@
 import React from 'react';
 import { useInput } from 'ink';
-import { useContainerActions } from './creation/useContainerActions';
-import { useContainerCreation } from './creation/useContainerCreation';
-import { useLogsViewer } from './creation/useLogsViewer';
-import { useContainerSelection } from './navigation/useContainerSelection';
-import { useDebugLogs } from './debug/useDebugLogs';
-import { useEraseConfirmation } from './useEraseConfirmation';
-import { useConfirmation } from './useConfirmation';
-import { useExitHandler } from './useExitHandler';
-import { useShellMode } from './useShellMode';
+import { useContainerActions } from './creation/useContainerActions.js';
+import { useContainerCreation } from './creation/useContainerCreation.js';
+import { useLogsViewer } from './creation/useLogsViewer.js';
+import { useContainerSelection } from './navigation/useContainerSelection.js';
+import { useDebugLogs } from './debug/useDebugLogs.js';
+import { useEraseConfirmation } from './useEraseConfirmation.js';
+import { useConfirmation } from './useConfirmation.js';
+import { useExitHandler } from './useExitHandler.js';
+import { useShellMode } from './useShellMode.js';
 import { getLogsStream } from '../helpers/dockerService/serviceComponents/containerLogs.js';
 import { createContainer as svcCreateContainer } from '../helpers/dockerService/serviceComponents/containerActions.js';
 import { buildContainerOptions } from '../helpers/containerOptionsBuilder.js';
@@ -110,6 +110,7 @@ export function useControls(containers = [], overrides = {}) {
       actions.handleAction({
         actionFn: async (id) => await actions.removeContainer(id),
         actionLabel: 'Erasing',
+        actionVerb: 'erase',
         selected: selection.selected,
       });
       actions.setMessageColor('yellow');
@@ -236,6 +237,7 @@ export function useControls(containers = [], overrides = {}) {
         actions.handleAction({
           actionFn: async (id) => await actions.startContainer(id),
           actionLabel: 'Starting',
+          actionVerb: 'start',
           selected: selection.selected,
           stateCheck: (c) =>
             (c.state === 'running' || c.status === 'running') &&
@@ -248,6 +250,7 @@ export function useControls(containers = [], overrides = {}) {
         actions.handleAction({
           actionFn: async (id) => await actions.stopContainer(id),
           actionLabel: 'Stopping',
+          actionVerb: 'stop',
           selected: selection.selected,
           stateCheck: (c) =>
             (c.state === 'exited' ||
@@ -263,6 +266,7 @@ export function useControls(containers = [], overrides = {}) {
         actions.handleAction({
           actionFn: async (id) => await actions.restartContainer(id),
           actionLabel: 'Restarting',
+          actionVerb: 'restart',
           selected: selection.selected,
         });
       },
