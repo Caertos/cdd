@@ -85,6 +85,19 @@ describe('buildCreationSummary', () => {
     expect(portsRow.origin).toBe('assigned by CDD');
   });
 
+  test('a previewed port with no free host slot says so instead of printing null', () => {
+    const preview = [
+      { hostPort: null, containerPort: '5432', protocol: 'tcp' },
+    ];
+    const rows = buildCreationSummary(
+      { imageName: 'postgres', containerName: '', portInput: '', envInput: '' },
+      { rawImageInput: 'postgres', imageProfiles: profiles, previewedPorts: preview }
+    );
+    const portsRow = rows.find((r) => r.key === 'ports');
+    expect(portsRow.values[0]).toBe('(no free host port)→5432/tcp');
+    expect(portsRow.values[0]).not.toContain('null');
+  });
+
   test('empty ports without preview shows fallback message', () => {
     const rows = buildCreationSummary(
       { imageName: 'nginx', containerName: '', portInput: '', envInput: '' },

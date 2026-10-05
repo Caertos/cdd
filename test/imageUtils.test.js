@@ -140,7 +140,7 @@ describe('previewAutoPorts', () => {
     ]);
   });
 
-  test('container with ports undefined → ignored without breaking', async () => {
+  test('a container with ports undefined → ignored without breaking', async () => {
     const { previewAutoPorts } = await loadImageUtils(withImage({ '80/tcp': {} }));
     await expect(previewAutoPorts('nginx:alpine', [{}])).resolves.toHaveLength(1);
   });

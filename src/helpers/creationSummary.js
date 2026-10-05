@@ -69,7 +69,10 @@ export function buildCreationSummary(values, ctx) {
     });
   } else if (previewedPorts && previewedPorts.length > 0) {
     const portLines = previewedPorts.map(
-      (p) => `${p.hostPort}\u2192${p.containerPort}/${p.protocol}`
+      (p) =>
+        `${p.hostPort ?? '(no free host port)'}→${p.containerPort}/${
+          p.protocol
+        }`
     );
     rows.push({
       key: 'ports',

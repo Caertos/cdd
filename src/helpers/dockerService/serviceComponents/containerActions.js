@@ -172,6 +172,16 @@ export async function createContainer(
               const containerPort = parts[0];
               const protocol = parts[1] || 'tcp';
               const hostPort = pickNextAvailablePort(containerPort);
+              if (hostPort === null) {
+                // No free host port left. Leave the port unpublished rather
+                // than binding something Docker would reject.
+                logger.warn(
+                  'No free host port at or above %s for %s',
+                  containerPort,
+                  portKey
+                );
+                return;
+              }
               createOpts.HostConfig.PortBindings[portKey] = [
                 { HostPort: hostPort },
               ];
