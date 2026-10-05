@@ -21,6 +21,20 @@ export const STRINGS = {
   stateExited: '🔴 EXITED',
   statePaused: '🟠 PAUSED',
 
+  // ── Health engine (TASK-7) ──
+  // Short headlines for the row; the icon/colour come from levelStyle(level).
+  health: {
+    running: 'RUNNING',
+    starting: 'starting',
+    stopped: 'stopped',
+    crashed: (code) => `crashed · exit ${code}`,
+    crashLoop: (seconds) => `died after ${seconds}s`,
+    restarting: (count) => `restarting (${count}×)`,
+    unhealthy: 'unhealthy',
+    paused: 'PAUSED',
+    unknown: 'UNKNOWN',
+  },
+
   // ── EmptyState ──
   emptyTitle: 'No containers yet.',
   emptyHint: 'Press [C] to create the first one — CDD guides you step by step.',
