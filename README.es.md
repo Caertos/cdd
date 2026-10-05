@@ -100,7 +100,8 @@ Así debería sentirse la experiencia de desarrollo.
 - 🐳 Vista en vivo de todos los contenedores Docker con estadísticas de CPU/memoria
 - 🔄 Auto-refresco cada pocos segundos — siempre actualizado
 - ⌨️ Acciones controladas por teclado: iniciar, detener, reiniciar, ver logs, eliminar
-- 🎨 Estados de contenedor codificados por color y retroalimentación visual
+- 🎨 **Veredictos de salud** — running, starting, stopped, crashed, crash-loop, restarting o unhealthy, leídos de los propios datos de Docker
+- ⚪ Detenido vs caído — un contenedor que paraste tú se ve gris; el rojo se reserva para fallos reales
 - ✨ **Asistente de creación interactivo** — configuración paso a paso con perfiles curados y búsqueda en Hub
 - 🪵 Streaming de logs en tiempo real para el contenedor seleccionado
 - 🐛 Panel de debug en vivo activable con la tecla `D`
