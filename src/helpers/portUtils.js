@@ -4,13 +4,19 @@
  * use the same logic and cannot diverge.
  */
 
+/** Highest valid TCP port. */
+export const MAX_PORT = 65535;
+
 /**
  * Find the next available host port starting from a numeric base.
  * Mutates usedPorts by adding the chosen port.
  *
+ * Returns null when the numeric range is exhausted — a port above 65535 is
+ * never handed out. Callers decide what to do with that; we never invent one.
+ *
  * @param {string} base - Base port string (e.g. '5432')
  * @param {Set<string>} usedPorts - Set of already-used host ports (mutated)
- * @returns {string} The next available port
+ * @returns {string|null} The next available port, or null when there is none
  */
 export function findAvailablePort(base, usedPorts) {
   const numericBase = Number.parseInt(base, 10);
@@ -29,8 +35,11 @@ export function findAvailablePort(base, usedPorts) {
     return candidate;
   }
   let candidate = numericBase;
-  while (usedPorts.has(String(candidate))) {
+  while (candidate <= MAX_PORT && usedPorts.has(String(candidate))) {
     candidate += 1;
+  }
+  if (candidate > MAX_PORT) {
+    return null;
   }
   usedPorts.add(String(candidate));
   return String(candidate);

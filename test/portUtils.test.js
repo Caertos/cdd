@@ -54,9 +54,15 @@ describe('findAvailablePort — upper bound', () => {
     expect(findAvailablePort('65535', new Set())).toBe('65535');
   });
 
-  // D20 — fixed by TASK-19. Never hand out a port outside 1..65535.
-  test.failing('never returns a port above 65535', () => {
+  // D20. Never hand out a port outside 1..65535.
+  test('never returns a port above 65535', () => {
     const result = findAvailablePort('65535', new Set(['65535']));
-    expect(result === null || Number(result) <= 65535).toBe(true); // today: '65536'
+    expect(result).toBeNull();
+  });
+
+  test('does not mutate the Set when no port is available', () => {
+    const used = new Set(['65535']);
+    findAvailablePort('65535', used);
+    expect(used.has('65536')).toBe(false);
   });
 });
