@@ -1,5 +1,5 @@
 import { spawn } from 'child_process';
-import { EXIT_DELAY } from './constants';
+import { EXIT_DELAY } from './constants.js';
 
 /**
  * Show an exit message using provided setters, clear the terminal and exit after a delay.

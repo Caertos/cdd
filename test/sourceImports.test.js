@@ -36,7 +36,7 @@ test('scanner finds the relative imports of App.jsx', () => {
   expect([...code.matchAll(SPEC)].length).toBeGreaterThan(0);
 });
 
-// §5.9 (D19) — fixed by TASK-19.
-test.failing('every relative import carries an extension (valid ESM without fix-imports)', () => {
-  expect(offenders()).toEqual([]); // today: 10 offenders
+// §5.9 (D19)
+test('every relative import carries an extension (valid ESM without fix-imports)', () => {
+  expect(offenders()).toEqual([]);
 });
