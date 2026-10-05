@@ -52,13 +52,18 @@ describe('useContainerActions — handleAction', () => {
     expect(onAction).not.toHaveBeenCalled();
   });
 
-  // D23 — fixed by TASK-19. The label is a gerund ('Stopping'), so the
-  // failure text reads "Failed to stopping container". Control: test above.
-  test.failing('failure message uses the verb, not the gerund', async () => {
+  // D23. The label is a gerund ('Stopping'), so the failure text used to
+  // read "Failed to stopping container". Control: test above.
+  test('failure message uses the verb, not the gerund', async () => {
     const { result } = setup();
     const actionFn = jest.fn().mockRejectedValue(new Error('boom'));
     await act(async () => {
-      await result.current.handleAction({ actionFn, actionLabel: 'Stopping', selected: 0 });
+      await result.current.handleAction({
+        actionFn,
+        actionLabel: 'Stopping',
+        actionVerb: 'stop',
+        selected: 0,
+      });
     });
     expect(result.current.message).toBe('Failed to stop container: boom');
   });

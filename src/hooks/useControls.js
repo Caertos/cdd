@@ -110,6 +110,7 @@ export function useControls(containers = [], overrides = {}) {
       actions.handleAction({
         actionFn: async (id) => await actions.removeContainer(id),
         actionLabel: 'Erasing',
+        actionVerb: 'erase',
         selected: selection.selected,
       });
       actions.setMessageColor('yellow');
@@ -236,6 +237,7 @@ export function useControls(containers = [], overrides = {}) {
         actions.handleAction({
           actionFn: async (id) => await actions.startContainer(id),
           actionLabel: 'Starting',
+          actionVerb: 'start',
           selected: selection.selected,
           stateCheck: (c) =>
             (c.state === 'running' || c.status === 'running') &&
@@ -248,6 +250,7 @@ export function useControls(containers = [], overrides = {}) {
         actions.handleAction({
           actionFn: async (id) => await actions.stopContainer(id),
           actionLabel: 'Stopping',
+          actionVerb: 'stop',
           selected: selection.selected,
           stateCheck: (c) =>
             (c.state === 'exited' ||
@@ -263,6 +266,7 @@ export function useControls(containers = [], overrides = {}) {
         actions.handleAction({
           actionFn: async (id) => await actions.restartContainer(id),
           actionLabel: 'Restarting',
+          actionVerb: 'restart',
           selected: selection.selected,
         });
       },
