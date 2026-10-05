@@ -204,6 +204,36 @@ describe('evaluateHealth — missing or incomplete data', () => {
     );
     expect(v.code).toBe('stopped');
   });
+
+  test('non-numeric inspect fields fall back to safe defaults', () => {
+    const v = evaluateHealth(
+      { state: 'running' },
+      details({
+        state: 'running',
+        restartCount: null,
+        exitCode: 'oops',
+        startedAt: new Date(NOW - 3_600_000).toISOString(),
+        finishedAt: '0001-01-01T00:00:00Z',
+      }),
+      NOW
+    );
+    expect(v.facts.restartCount).toBe(0);
+    expect(v.facts.exitCode).toBeNull();
+    expect(v.code).toBe('running');
+  });
+
+  test('uses the list state when inspect omits it', () => {
+    const v = evaluateHealth(
+      { state: 'running' },
+      details({
+        state: null,
+        startedAt: new Date(NOW - 3_600_000).toISOString(),
+        finishedAt: '0001-01-01T00:00:00Z',
+      }),
+      NOW
+    );
+    expect(v.code).toBe('running');
+  });
 });
 
 describe('computeUptime', () => {
