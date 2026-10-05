@@ -79,6 +79,27 @@ export function validateImageName(name) {
   return { valid: true };
 }
 
+/** Lowest valid TCP port. */
+const MIN_PORT = 1;
+
+/** Highest valid TCP port. */
+const MAX_PORT = 65535;
+
+/**
+ * A port is valid only when it is written as plain digits and lands in range.
+ * `Number()` alone would accept '80.5', '0x50' and '1e3', all of which Docker
+ * rejects later with a much less helpful error.
+ * Leading zeros stay allowed: Docker reads '080' as 80.
+ *
+ * @param {string} value
+ * @returns {boolean}
+ */
+function isPort(value) {
+  if (!/^\d+$/.test(value)) return false;
+  const num = Number(value);
+  return num >= MIN_PORT && num <= MAX_PORT;
+}
+
 /**
  * Validate a comma-separated list of port mappings in the form "host:container".
  * Examples of valid input: "8080:80, 3000:3000"
@@ -96,12 +117,7 @@ export function validatePorts(portInput) {
   if (ports.length === 0) return true;
   const invalid = ports.find((pair) => {
     const [host, cont] = pair.split(':');
-    if (!host || !cont) return true;
-    const hostNum = Number(host);
-    const contNum = Number(cont);
-    if (isNaN(hostNum) || isNaN(contNum)) return true;
-    if (hostNum < 1 || hostNum > 65535) return true;
-    if (contNum < 1 || contNum > 65535) return true;
+    if (!isPort(host) || !isPort(cont)) return true;
     return false;
   });
   return !invalid;

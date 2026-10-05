@@ -196,19 +196,22 @@ describe('validatePorts — range', () => {
     (p) => expect(validatePorts(p)).toBe(true)
   );
 
-  // §5.7 (D18) — fixed by TASK-19. Controls: '1:1' and '65535:65535' above.
-  test.failing('rejects decimal host port', () => {
+  // §5.7 (D18). Controls: '1:1' and '65535:65535' above.
+  test('rejects decimal host port', () => {
     expect(validatePorts('80.5:80')).toBe(false);
   });
 
-  // §5.7 (D18) — fixed by TASK-19.
-  test.failing('rejects hex host port', () => {
+  test('rejects hex host port', () => {
     expect(validatePorts('0x50:80')).toBe(false);
   });
 
-  // §5.7 (D18) — fixed by TASK-19.
-  test.failing('rejects exponent notation', () => {
+  test('rejects exponent notation', () => {
     expect(validatePorts('1e3:80')).toBe(false);
+  });
+
+  // Leading zeros are accepted on purpose: Docker reads '080' as 80.
+  test("accepts a leading-zero port like '080:80'", () => {
+    expect(validatePorts('080:80')).toBe(true);
   });
 });
 
