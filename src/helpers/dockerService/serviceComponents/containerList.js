@@ -53,6 +53,8 @@ export async function getContainers() {
       image: container.Image,
       state: container.State,
       status: container.Status,
+      labels: container.Labels || {},
+      createdAt: container.Created,
       ports: (() => {
         const publicPorts = container.Ports.filter(
           (port) => port.PublicPort
