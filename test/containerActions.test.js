@@ -247,6 +247,31 @@ describe('containerActions service functions (mocked ESM imports)', () => {
     expect(removeMock).toHaveBeenCalledWith({ force: true });
   });
 
+  test('removeContainer gives up instead of hanging when Docker never answers', async () => {
+    jest.useFakeTimers({ doNotFake: ['setImmediate', 'nextTick'] });
+    try {
+      const dockerMock = {
+        getContainer: jest
+          .fn()
+          .mockReturnValue({ remove: jest.fn().mockReturnValue(new Promise(() => {})) }),
+      };
+
+      await jest.unstable_mockModule('../src/helpers/dockerService/dockerService.js', () => ({ docker: dockerMock }));
+      await jest.unstable_mockModule('../src/helpers/dockerService/serviceComponents/imageUtils.js', () => ({ imageExists: jest.fn(), pullImage: jest.fn() }));
+
+      const mod = await import('../src/helpers/dockerService/serviceComponents/containerActions.js');
+
+      const pending = mod.removeContainer('abc');
+      const assertion = expect(pending).rejects.toThrow(
+        'Error removing container: Operation timed out'
+      );
+      await jest.advanceTimersByTimeAsync(30_000);
+      await assertion;
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
   test('start/stop/restart call respective container methods', async () => {
     const startMock = jest.fn().mockResolvedValue(undefined);
     const stopMock = jest.fn().mockResolvedValue(undefined);
