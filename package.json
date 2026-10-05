@@ -28,7 +28,7 @@
   "author": "caertos",
   "license": "ISC",
   "type": "module",
-  "packageManager": "pnpm@12.6.0",
+  "packageManager": "pnpm@12.9.1",
   "engines": {
     "node": ">=18"
   },
