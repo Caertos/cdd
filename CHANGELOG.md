@@ -7,6 +7,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 - Nothing yet.
 
+## [4.9.1] - 2026-10-05
+
+### Changed
+- Release pipeline now publishes to npm from GitHub Actions via npm Trusted Publishing (OIDC) on `v*` tags — no long-lived tokens, automatic provenance.
+
 ## [4.9.0] - 2026-10-05
 
 ### Added
