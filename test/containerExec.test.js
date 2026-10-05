@@ -72,14 +72,14 @@ describe('detectShell', () => {
     await expect(detectShell('a'.repeat(64))).resolves.toBe('sh');
   });
 
-  // §5.1-residual (D14) — fixed by TASK-19. Flip to test() with the fix.
-  test.failing('leaves no pending timers after resolving', async () => {
+  // §5.1-residual (D14)
+  test('leaves no pending timers after resolving', async () => {
     const exec = jest.fn((opts, cb) =>
       cb(null, { start: (o, sc) => sc(null, fakeStream('/bin/bash\n')) })
     );
     const { detectShell } = await loadExec(exec);
     await detectShell('a'.repeat(64));
-    expect(jest.getTimerCount()).toBe(0); // today: 1 (the 30 s race timer)
+    expect(jest.getTimerCount()).toBe(0);
   });
 });
 
@@ -204,8 +204,8 @@ describe('execCommand', () => {
     });
   });
 
-  // §5.1-residual (D14) — fixed by TASK-19. Flip to test() with the fix.
-  test.failing('clears the timeout timer when the command resolves first', async () => {
+  // §5.1-residual (D14)
+  test('clears the timeout timer when the command resolves first', async () => {
     jest.useFakeTimers({ doNotFake: ['setImmediate'] });
     const exec = jest.fn((opts, cb) =>
       cb(null, {
@@ -215,7 +215,7 @@ describe('execCommand', () => {
     );
     const { execCommand } = await loadExec(exec);
     await execCommand('cid', ['x'], { timeout: 5000 });
-    expect(jest.getTimerCount()).toBe(0); // today: 1 (the rejection timer)
+    expect(jest.getTimerCount()).toBe(0);
   });
 
   // Documents a known limitation (see §5.6 note on multiplexed streams).
