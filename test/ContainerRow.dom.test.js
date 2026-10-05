@@ -114,14 +114,44 @@ describe('ContainerRow', () => {
     expect(stopped.container.textContent).not.toContain('CPU:');
   });
 
-  // §5.8 (D12) — fixed by TASK-7 (stateText rewrite). Control: 'unknown state renders uppercased'.
-  test.failing('missing state renders without throwing', async () => {
+  // §5.8 (D12) — fixed by TASK-7 (null-safe stateText).
+  test('missing state renders without throwing', async () => {
     const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
     try {
-      const { container } = await renderRow({ container: { ...base, state: undefined } });
+      const { container } = await renderRow({
+        container: { ...base, state: undefined },
+      });
       expect(container.textContent).toContain('web');
     } finally {
       spy.mockRestore();
     }
+  });
+
+  test('renders a health verdict headline with its level colour', async () => {
+    const { getByText } = await renderRow({
+      container: { ...base, state: 'exited' },
+      verdict: {
+        code: 'stopped',
+        level: 'idle',
+        headline: 'stopped',
+        facts: {},
+      },
+    });
+    const el = getByText('⚪ stopped');
+    expect(el.getAttribute('data-color')).toBe('gray');
+  });
+
+  test('crash-loop verdict is shown in red', async () => {
+    const { getByText } = await renderRow({
+      container: { ...base, state: 'exited' },
+      verdict: {
+        code: 'crash-loop',
+        level: 'fail',
+        headline: 'died 2s',
+        facts: {},
+      },
+    });
+    const el = getByText('🔴 died 2s');
+    expect(el.getAttribute('data-color')).toBe('red');
   });
 });

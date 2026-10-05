@@ -100,7 +100,8 @@ This is what developer experience should feel like.
 - 🐳 Live view of all Docker containers with CPU/memory stats
 - 🔄 Auto-refresh every few seconds — always up to date
 - ⌨️ Keyboard-driven actions: start, stop, restart, log streaming, removal
-- 🎨 Color-coded container states and visual feedback
+- 🎨 **Health verdicts** — running, starting, stopped, crashed, crash-loop, restarting or unhealthy, read from Docker's own data
+- ⚪ Stopped vs crashed — a container you stopped is grey; red is reserved for real failures
 - ✨ **Interactive creation wizard** — step-by-step container setup with curated profiles and live Hub search
 - 🪵 Real-time log streaming for any selected container
 - 🐛 Toggleable live debug panel (`D` key)

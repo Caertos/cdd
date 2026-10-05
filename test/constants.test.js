@@ -3,6 +3,7 @@
  */
 import {
   REFRESH_INTERVALS,
+  HEALTH_THRESHOLDS,
   WIZARD_STEP_COUNT,
   MESSAGE_TIMEOUTS,
   EXIT_DELAY,
@@ -15,6 +16,15 @@ import {
 describe('constants — scalar and grouped exports', () => {
   test('REFRESH_INTERVALS', () => {
     expect(REFRESH_INTERVALS).toEqual({ CONTAINER_LIST: 3000, CONTAINER_STATS: 1500 });
+  });
+
+  test('HEALTH_THRESHOLDS', () => {
+    expect(HEALTH_THRESHOLDS).toEqual({
+      CRASH_LOOP_MAX_UPTIME: 10000,
+      STARTING_GRACE: 5000,
+      RESTART_WINDOW: 60000,
+      RESTART_COUNT_ALERT: 3,
+    });
   });
 
   test('WIZARD_STEP_COUNT = 5 (image, name, ports, env, review)', () => {

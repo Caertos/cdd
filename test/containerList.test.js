@@ -131,6 +131,20 @@ describe('containerList — port formatting and errors', () => {
     expect(list[0].ports).toEqual([]);
   });
 
+  test('maps labels and createdAt (needed by TASK-13 and TASK-9)', async () => {
+    const list = await listWith([
+      {
+        ...baseContainer,
+        Labels: { 'com.docker.compose.project': 'shop' },
+        Created: 1735689600,
+      },
+      { ...baseContainer, Id: 'no-meta' },
+    ]);
+    expect(list[0].labels).toEqual({ 'com.docker.compose.project': 'shop' });
+    expect(list[0].createdAt).toBe(1735689600);
+    expect(list[1].labels).toEqual({});
+  });
+
   test('listContainers error is propagated after logging', async () => {
     await jest.unstable_mockModule('../src/helpers/dockerService/dockerService.js', () => ({
       docker: {
