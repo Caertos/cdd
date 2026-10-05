@@ -43,14 +43,14 @@ describe('HelpPanel', () => {
     expect(getByText('Pause stream')).toBeTruthy();
   });
 
-  // §5.5 (D16) — fixed by TASK-19.
-  test.failing('every keymap context has a label in STRINGS.contextLabels', () => {
+  // §5.5 (D16)
+  test('every keymap context has a label in STRINGS.contextLabels', () => {
     const missing = Object.keys(KEYMAP).filter((ctx) => !STRINGS.contextLabels[ctx]);
-    expect(missing).toEqual([]); // today: wizard-discard, wizard-review, confirm-quit
+    expect(missing).toEqual([]);
   });
 
-  // §5.5 (D16) — fixed by TASK-19. HelpPanel keeps a private copy without 'disconnected'.
-  test.failing('titles come from STRINGS.contextLabels', () => {
+  // §5.5 (D16). HelpPanel used to keep a private copy without 'disconnected'.
+  test('titles come from STRINGS.contextLabels', () => {
     const { getByText } = render(<HelpPanel context="disconnected" bindings={[]} />);
     expect(getByText(`Help — ${STRINGS.contextLabels.disconnected}`)).toBeTruthy();
   });
