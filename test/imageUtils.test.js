@@ -145,18 +145,28 @@ describe('previewAutoPorts', () => {
     await expect(previewAutoPorts('nginx:alpine', [{}])).resolves.toHaveLength(1);
   });
 
-  // §5.3 (D15) — fixed by TASK-19. prepareReview() passes raw listContainers().
-  test.failing('avoids a host port used by a raw API container', async () => {
+  // §5.3 (D15). prepareReview() passes raw listContainers().
+  test('avoids a host port used by a raw API container', async () => {
     const { previewAutoPorts } = await loadImageUtils(withImage({ '80/tcp': {} }));
     const raw = [{ Ports: [{ PublicPort: 80, PrivatePort: 80, Type: 'tcp' }] }];
     const [row] = await previewAutoPorts('nginx:alpine', raw);
-    expect(row.hostPort).toBe('81'); // today: '80'
+    expect(row.hostPort).toBe('81');
   });
 
-  // §5.3 (D15) — fixed by TASK-19.
-  test.failing('avoids a host port used by a normalized "host:container" entry', async () => {
+  // §5.3 (D15)
+  test('avoids a host port used by a normalized "host:container" entry', async () => {
     const { previewAutoPorts } = await loadImageUtils(withImage({ '80/tcp': {} }));
     const [row] = await previewAutoPorts('nginx:alpine', [{ ports: ['80:80'] }]);
-    expect(row.hostPort).toBe('81'); // today: '80'
+    expect(row.hostPort).toBe('81');
+  });
+
+  test('reports hostPort null when the whole range is taken', async () => {
+    const { previewAutoPorts } = await loadImageUtils(
+      withImage({ '65535/tcp': {} })
+    );
+    const [row] = await previewAutoPorts('nginx:alpine', [
+      { ports: ['65535:65535'] },
+    ]);
+    expect(row.hostPort).toBeNull();
   });
 });

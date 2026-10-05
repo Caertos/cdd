@@ -1,7 +1,7 @@
 import { docker } from '../dockerService.js';
 import { normalizeImageName } from '../../imageNameUtils.js';
 import { IMAGE_PROFILES } from '../../constants.js';
-import { findAvailablePort } from '../../portUtils.js';
+import { findAvailablePort, hostPortsOf } from '../../portUtils.js';
 
 /**
  * Check whether an image exists locally.
@@ -81,8 +81,8 @@ export async function previewAutoPorts(
 
     const usedHostPorts = new Set();
     for (const container of containers || []) {
-      for (const port of container.ports || []) {
-        usedHostPorts.add(String(port));
+      for (const port of hostPortsOf(container)) {
+        usedHostPorts.add(port);
       }
     }
 

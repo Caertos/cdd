@@ -3,7 +3,7 @@ import { imageExists, pullImage } from './imageUtils.js';
 import { TIMEOUTS, IMAGE_PROFILES } from '../../constants.js';
 import { logger } from '../../logger.js';
 import { normalizeImageName } from '../../imageNameUtils.js';
-import { findAvailablePort } from '../../portUtils.js';
+import { findAvailablePort, hostPortsOf } from '../../portUtils.js';
 import { redactForLog } from '../../secrets.js';
 import {
   validateImageName,
@@ -117,10 +117,8 @@ export async function createContainer(
               TIMEOUTS.CONTAINER_OP
             );
             containers.forEach((container) => {
-              (container.Ports || []).forEach((portInfo) => {
-                if (portInfo && portInfo.PublicPort) {
-                  usedHostPorts.add(String(portInfo.PublicPort));
-                }
+              hostPortsOf(container).forEach((port) => {
+                usedHostPorts.add(port);
               });
             });
           } catch (err) {
