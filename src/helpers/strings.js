@@ -22,14 +22,15 @@ export const STRINGS = {
   statePaused: '🟠 PAUSED',
 
   // ── Health engine (TASK-7) ──
-  // Short headlines for the row; the icon/colour come from levelStyle(level).
+  // Short headlines for the row; keep them within the state column.
+  // The icon/colour come from levelStyle(level).
   health: {
     running: 'RUNNING',
     starting: 'starting',
     stopped: 'stopped',
-    crashed: (code) => `crashed · exit ${code}`,
-    crashLoop: (seconds) => `died after ${seconds}s`,
-    restarting: (count) => `restarting (${count}×)`,
+    crashed: (code) => `exit ${code}`,
+    crashLoop: (seconds) => `died ${seconds}s`,
+    restarting: (count) => `restart ×${count}`,
     unhealthy: 'unhealthy',
     paused: 'PAUSED',
     unknown: 'UNKNOWN',
