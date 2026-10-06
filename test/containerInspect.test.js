@@ -15,7 +15,13 @@ const inspectPayload = {
     Health: { Status: 'healthy' },
     OOMKilled: false,
   },
-  Config: { Labels: { 'com.example': 'yes' } },
+  Config: {
+    Labels: { 'com.example': 'yes' },
+    Env: ['PATH=/usr/local/bin', 'POSTGRES_PASSWORD=secret'],
+    Cmd: ['postgres'],
+    Entrypoint: ['docker-entrypoint.sh'],
+    Image: 'postgres:17-alpine',
+  },
 };
 
 async function load(mock) {
@@ -51,6 +57,10 @@ describe('getContainerDetails', () => {
       healthStatus: 'healthy',
       oomKilled: false,
       labels: { 'com.example': 'yes' },
+      env: ['PATH=/usr/local/bin', 'POSTGRES_PASSWORD=secret'],
+      cmd: ['postgres'],
+      entrypoint: ['docker-entrypoint.sh'],
+      imageRef: 'postgres:17-alpine',
     });
   });
 
@@ -150,5 +160,131 @@ describe('getManyContainerDetails', () => {
     });
     const map = await mod.getManyContainerDetails(['x'], { concurrency: 0 });
     expect(map.size).toBe(1);
+  });
+});
+
+describe('getContainerDetails — config for the prefill', () => {
+  afterEach(() => jest.resetModules());
+
+  test('a bare payload yields empty config arrays rather than undefined', async () => {
+    const mod = await load({
+      getContainer: jest.fn(() => ({
+        inspect: jest.fn().mockResolvedValue({ Id: 'bare' }),
+      })),
+    });
+    const details = await mod.getContainerDetails('bare');
+    expect(details.env).toEqual([]);
+    expect(details.cmd).toEqual([]);
+    expect(details.entrypoint).toEqual([]);
+    expect(details.imageRef).toBeNull();
+  });
+
+  test('non-string entries in Env are dropped', async () => {
+    const mod = await load({
+      getContainer: jest.fn(() => ({
+        inspect: jest
+          .fn()
+          .mockResolvedValue({ Id: 'x', Config: { Env: ['A=1', 42, null] } }),
+      })),
+    });
+    await expect(mod.getContainerDetails('x')).resolves.toMatchObject({
+      env: ['A=1'],
+    });
+  });
+
+  test('an Env that is not an array is ignored', async () => {
+    const mod = await load({
+      getContainer: jest.fn(() => ({
+        inspect: jest
+          .fn()
+          .mockResolvedValue({ Id: 'x', Config: { Env: 'PATH=/bin' } }),
+      })),
+    });
+    await expect(mod.getContainerDetails('x')).resolves.toMatchObject({
+      env: [],
+    });
+  });
+});
+
+describe('getImageEnv', () => {
+  afterEach(() => jest.resetModules());
+
+  test('reads the env an image sets for itself', async () => {
+    const mod = await load({
+      getImage: jest.fn(() => ({
+        inspect: jest
+          .fn()
+          .mockResolvedValue({ Config: { Env: ['PATH=/usr/bin', 'PG_VERSION=17'] } }),
+      })),
+    });
+    await expect(mod.getImageEnv('postgres:17-alpine')).resolves.toEqual([
+      'PATH=/usr/bin',
+      'PG_VERSION=17',
+    ]);
+  });
+
+  test('falls back to ContainerConfig and config, as older payloads do', async () => {
+    const asContainerConfig = await load({
+      getImage: jest.fn(() => ({
+        inspect: jest
+          .fn()
+          .mockResolvedValue({ ContainerConfig: { Env: ['A=1'] } }),
+      })),
+    });
+    await expect(asContainerConfig.getImageEnv('x')).resolves.toEqual(['A=1']);
+
+    jest.resetModules();
+    const asConfig = await load({
+      getImage: jest.fn(() => ({
+        inspect: jest.fn().mockResolvedValue({ config: { Env: ['B=2'] } }),
+      })),
+    });
+    await expect(asConfig.getImageEnv('x')).resolves.toEqual(['B=2']);
+  });
+
+  test('an image with no ENV at all is an empty list, not null', async () => {
+    const mod = await load({
+      getImage: jest.fn(() => ({
+        inspect: jest.fn().mockResolvedValue({ Config: {} }),
+      })),
+    });
+    // null means "we could not find out"; this one we did find out.
+    await expect(mod.getImageEnv('scratch')).resolves.toEqual([]);
+  });
+
+  test('a dangling image resolves null, not a rejection', async () => {
+    const mod = await load({
+      getImage: jest.fn(() => {
+        throw new Error('no such image');
+      }),
+    });
+    await expect(mod.getImageEnv('gone:1')).resolves.toBeNull();
+  });
+
+  test('a rejected inspect resolves null', async () => {
+    const mod = await load({
+      getImage: jest.fn(() => ({
+        inspect: jest.fn().mockRejectedValue(new Error('daemon gone')),
+      })),
+    });
+    await expect(mod.getImageEnv('x')).resolves.toBeNull();
+  });
+
+  test('an unusable reference is null rather than a throw', async () => {
+    const mod = await load({
+      getImage: jest.fn(() => ({})),
+    });
+    await expect(mod.getImageEnv('')).resolves.toBeNull();
+    await expect(mod.getImageEnv(null)).resolves.toBeNull();
+    await expect(mod.getImageEnv('x')).resolves.toBeNull();
+  });
+
+  test('a non-array Env is treated as none', async () => {
+    const mod = await load({
+      getImage: jest.fn(() => ({
+        inspect: jest.fn().mockResolvedValue({ Config: { Env: 'PATH=/bin' } }),
+      })),
+    });
+    await expect(mod.getImageEnv('x')).resolves.toEqual([]);
   });
 });
