@@ -1556,3 +1556,126 @@ describe('useControls — the cleanup question waits for an answer (N1)', () => 
     expect(expose.current.message).not.toContain('[y] Yes');
   });
 });
+
+describe('useControls — F is not re-entrant', () => {
+  const broken = {
+    id: 'c1',
+    name: 'mi-basedatos',
+    image: 'postgres:17-alpine',
+    state: 'exited',
+    status: 'Exited (1) 2 seconds ago',
+    ports: ['5432:5432'],
+  };
+  const verdictMap = new Map([
+    [
+      'c1',
+      {
+        code: 'crash-loop',
+        level: 'fail',
+        headline: 'died 2s',
+        facts: {
+          exitCode: 1,
+          uptimeMs: 2000,
+          restartCount: 0,
+          oomKilled: false,
+          healthStatus: null,
+        },
+      },
+    ],
+  ]);
+
+  beforeEach(async () => {
+    mockGetContainerDetails.mockReset().mockResolvedValue({
+      env: ['POSTGRES_PASSWORD=x'],
+      cmd: [],
+    });
+    mockGetImageEnv.mockReset().mockResolvedValue([]);
+    const { getLogsTail } = await import(
+      '../src/helpers/dockerService/serviceComponents/containerLogs.js'
+    );
+    getLogsTail.mockResolvedValue(['superuser password is not specified']);
+  });
+
+  test('a second F while the first is still reading is ignored', async () => {
+    let release;
+    mockGetContainerDetails.mockReturnValue(
+      new Promise((resolve) => {
+        release = () =>
+          resolve({ env: ['POSTGRES_PASSWORD=x'], cmd: [] });
+      })
+    );
+
+    const expose = { current: null };
+    render(
+      <HookTester
+        containers={[broken]}
+        expose={expose}
+        overrides={{ health: verdictMap }}
+      />
+    );
+    await act(async () => {});
+
+    const first = expose.current.dispatch('container.fix');
+    // Second press, mid-flight: it must not open a second wizard.
+    expose.current.dispatch('container.fix');
+    await act(async () => {
+      release();
+      await first;
+    });
+
+    expect(mockGetContainerDetails).toHaveBeenCalledTimes(1);
+    expect(expose.current.creationStep).toBe(4);
+  });
+
+  test('F works again once the first attempt finished', async () => {
+    const expose = { current: null };
+    render(
+      <HookTester
+        containers={[broken]}
+        expose={expose}
+        overrides={{ health: verdictMap }}
+      />
+    );
+    await act(async () => {});
+    await act(async () => {
+      await expose.current.dispatch('container.fix');
+    });
+    expect(expose.current.creationStep).toBe(4);
+
+    // Back out, then use the key again: the guard must not stay latched.
+    await act(async () => {
+      expose.current.creation.cancelCreation();
+    });
+    await act(async () => {
+      await expose.current.dispatch('container.fix');
+    });
+    expect(mockGetContainerDetails).toHaveBeenCalledTimes(2);
+    expect(expose.current.creationStep).toBe(4);
+  });
+
+  test('a refused attempt does not leave the key disabled', async () => {
+    mockGetContainerDetails.mockResolvedValue(null);
+    const expose = { current: null };
+    render(
+      <HookTester
+        containers={[broken]}
+        expose={expose}
+        overrides={{ health: verdictMap }}
+      />
+    );
+    await act(async () => {});
+    await act(async () => {
+      await expose.current.dispatch('container.fix');
+    });
+    expect(expose.current.creatingContainer).toBe(false);
+
+    mockGetContainerDetails.mockResolvedValue({
+      env: ['POSTGRES_PASSWORD=x'],
+      cmd: [],
+    });
+    await act(async () => {
+      await expose.current.dispatch('container.fix');
+    });
+    expect(expose.current.creationStep).toBe(4);
+  });
+});

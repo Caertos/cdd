@@ -66,6 +66,8 @@ export function useControls(containers = [], overrides = {}) {
   // Set by the F key, consumed by onCreate: the fix may rename the new
   // container to keep this one.
   const supersededRef = React.useRef(null);
+  // True while a fix is being prepared, so a second F cannot interleave.
+  const fixInFlightRef = React.useRef(false);
   const lastCreationRef = React.useRef(null);
 
   // — Modular hooks —
@@ -370,9 +372,13 @@ export function useControls(containers = [], overrides = {}) {
       // The fix is never applied directly — the wizard opens on the review
       // step with the touched rows marked, so the user confirms the diff.
       'container.fix': async () => {
+        // Two F presses in quick succession would interleave two reads of the
+        // same container and open the wizard twice.
+        if (fixInFlightRef.current) return;
         const container = containers[selection.selected];
         const fix = diagnostics.diagnosis?.fix;
         if (!container || !fix) return;
+        fixInFlightRef.current = true;
 
         actions.setTimedMessage(
           `Reading ${container.name}'s configuration...`,
@@ -392,6 +398,7 @@ export function useControls(containers = [], overrides = {}) {
             `Couldn't read ${container.name}'s configuration — press C to create one from scratch`,
             'red'
           );
+          fixInFlightRef.current = false;
           return;
         }
 
@@ -413,7 +420,11 @@ export function useControls(containers = [], overrides = {}) {
         supersededRef.current = { id: container.id, name: container.name };
         backHintShownRef.current = false;
         setCreatingContainer(true);
-        await creation.prefillCreation(values, changedFields);
+        try {
+          await creation.prefillCreation(values, changedFields);
+        } finally {
+          fixInFlightRef.current = false;
+        }
       },
       'container.create': () => {
         supersededRef.current = null;
@@ -433,7 +444,10 @@ export function useControls(containers = [], overrides = {}) {
             'green'
           );
         } catch (err) {
-          actions.setTimedMessage(`Could not remove ${target.name}`, 'red');
+          actions.setTimedMessage(
+            withContext(`Could not remove ${target.name}`, err.message),
+            'red'
+          );
         }
       },
       'cleanup.keep': () => {
