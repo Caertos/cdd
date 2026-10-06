@@ -14,12 +14,16 @@ export const REFRESH_INTERVALS = {
  * - STARTING_GRACE: just started → starting
  * - RESTART_WINDOW: window in which restarts count as a loop
  * - RESTART_COUNT_ALERT: restarts within the window → restarting
+ * - FAST_EXIT_MS: alive for less than this with exit code 0 → the image
+ *   finished its job and is not a service, which is a diagnosis rather
+ *   than a failure (TASK-8)
  */
 export const HEALTH_THRESHOLDS = {
   CRASH_LOOP_MAX_UPTIME: 10_000,
   STARTING_GRACE: 5_000,
   RESTART_WINDOW: 60_000,
   RESTART_COUNT_ALERT: 3,
+  FAST_EXIT_MS: 2000,
 };
 
 /** Number of steps in the container creation wizard. 5 since TASK-4 (review step). */

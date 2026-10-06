@@ -71,6 +71,31 @@ export async function createTestContainer(suffix, opts = {}) {
   return { id: container.id, name, container };
 }
 
+/**
+ * A container that dies immediately with a non-zero code, so the dashboard
+ * has something real to explain. Uses a tiny image: no ports, no pull weight.
+ *
+ * @param {string} suffix
+ * @param {Object} [opts]
+ * @param {string} [opts.image]
+ * @param {string[]} [opts.cmd]
+ * @param {boolean} [opts.withOutput] - Emit a line before dying
+ */
+export async function createExitedContainer(suffix, opts = {}) {
+  const {
+    image = TINY_IMAGE,
+    cmd = ['sh', '-c', 'exit 1'],
+    withOutput = false,
+  } = opts;
+  const script = withOutput
+    ? 'echo "boom: something went wrong" >&2; exit 1'
+    : cmd[2];
+  return createTestContainer(suffix, {
+    image,
+    create: { Cmd: ['sh', '-c', script] },
+  });
+}
+
 export async function removeTestContainer(id) {
   try {
     await docker.getContainer(id).remove({ force: true });
