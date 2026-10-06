@@ -14,7 +14,6 @@ import { Box, Text, Spacer, useApp } from 'ink';
 import { setSuspendTerminal } from './helpers/appState.js';
 import { useContainers } from './hooks/useContainers.js';
 import { useContainerHealth } from './hooks/useContainerHealth.js';
-import { useDiagnostics } from './hooks/useDiagnostics.js';
 import { useControls } from './hooks/useControls.js';
 import { useDockerLauncher } from './hooks/useDockerLauncher.js';
 import ContainerSection from './components/ContainerSection.jsx';
@@ -34,13 +33,11 @@ export default function App() {
   const { containers, connection } = useContainers();
   const { health } = useContainerHealth(containers);
   const launcher = useDockerLauncher();
-  const controls = useControls(containers, { connection, launcher });
+  // health goes in so useControls owns the one diagnosis the panel renders and
+  // the F key acts on. Two hooks would mean reading the log twice.
+  const controls = useControls(containers, { connection, launcher, health });
 
   const selectedContainer = containers[controls.selected] ?? null;
-  const diagnostics = useDiagnostics(
-    selectedContainer,
-    selectedContainer ? (health.get(selectedContainer.id) ?? null) : null
-  );
 
   // Expose suspendTerminal to plain helpers (terminalHandover) via appState.
   useEffect(() => {
@@ -128,11 +125,12 @@ export default function App() {
         />
         {/* The panel takes room only when a container is failing and we have
             something to say about it — a deliberate stop gets nothing. */}
-        {(diagnostics.diagnosis || diagnostics.isLoading) && (
+        {(controls.diagnosis || controls.isDiagnosing) && (
           <DiagnosticPanel
-            diagnosis={diagnostics.diagnosis}
+            diagnosis={controls.diagnosis}
             containerName={selectedContainer?.name ?? ''}
-            isLoading={diagnostics.isLoading}
+            isLoading={controls.isDiagnosing}
+            fixLabel={controls.diagnosis?.fix?.label ?? null}
           />
         )}
         <Spacer />

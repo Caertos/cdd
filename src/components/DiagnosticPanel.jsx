@@ -16,12 +16,14 @@ import { STRINGS } from '../helpers/strings.js';
  *   null while the log is still being read
  * @param {string} props.containerName - Name shown in the title
  * @param {boolean} [props.isLoading] - True while the log is being read
+ * @param {string|null} [props.fixLabel] - What F would do, when it can
  * @returns {JSX.Element|null}
  */
 export function DiagnosticPanel({
   diagnosis,
   containerName,
   isLoading = false,
+  fixLabel = null,
 }) {
   const { panelTitle, likelyCause, notRecognized, lastLines } =
     STRINGS.diagnostics;
@@ -82,12 +84,20 @@ export function DiagnosticPanel({
       )}
 
       <Text> </Text>
-      <Text color="cyan">{STRINGS.diagnostics.viewFullLog}</Text>
+      <Box columnGap={2}>
+        {fixLabel && (
+          <Text color="green" bold>
+            [F] {fixLabel}
+          </Text>
+        )}
+        <Text color="cyan">{STRINGS.diagnostics.viewFullLog}</Text>
+      </Box>
     </Box>
   );
 }
 
 DiagnosticPanel.propTypes = {
+  fixLabel: PropTypes.string,
   diagnosis: PropTypes.shape({
     what: PropTypes.string.isRequired,
     why: PropTypes.string,

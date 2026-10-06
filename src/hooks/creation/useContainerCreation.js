@@ -356,6 +356,9 @@ export function useContainerCreation({
   // Review step state
   const [reviewRows, setReviewRows] = useState([]);
   const [reviewWarnings, setReviewWarnings] = useState([]);
+  // Wizard fields CDD itself changed when coming from a diagnosis (TASK-8), so
+  // the review can point at exactly what moved.
+  const [changedFields, setChangedFields] = useState([]);
   const [focusedReviewRow, setFocusedReviewRow] = useState(0);
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
   const returnToReviewRef = useRef(false);
@@ -550,9 +553,14 @@ export function useContainerCreation({
    * Prepares the review step: builds summary rows, warnings,
    * and previews auto-ports if the image is local.
    */
-  async function prepareReview() {
+  async function prepareReview(overrideValues, overrideChanged) {
     const f = formRef.current;
-    const currentValues = {
+    // A prefill sets changedFields in the same tick, so reading it from the
+    // closure here would get the previous render's empty list.
+    const changed = overrideChanged ?? changedFields;
+    // A prefill dispatches its values and then calls this; reading formRef
+    // instead would get the previous render's values.
+    const currentValues = overrideValues ?? {
       imageName: f.imageName,
       containerName: f.containerName,
       portInput: f.portInput,
@@ -568,11 +576,12 @@ export function useContainerCreation({
     setFocusedReviewRow(0);
 
     // Build summary (pure, no Docker calls)
-    const rawInput = f._rawImageInput ?? f.imageName;
+    const rawInput = f._rawImageInput ?? currentValues.imageName;
     const rows = buildCreationSummary(currentValues, {
       rawImageInput: rawInput,
       imageProfiles,
       previewedPorts: null,
+      changedFields: changed,
     });
     setReviewRows(rows);
 
@@ -609,6 +618,7 @@ export function useContainerCreation({
           rawImageInput: rawInput,
           imageProfiles,
           previewedPorts,
+          changedFields: changed,
         });
         setReviewRows(updatedRows);
       }
@@ -764,6 +774,29 @@ export function useContainerCreation({
    */
   function resetCreation() {
     dispatch({ type: 'RESET_WIZARD' });
+    setChangedFields([]);
+    setReviewRows([]);
+    setReviewWarnings([]);
+  }
+
+  /**
+   * Open the wizard already filled in and already on the review step.
+   *
+   * TASK-8's "recreate with the fix": the fix is never applied behind the
+   * user's back, so the first thing they see is the review with the touched
+   * rows marked. Starting at step 4 rather than step 0 is deliberate — the
+   * interesting thing to check is the diff, not the image name.
+   *
+   * @param {import('../../helpers/diagnostics/prefill.js').CreationValues} values
+   * @param {string[]} [changed] - Wizard fields the fix altered
+   */
+  async function prefillCreation(values, changed = []) {
+    dispatch({
+      type: 'SET',
+      payload: { ...INITIAL_FORM, ...values, step: 4 },
+    });
+    setChangedFields(changed);
+    await prepareReview(values, changed);
   }
 
   /**
@@ -936,6 +969,8 @@ export function useContainerCreation({
     hasAnyInput,
     cancelCreation,
     resetCreation,
+    prefillCreation,
+    changedFields,
     insertNextSuggestedEnv,
     hasSuggestedEnv,
     fieldForStep,

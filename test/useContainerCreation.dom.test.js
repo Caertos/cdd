@@ -661,3 +661,152 @@ describe('useContainerCreation — review warnings against real containers', () 
     expect(docker.listContainers).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('useContainerCreation — prefillCreation (TASK-8)', () => {
+  const values = {
+    imageName: 'postgres:17-alpine',
+    containerName: 'mi-basedatos-2',
+    portInput: '5433:5432',
+    envInput: 'POSTGRES_PASSWORD=secret',
+  };
+
+  const valuesOf = (expose) => ({
+    imageName: expose.current.imageName,
+    containerName: expose.current.containerName,
+    portInput: expose.current.portInput,
+    envInput: expose.current.envInput,
+  });
+
+  test('opens already filled in and already on the review step', async () => {
+    const expose = { current: null };
+    render(
+      <HookTester onCreate={() => {}} onCancel={() => {}} dbImages={[]} expose={expose} />
+    );
+    await act(async () => {
+      await expose.current.prefillCreation(values, ['envInput', 'containerName']);
+    });
+
+    expect(expose.current.step).toBe(4);
+    expect(valuesOf(expose)).toEqual(values);
+  });
+
+  test('skips the intermediate steps on purpose', async () => {
+    // The interesting thing to check is the diff, not the image name.
+    const expose = { current: null };
+    render(
+      <HookTester onCreate={() => {}} onCancel={() => {}} dbImages={[]} expose={expose} />
+    );
+    await act(async () => {
+      await expose.current.prefillCreation(values, []);
+    });
+    expect(expose.current.step).toBe(4);
+    expect(expose.current.reviewRows.length).toBeGreaterThan(0);
+  });
+
+  test('the review marks the rows the fix changed', async () => {
+    const expose = { current: null };
+    render(
+      <HookTester onCreate={() => {}} onCancel={() => {}} dbImages={[]} expose={expose} />
+    );
+    await act(async () => {
+      await expose.current.prefillCreation(values, ['envInput']);
+    });
+    const changed = expose.current.reviewRows
+      .filter((r) => r.changed)
+      .map((r) => r.key);
+    expect(changed).toEqual(['env']);
+  });
+
+  test('no changed fields means nothing is marked', async () => {
+    const expose = { current: null };
+    render(
+      <HookTester onCreate={() => {}} onCancel={() => {}} dbImages={[]} expose={expose} />
+    );
+    await act(async () => {
+      await expose.current.prefillCreation(values, []);
+    });
+    expect(expose.current.reviewRows.some((r) => r.changed)).toBe(false);
+  });
+
+  test('Enter on the review creates the container', async () => {
+    const onCreate = jest.fn();
+    const expose = { current: null };
+    render(
+      <HookTester onCreate={onCreate} onCancel={() => {}} dbImages={[]} expose={expose} />
+    );
+    await act(async () => {
+      await expose.current.prefillCreation(values, []);
+    });
+    await act(async () => {
+      expose.current.nextStep();
+    });
+    expect(onCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ containerName: 'mi-basedatos-2' })
+    );
+  });
+
+  test('Esc from the review goes back to the env step', async () => {
+    const expose = { current: null };
+    render(
+      <HookTester onCreate={() => {}} onCancel={() => {}} dbImages={[]} expose={expose} />
+    );
+    await act(async () => {
+      await expose.current.prefillCreation(values, []);
+    });
+    await act(async () => {
+      expose.current.prevStep();
+    });
+    expect(expose.current.step).toBe(3);
+  });
+
+  test('editing a field from the review and coming back keeps the marking', async () => {
+    const expose = { current: null };
+    render(
+      <HookTester onCreate={() => {}} onCancel={() => {}} dbImages={[]} expose={expose} />
+    );
+    await act(async () => {
+      await expose.current.prefillCreation(values, ['envInput']);
+    });
+    await act(async () => {
+      expose.current.editFromReview(3);
+    });
+    await act(async () => {
+      await expose.current.nextStep();
+    });
+    expect(expose.current.step).toBe(4);
+    expect(
+      expose.current.reviewRows.find((r) => r.key === 'env').changed
+    ).toBe(true);
+  });
+
+  test('resetCreation clears the marking for the next wizard', async () => {
+    const expose = { current: null };
+    render(
+      <HookTester onCreate={() => {}} onCancel={() => {}} dbImages={[]} expose={expose} />
+    );
+    await act(async () => {
+      await expose.current.prefillCreation(values, ['envInput']);
+    });
+    await act(async () => {
+      expose.current.resetCreation();
+    });
+    expect(expose.current.changedFields).toEqual([]);
+    expect(expose.current.step).toBe(0);
+  });
+
+  test('the review warns when the name is already taken', async () => {
+    docker.listContainers.mockResolvedValue([
+      { Id: 'x'.repeat(64), Names: ['/mi-basedatos-2'], Image: 'postgres:17', State: 'exited', Ports: [] },
+    ]);
+    const expose = { current: null };
+    render(
+      <HookTester onCreate={() => {}} onCancel={() => {}} dbImages={[]} expose={expose} />
+    );
+    await act(async () => {
+      await expose.current.prefillCreation(values, []);
+    });
+    expect(expose.current.reviewWarnings.map((w) => w.kind)).toContain(
+      'name-taken'
+    );
+  });
+});

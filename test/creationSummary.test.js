@@ -240,3 +240,59 @@ describe('buildCreationWarnings', () => {
     expect(kinds).toContain('secret-plain');
   });
 });
+
+describe('buildCreationSummary — what CDD changed (TASK-8)', () => {
+  const values = {
+    imageName: 'postgres:17-alpine',
+    containerName: 'mi-basedatos-2',
+    portInput: '5432:5432',
+    envInput: 'POSTGRES_PASSWORD=secret',
+  };
+  const build = (changedFields) =>
+    buildCreationSummary(values, {
+      rawImageInput: 'postgres:17-alpine',
+      imageProfiles: profiles,
+      previewedPorts: null,
+      changedFields,
+    });
+
+  test('marks the rows the fix touched', () => {
+    const changed = build(['envInput', 'containerName'])
+      .filter((r) => r.changed)
+      .map((r) => r.key);
+    expect(changed).toEqual(['name', 'env']);
+  });
+
+  test('leaves the untouched rows alone', () => {
+    const rows = build(['envInput']);
+    expect(rows.find((r) => r.key === 'image').changed).toBeUndefined();
+    expect(rows.find((r) => r.key === 'ports').changed).toBeUndefined();
+  });
+
+  test('no changedFields means no marking', () => {
+    expect(build([]).some((r) => r.changed)).toBe(false);
+    expect(build(undefined).some((r) => r.changed)).toBe(false);
+  });
+
+  test('an unknown field name marks nothing rather than crashing', () => {
+    expect(build(['nonsense']).some((r) => r.changed)).toBe(false);
+  });
+
+  test('every wizard field maps to some row', () => {
+    const keys = build([
+      'imageName',
+      'containerName',
+      'portInput',
+      'envInput',
+    ]).map((r) => r.key);
+    expect(keys).toEqual(
+      expect.arrayContaining(['image', 'name', 'ports', 'env'])
+    );
+  });
+
+  test('marking does not change the values shown', () => {
+    const plain = build([]).find((r) => r.key === 'env');
+    const flagged = build(['envInput']).find((r) => r.key === 'env');
+    expect(flagged.values).toEqual(plain.values);
+  });
+});

@@ -129,11 +129,39 @@ describe('DiagnosticPanel — states without content', () => {
     expect(getByText(/Diagnosis:/)).toBeTruthy();
   });
 
-  test('no fix key is advertised before there is one to apply', () => {
-    // The F key arrives with the fix, and showing a key that does nothing
-    // would be worse than showing nothing.
+  test('no fix key is advertised when there is no fix', () => {
+    // Showing a key that does nothing would be worse than showing nothing.
     const { queryByText } = render(
       <DiagnosticPanel diagnosis={diagnosis()} containerName="db" />
+    );
+    expect(queryByText(/\[F\]/)).toBeNull();
+  });
+
+  test('the fix key appears with the label when a fix exists', () => {
+    const { getByText } = render(
+      <DiagnosticPanel
+        diagnosis={diagnosis()}
+        containerName="db"
+        fixLabel="Recreate with POSTGRES_PASSWORD"
+      />
+    );
+    expect(getByText(/\[F\] Recreate with POSTGRES_PASSWORD/)).toBeTruthy();
+  });
+
+  test('the log key stays available alongside the fix key', () => {
+    const { getByText } = render(
+      <DiagnosticPanel
+        diagnosis={diagnosis()}
+        containerName="db"
+        fixLabel="Recreate with POSTGRES_PASSWORD"
+      />
+    );
+    expect(getByText('[L] Full log')).toBeTruthy();
+  });
+
+  test('a null fixLabel is not advertised either', () => {
+    const { queryByText } = render(
+      <DiagnosticPanel diagnosis={diagnosis()} containerName="db" fixLabel={null} />
     );
     expect(queryByText(/\[F\]/)).toBeNull();
   });

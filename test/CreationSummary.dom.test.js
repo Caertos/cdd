@@ -124,3 +124,65 @@ describe('CreationSummary', () => {
     expect(queryByText(/Checking image/)).toBeNull();
   });
 });
+
+describe('CreationSummary — rows CDD changed', () => {
+  const renderRows = (rows) =>
+    render(
+      <CreationSummary
+        rows={rows}
+        warnings={[]}
+        focusedRow={0}
+        isLoadingPreview={false}
+      />
+    );
+
+  test('a changed row says so', () => {
+    const { getByText } = renderRows([
+      { key: 'env', step: 3, label: 'Env', values: ['POSTGRES_PASSWORD'], changed: true },
+    ]);
+    expect(getByText(/changed by CDD/)).toBeTruthy();
+  });
+
+  test('an untouched row does not', () => {
+    const { queryByText } = renderRows([
+      { key: 'env', step: 3, label: 'Env', values: ['POSTGRES_PASSWORD'] },
+    ]);
+    expect(queryByText(/changed by CDD/)).toBeNull();
+  });
+
+  test('only the changed rows are marked', () => {
+    const { getAllByText } = renderRows([
+      { key: 'name', step: 1, label: 'Name', values: ['db-2'], changed: true },
+      { key: 'env', step: 3, label: 'Env', values: ['A=1'] },
+    ]);
+    expect(getAllByText(/changed by CDD/)).toHaveLength(1);
+  });
+
+  test('a changed row keeps its origin line', () => {
+    const { getByText } = renderRows([
+      {
+        key: 'ports',
+        step: 2,
+        label: 'Ports',
+        values: ['8081→80/tcp'],
+        origin: 'assigned by CDD',
+        changed: true,
+      },
+    ]);
+    expect(getByText(/↓ assigned by CDD/)).toBeTruthy();
+    expect(getByText(/changed by CDD/)).toBeTruthy();
+  });
+
+  test('a changed env row still masks its secrets', () => {
+    const { getByText } = renderRows([
+      {
+        key: 'env',
+        step: 3,
+        label: 'Env',
+        values: ['POSTGRES_PASSWORD=•••••• [^R]'],
+        changed: true,
+      },
+    ]);
+    expect(getByText('POSTGRES_PASSWORD=•••••• [^R]')).toBeTruthy();
+  });
+});

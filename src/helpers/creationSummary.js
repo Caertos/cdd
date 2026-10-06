@@ -9,7 +9,19 @@ import { hostPortsOf } from './portUtils.js';
  * @property {string} label   - Display label
  * @property {string[]} values - One or more value lines
  * @property {string} [origin] - Explanatory second line
+ * @property {boolean} [changed] - True when CDD altered this row (TASK-8)
  */
+
+/**
+ * Which wizard field feeds which summary row. Used to translate a fix's
+ * changedFields — which speak field names — into the rows the user sees.
+ */
+const ROW_OF_FIELD = {
+  imageName: 'image',
+  containerName: 'name',
+  portInput: 'ports',
+  envInput: 'env',
+};
 
 /**
  * @typedef {Object} Warning
@@ -27,11 +39,26 @@ import { hostPortsOf } from './portUtils.js';
  * @param {string} ctx.rawImageInput - What the user originally typed for the image
  * @param {Object} ctx.imageProfiles - Profile map
  * @param {Array} [ctx.previewedPorts] - Auto-assigned ports from preview, or null
+ * @param {string[]} [ctx.changedFields] - Wizard fields CDD changed (TASK-8)
  * @returns {SummaryRow[]}
  */
 export function buildCreationSummary(values, ctx) {
   const { imageName, containerName, portInput, envInput } = values;
-  const { rawImageInput, imageProfiles, previewedPorts } = ctx;
+  const {
+    rawImageInput,
+    imageProfiles,
+    previewedPorts,
+    changedFields = [],
+  } = ctx;
+
+  // The point of "recreate with the fix" is that the user can see what CDD
+  // did before confirming it, so the touched rows are flagged rather than
+  // silently different from the container that failed.
+  const changedRows = new Set(
+    changedFields.map((field) => ROW_OF_FIELD[field]).filter(Boolean)
+  );
+  const flag = (row) =>
+    changedRows.has(row.key) ? { ...row, changed: true } : row;
 
   const rows = [];
 
@@ -110,7 +137,7 @@ export function buildCreationSummary(values, ctx) {
     rows.push({ key: 'env', step: 3, label: 'Env', values: ['(none)'] });
   }
 
-  return rows;
+  return rows.map(flag);
 }
 
 /**

@@ -32,10 +32,26 @@ await jest.unstable_mockModule(
   })
 );
 
-// Mock getLogsStream to avoid side effects
+// Mock the log module to avoid side effects. getLogsTail is what the
+// diagnosis panel and the F key read through useDiagnostics.
 await jest.unstable_mockModule(
   '../src/helpers/dockerService/serviceComponents/containerLogs.js',
-  () => ({ getLogsStream: () => {} })
+  () => ({
+    getLogsStream: () => {},
+    getLogsTail: jest.fn().mockResolvedValue([]),
+  })
+);
+
+// inspect: the F key reads Config.Env to rebuild the wizard (TASK-8).
+const mockGetContainerDetails = jest.fn();
+const mockGetImageEnv = jest.fn();
+await jest.unstable_mockModule(
+  '../src/helpers/dockerService/serviceComponents/containerInspect.js',
+  () => ({
+    getContainerDetails: mockGetContainerDetails,
+    getImageEnv: mockGetImageEnv,
+    getManyContainerDetails: jest.fn().mockResolvedValue(new Map()),
+  })
 );
 
 // Break useControls → useShellMode → App.jsx → useContainers cycle under ESM
@@ -672,5 +688,278 @@ describe('useControls — disconnected context wires R to connection.retry', () 
     expect(expose.current.confirmQuit).toBe(false);
     expect(expose.current.message).toBe('Exiting...');
     expect(expose.current.context).toBe('disconnected');
+  });
+});
+
+describe('useControls — the fix key (TASK-8)', () => {
+  const broken = {
+    id: 'c1',
+    name: 'mi-basedatos',
+    image: 'postgres:17-alpine',
+    state: 'exited',
+    status: 'Exited (1) 2 seconds ago',
+    ports: ['5432:5432'],
+  };
+
+  const healthMap = (container, facts = {}) =>
+    new Map([
+      [
+        container.id,
+        {
+          code: 'crash-loop',
+          level: 'fail',
+          headline: 'died 2s',
+          facts: {
+            exitCode: 1,
+            uptimeMs: 2000,
+            restartCount: 0,
+            oomKilled: false,
+            healthStatus: null,
+            ...facts,
+          },
+        },
+      ],
+    ]);
+
+  const logLine = ['Error: superuser password is not specified'];
+
+  async function setup() {
+    const { getLogsTail } = await import(
+      '../src/helpers/dockerService/serviceComponents/containerLogs.js'
+    );
+    getLogsTail.mockResolvedValue(logLine);
+    mockGetContainerDetails.mockResolvedValue({
+      env: ['POSTGRES_USER=app', 'PATH=/usr/bin'],
+      cmd: ['postgres'],
+    });
+    mockGetImageEnv.mockResolvedValue(['PATH=/usr/bin']);
+
+    const expose = { current: null };
+    render(
+      <HookTester
+        containers={[broken]}
+        expose={expose}
+        overrides={{ health: healthMap(broken) }}
+      />
+    );
+    await act(async () => {});
+    return expose;
+  }
+
+  afterEach(() => {
+    mockGetContainerDetails.mockReset();
+    mockGetImageEnv.mockReset();
+    mockSvcCreateContainer.mockReset();
+  });
+
+  test('the key is offered once a fix is available', async () => {
+    const expose = await setup();
+    expect(expose.current.diagnosis.fix).not.toBeNull();
+    const ids = expose.current.keymapBindings.map((b) => b.id);
+    expect(ids).toContain('container.fix');
+  });
+
+  test('pressing F opens the wizard prefilled on the review step', async () => {
+    const expose = await setup();
+    await act(async () => {
+      expose.current.handlers['container.fix']();
+    });
+    await act(async () => {});
+
+    expect(expose.current.creatingContainer).toBe(true);
+    expect(expose.current.creationStep).toBe(4);
+    expect(expose.current.containerNameInput).toBe('mi-basedatos-2');
+    expect(expose.current.envInput).toContain('POSTGRES_PASSWORD');
+  });
+
+  test('the image own variables never reach the form', async () => {
+    const expose = await setup();
+    await act(async () => {
+      expose.current.handlers['container.fix']();
+    });
+    await act(async () => {});
+    expect(expose.current.envInput).not.toContain('PATH=');
+  });
+
+  test('the ports are carried over', async () => {
+    const expose = await setup();
+    await act(async () => {
+      expose.current.handlers['container.fix']();
+    });
+    await act(async () => {});
+    expect(expose.current.portInput).toBe('5432:5432');
+  });
+
+  test('the review marks what the fix changed', async () => {
+    const expose = await setup();
+    await act(async () => {
+      expose.current.handlers['container.fix']();
+    });
+    await act(async () => {});
+    const changed = expose.current.creation.reviewRows
+      .filter((r) => r.changed)
+      .map((r) => r.key);
+    expect(changed).toEqual(expect.arrayContaining(['env', 'name']));
+  });
+
+  test('without a fix the key is not offered', async () => {
+    const { getLogsTail } = await import(
+      '../src/helpers/dockerService/serviceComponents/containerLogs.js'
+    );
+    getLogsTail.mockResolvedValue(['something nobody recognises']);
+    mockGetContainerDetails.mockResolvedValue({ env: [], cmd: [] });
+    mockGetImageEnv.mockResolvedValue([]);
+
+    const container = { ...broken, image: 'acme/app:1' };
+    const expose = { current: null };
+    render(
+      <HookTester
+        containers={[container]}
+        expose={expose}
+        overrides={{ health: healthMap(container) }}
+      />
+    );
+    await act(async () => {});
+
+    expect(expose.current.diagnosis.fix).toBeNull();
+    expect(
+      expose.current.keymapBindings.map((b) => b.id)
+    ).not.toContain('container.fix');
+  });
+});
+
+describe('useControls — the failed container is never deleted silently', () => {
+  const broken = {
+    id: 'c1',
+    name: 'mi-basedatos',
+    image: 'postgres:17-alpine',
+    state: 'exited',
+    status: 'Exited (1) 2 seconds ago',
+    ports: ['5432:5432'],
+  };
+
+  const verdictMap = new Map([
+    [
+      'c1',
+      {
+        code: 'crash-loop',
+        level: 'fail',
+        headline: 'died 2s',
+        facts: {
+          exitCode: 1,
+          uptimeMs: 2000,
+          restartCount: 0,
+          oomKilled: false,
+          healthStatus: null,
+        },
+      },
+    ],
+  ]);
+
+  beforeEach(async () => {
+    mockSvcCreateContainer.mockReset().mockResolvedValue({
+      id: 'cid-new',
+      ports: [],
+    });
+    const { getLogsTail } = await import(
+      '../src/helpers/dockerService/serviceComponents/containerLogs.js'
+    );
+    getLogsTail.mockResolvedValue(['superuser password is not specified']);
+    mockGetContainerDetails.mockResolvedValue({
+      env: ['POSTGRES_PASSWORD=x'],
+      cmd: [],
+    });
+    mockGetImageEnv.mockResolvedValue([]);
+    const { removeContainer } = await import(
+      '../src/helpers/dockerService/serviceComponents/containerActions.js'
+    );
+    removeContainer.mockClear();
+  });
+
+  async function recreateAndConfirm(expose) {
+    await act(async () => {
+      expose.current.handlers['container.fix']();
+    });
+    await act(async () => {});
+    expect(expose.current.creationStep).toBe(4);
+    await act(async () => {
+      expose.current.creation.nextStep();
+    });
+    await act(async () => {});
+  }
+
+  async function setup() {
+    const expose = { current: null };
+    render(
+      <HookTester
+        containers={[broken]}
+        expose={expose}
+        overrides={{ health: verdictMap }}
+      />
+    );
+    await act(async () => {});
+    return expose;
+  }
+
+  test('after creating, CDD asks before touching the failed container', async () => {
+    const expose = await setup();
+    await recreateAndConfirm(expose);
+
+    expect(expose.current.message).toContain('mi-basedatos-2');
+    expect(expose.current.message).toContain('Delete mi-basedatos');
+    expect(expose.current.pendingCleanup).toEqual({
+      id: 'c1',
+      name: 'mi-basedatos',
+    });
+  });
+
+  test('answering no leaves the failed container alone', async () => {
+    const { removeContainer } = await import(
+      '../src/helpers/dockerService/serviceComponents/containerActions.js'
+    );
+    const expose = await setup();
+    await recreateAndConfirm(expose);
+
+    await act(async () => {
+      expose.current.handlers['cleanup.keep']();
+    });
+    expect(removeContainer).not.toHaveBeenCalled();
+    expect(expose.current.pendingCleanup).toBeNull();
+  });
+
+  test('answering yes removes it', async () => {
+    const { removeContainer } = await import(
+      '../src/helpers/dockerService/serviceComponents/containerActions.js'
+    );
+    const expose = await setup();
+    await recreateAndConfirm(expose);
+
+    await act(async () => {
+      await expose.current.handlers['cleanup.delete']();
+    });
+    expect(removeContainer).toHaveBeenCalledWith('c1');
+    expect(expose.current.pendingCleanup).toBeNull();
+  });
+
+  test('the question is only asked when a fix was used', async () => {
+    // A plain wizard creation has no failed container to ask about.
+    const expose = { current: null };
+    render(<HookTester containers={[broken]} expose={expose} overrides={{}} />);
+    await act(async () => {});
+    await completeCreationWizard(expose, 'nginx');
+    expect(expose.current.pendingCleanup).toBeNull();
+    expect(expose.current.message).toContain('Created container cid-new');
+  });
+
+  test('cancelling the wizard forgets the superseded container', async () => {
+    const expose = await setup();
+    await act(async () => {
+      expose.current.handlers['container.fix']();
+    });
+    await act(async () => {});
+    await act(async () => {
+      expose.current.creation.cancelCreation();
+    });
+    expect(expose.current.pendingCleanup).toBeNull();
   });
 });

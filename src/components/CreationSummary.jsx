@@ -41,8 +41,10 @@ export function CreationSummary({
               <Text color={isFocused ? 'cyan' : undefined}>
                 [{row.step + 1}]{' '}
               </Text>
-              <Text bold>{row.label} </Text>
-              <Text>
+              <Text bold color={row.changed ? 'green' : undefined}>
+                {row.label}{' '}
+              </Text>
+              <Text color={row.changed ? 'green' : undefined}>
                 {row.values
                   .map((v, vi) => {
                     // For env rows, apply reveal logic
@@ -64,6 +66,11 @@ export function CreationSummary({
                   .join(', ')}
               </Text>
             </Box>
+            {row.changed && (
+              <Box paddingLeft={4}>
+                <Text color="green">{'\u2191'} changed by CDD</Text>
+              </Box>
+            )}
             {row.origin && (
               <Box paddingLeft={4}>
                 <Text dimColor>
@@ -100,6 +107,7 @@ CreationSummary.propTypes = {
       label: PropTypes.string.isRequired,
       values: PropTypes.arrayOf(PropTypes.string).isRequired,
       origin: PropTypes.string,
+      changed: PropTypes.bool,
     })
   ).isRequired,
   warnings: PropTypes.arrayOf(
