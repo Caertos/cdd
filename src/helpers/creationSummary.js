@@ -9,7 +9,22 @@ import { hostPortsOf } from './portUtils.js';
  * @property {string} label   - Display label
  * @property {string[]} values - One or more value lines
  * @property {string} [origin] - Explanatory second line
+ * @property {boolean} [changed] - True when CDD altered this row (TASK-8)
  */
+
+/**
+ * Which wizard field feeds which summary row. Used to translate a fix's
+ * changedFields — which speak field names — into the rows the user sees.
+ */
+const ROW_OF_FIELD = {
+  imageName: 'image',
+  containerName: 'name',
+  portInput: 'ports',
+  envInput: 'env',
+};
+
+/** Shown in place of the mask for a secret that has no value. */
+export const EMPTY_VALUE = '(empty)';
 
 /**
  * @typedef {Object} Warning
@@ -27,11 +42,28 @@ import { hostPortsOf } from './portUtils.js';
  * @param {string} ctx.rawImageInput - What the user originally typed for the image
  * @param {Object} ctx.imageProfiles - Profile map
  * @param {Array} [ctx.previewedPorts] - Auto-assigned ports from preview, or null
+ * @param {string[]} [ctx.changedFields] - Wizard fields CDD changed (TASK-8)
+ * @param {boolean} [ctx.recreating] - True when the values were prefilled from a failed container
  * @returns {SummaryRow[]}
  */
 export function buildCreationSummary(values, ctx) {
   const { imageName, containerName, portInput, envInput } = values;
-  const { rawImageInput, imageProfiles, previewedPorts } = ctx;
+  const {
+    rawImageInput,
+    imageProfiles,
+    previewedPorts,
+    changedFields = [],
+    recreating = false,
+  } = ctx;
+
+  // The point of "recreate with the fix" is that the user can see what CDD
+  // did before confirming it, so the touched rows are flagged rather than
+  // silently different from the container that failed.
+  const changedRows = new Set(
+    changedFields.map((field) => ROW_OF_FIELD[field]).filter(Boolean)
+  );
+  const flag = (row) =>
+    changedRows.has(row.key) ? { ...row, changed: true } : row;
 
   const rows = [];
 
@@ -80,7 +112,11 @@ export function buildCreationSummary(values, ctx) {
       step: 2,
       label: 'Ports',
       values: portLines,
-      origin: 'assigned by CDD',
+      // A recreation reads like a copy of the original, so say when the
+      // ports are new rather than carried over.
+      origin: recreating
+        ? 'assigned by CDD \u2014 the original published no ports'
+        : 'assigned by CDD',
     });
   } else {
     rows.push({
@@ -101,16 +137,17 @@ export function buildCreationSummary(values, ctx) {
       const eqIdx = v.indexOf('=');
       if (eqIdx === -1) return v;
       const key = v.slice(0, eqIdx);
-      return isSecretKey(key)
-        ? `${key}=\u2022\u2022\u2022\u2022\u2022\u2022`
-        : v;
+      if (!isSecretKey(key)) return v;
+      // Nothing to hide in an empty value, and dots would claim otherwise.
+      if (!v.slice(eqIdx + 1).trim()) return `${key}=${EMPTY_VALUE}`;
+      return `${key}=\u2022\u2022\u2022\u2022\u2022\u2022`;
     });
     rows.push({ key: 'env', step: 3, label: 'Env', values: envLines });
   } else {
     rows.push({ key: 'env', step: 3, label: 'Env', values: ['(none)'] });
   }
 
-  return rows;
+  return rows.map(flag);
 }
 
 /**
@@ -207,6 +244,39 @@ export function buildCreationWarnings(values, ctx) {
     }
   }
 
+  // Required vars that are present but carry no value. Distinct from "missing":
+  // the key is there, and the container will start, fail, and say the very
+  // thing CDD just diagnosed. TASK-8's password fix lands here on purpose —
+  // CDD cannot invent a password — so the review has to say so out loud.
+  if (profile?.requiredEnv?.length) {
+    // Named given, not values: `values` is the wizard-values parameter and
+    // shadowing it here made the two impossible to tell apart.
+    const given = new Map(
+      (envInput || '')
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .map((s) => {
+          const at = s.indexOf('=');
+          return at === -1
+            ? [s, null]
+            : [s.slice(0, at).trim(), s.slice(at + 1)];
+        })
+    );
+    const empty = profile.requiredEnv.filter((k) => {
+      if (!given.has(k)) return false;
+      const v = given.get(k);
+      return v !== null && v.trim() === '';
+    });
+    if (empty.length > 0) {
+      warnings.push({
+        kind: 'missing-env',
+        level: 'warn',
+        text: `Required env var${empty.length === 1 ? '' : 's'} set but empty: ${empty.join(', ')}. Fill ${empty.length === 1 ? 'it' : 'them'} in before creating — the container will fail without ${empty.length === 1 ? 'a value' : 'values'}.`,
+      });
+    }
+  }
+
   // Secrets in plain text
   const envVars = (envInput || '')
     .split(',')
@@ -216,7 +286,8 @@ export function buildCreationWarnings(values, ctx) {
     const eqIdx = v.indexOf('=');
     if (eqIdx === -1) continue;
     const key = v.slice(0, eqIdx);
-    if (isSecretKey(key)) {
+    // No value, nothing in plain text: the empty-value warning covers it.
+    if (isSecretKey(key) && v.slice(eqIdx + 1).trim()) {
       warnings.push({
         kind: 'secret-plain',
         level: 'warn',

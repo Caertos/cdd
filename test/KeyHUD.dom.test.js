@@ -3,6 +3,7 @@
  */
 import React from 'react';
 import { render } from '@testing-library/react';
+import { getBindings } from '../src/helpers/keymap.js';
 import { KeyHUD } from '../src/components/KeyHUD.jsx';
 
 describe('KeyHUD — component rendering', () => {
@@ -26,6 +27,24 @@ describe('KeyHUD — component rendering', () => {
     expect(getByText('Start')).toBeTruthy();
     expect(getByText('[p]')).toBeTruthy();
     expect(getByText('Stop')).toBeTruthy();
+  });
+
+  test('shows friendly key names instead of raw ones', () => {
+    const bindings = [
+      { id: 'a', keys: ['escape', '?'], label: 'Close', priority: 90 },
+      { id: 'b', keys: ['up'], label: '↑', priority: 80 },
+    ];
+    const { getByText } = render(<KeyHUD bindings={bindings} />);
+    expect(getByText('[Esc]')).toBeTruthy();
+    expect(getByText('[↑]')).toBeTruthy();
+  });
+
+  test('the cleanup question reads [y] Yes  [n] No', () => {
+    const bindings = getBindings('list', { confirmCleanup: true }).filter(
+      (b) => b.id.startsWith('cleanup.')
+    );
+    const { container } = render(<KeyHUD bindings={bindings} />);
+    expect(container.textContent).toMatch(/\[y\]\s+Yes\s*\[n\]\s+No/);
   });
 
   test('truncates and shows "? more" when maxWidth is exceeded', () => {

@@ -51,6 +51,23 @@ function logHas(ctx, ...needles) {
   return needles.some((needle) => haystack.includes(needle));
 }
 
+/**
+ * The label for an "add this variable" fix.
+ *
+ * When the fix has no value to give — a password — the button says so, because
+ * a label that promises a working container it cannot build is worse than no
+ * label at all.
+ *
+ * @param {string} key
+ * @param {boolean} needsUserInput
+ * @returns {string}
+ */
+function addEnvLabel(key, needsUserInput) {
+  return needsUserInput
+    ? STRINGS.diagnostics.fix.addEnvInputNeeded(key)
+    : STRINGS.diagnostics.fix.addEnv(key);
+}
+
 /** Facts from the health verdict, tolerating a missing verdict. */
 function factsOf(ctx) {
   return ctx.verdict?.facts ?? {};
@@ -68,7 +85,10 @@ function factsOf(ctx) {
  */
 function missingRequiredEnv(ctx) {
   const required = ctx.profile?.requiredEnv;
-  const given = ctx.container?.env;
+  // Read from inspect, not from the list row: getContainers() does not carry
+  // env, so a rule reading ctx.container.env matched only inside the tests.
+  // ctx.container.env stays as a fallback so a caller that does have it wins.
+  const given = ctx.details?.env ?? ctx.container?.env;
   if (!Array.isArray(required) || required.length === 0) return null;
   if (!Array.isArray(given)) return null;
   const flat = given.join('\n').toLowerCase();
@@ -97,11 +117,12 @@ function busyHostPort(ctx) {
 /** @type {DiagnosticRule[]} */
 export const DIAGNOSTIC_RULES = [
   {
-    // An inspect fact, not a log guess: the kernel told us why.
+    // Only the flag, never the exit code. 137 is SIGKILL, which Docker also
+    // sends for `docker kill` and a stop that timed out — calling that "out of
+    // memory" is exactly the invented cause this catalog must not produce.
     id: 'out-of-memory',
     priority: 100,
-    match: (ctx) =>
-      factsOf(ctx).oomKilled === true || factsOf(ctx).exitCode === 137,
+    match: (ctx) => factsOf(ctx).oomKilled === true,
     explain: () => STRINGS.diagnostics.explain['out-of-memory'],
   },
   {
@@ -117,7 +138,7 @@ export const DIAGNOSTIC_RULES = [
     explain: () => STRINGS.diagnostics.explain['postgres-missing-password'],
     fix: () => ({
       kind: 'add-env',
-      label: STRINGS.diagnostics.fix.addEnv('POSTGRES_PASSWORD'),
+      label: addEnvLabel('POSTGRES_PASSWORD', true),
       patch: { env: { POSTGRES_PASSWORD: '' } },
       needsUserInput: true,
     }),
@@ -151,7 +172,7 @@ export const DIAGNOSTIC_RULES = [
         'MYSQL_ROOT_PASSWORD';
       return {
         kind: 'add-env',
-        label: STRINGS.diagnostics.fix.addEnv(key),
+        label: addEnvLabel(key, true),
         patch: { env: { [key]: '' } },
         needsUserInput: true,
       };
@@ -237,7 +258,7 @@ export const DIAGNOSTIC_RULES = [
       const key = missingRequiredEnv(ctx);
       return {
         kind: 'add-env',
-        label: STRINGS.diagnostics.fix.addEnv(key),
+        label: addEnvLabel(key, true),
         patch: { env: { [key]: '' } },
         needsUserInput: true,
       };

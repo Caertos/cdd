@@ -60,6 +60,16 @@ describeE2E('E2E — diagnosis panel', () => {
 
       // No diagnosis is requested: selecting a failing container is enough.
       await ui.waitForText('Diagnosis:', { label: 'the diagnosis panel' });
+      // The log read is async and inspect lands separately, so the panel can
+      // still be loading when the title first appears.
+      await ui
+        .waitForTextGone('Reading the log...', {
+          timeout: 10000,
+          label: 'the log read to finish',
+        })
+        .catch(() => {
+          throw new Error('Panel never finished loading its log');
+        });
 
       const frame = ui.frame();
       expect(frame).toContain(name.slice(0, 17));
@@ -122,6 +132,92 @@ describeE2E('E2E — diagnosis panel', () => {
         .catch(() => {
           throw new Error('Panel appeared for a healthy container');
         });
+    } finally {
+      await removeTestContainer(id);
+    }
+  });
+});
+
+describeE2E('E2E — recreate with the fix', () => {
+  let ui = null;
+
+  beforeAll(async () => {
+    await cleanupAll();
+  });
+  afterEach(() => {
+    ui?.unmount();
+    ui = null;
+  });
+  afterAll(async () => {
+    await cleanupAll();
+  });
+
+  /**
+   * A container that fails because POSTGRES_PASSWORD is missing: exactly the
+   * case TASK-8 §1 promises to explain. The log line is what the catalog
+   * recognises, so the fix is the missing variable.
+   */
+  async function createUnconfiguredPostgres(suffix) {
+    return createExitedContainer(suffix, {
+      image: 'postgres:17-alpine',
+      cmd: [
+        'sh',
+        '-c',
+        'echo "Error: Database is uninitialized and superuser password is not specified." >&2; exit 1',
+      ],
+    });
+  }
+
+  test('the panel offers F and the review shows what CDD changed', async () => {
+    const { id, name } = await createUnconfiguredPostgres('fix-review');
+    try {
+      ui = renderApp(<App />);
+      await renderWithSelection(ui, { name });
+
+      // The panel names the cause and advertises the key.
+      await ui.waitForText('Likely cause:', { label: 'the diagnosis panel' });
+      await ui.waitForText('[F]', { label: 'the fix key' });
+
+      await ui.press('F');
+
+      // Straight to the review, with the changed row marked.
+      await ui.waitForText('Review and confirm', { label: 'the review step' });
+      await ui.waitForText('changed by CDD', { label: 'the changed marker' });
+      expect(ui.frame()).toContain('POSTGRES_PASSWORD');
+
+      // And it went to name-2: the old container still owns the name.
+      expect(ui.frame()).toContain(`${name}-2`);
+    } finally {
+      await removeTestContainer(id);
+    }
+  });
+
+  test('creating from the fix asks about the container that failed', async () => {
+    const { id, name } = await createUnconfiguredPostgres('fix-create');
+    try {
+      ui = renderApp(<App />);
+      await renderWithSelection(ui, { name });
+      await ui.waitForText('[F]', { label: 'the fix key' });
+
+      await ui.press('F');
+      await ui.waitForText('Review and confirm', { label: 'the review step' });
+
+      await ui.press(KEY.enter); // create
+
+      // Asked, not done. The failed container may hold something unread.
+      await ui.waitForText('Delete', { label: 'the cleanup question' });
+      expect(ui.frame()).toContain(name);
+
+      // Answering "no" leaves it in place.
+      await ui.press('n');
+      await ui.waitForText('kept', { label: 'the kept confirmation' });
+
+      const stillThere = await docker
+        .getContainer(id)
+        .inspect()
+        .then(() => true)
+        .catch(() => false);
+      expect(stillThere).toBe(true);
     } finally {
       await removeTestContainer(id);
     }

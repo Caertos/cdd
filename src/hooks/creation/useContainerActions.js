@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { safeCall } from '../../helpers/safeCall.js';
+import { withContext } from '../../helpers/errorMessage.js';
 import {
   startContainer as svcStartContainer,
   stopContainer as svcStopContainer,
@@ -29,6 +30,23 @@ export function useContainerActions({ containers, onAction }) {
     if (msg) {
       messageTimerRef.current = setTimeout(() => setMessage(''), ms);
     }
+  }
+
+  /**
+   * Show a message that waits for an answer instead of expiring.
+   *
+   * `setMessage` on its own does not cancel the timer a previous
+   * `setTimedMessage` armed, so a question written over a "Working..." line
+   * used to be wiped seconds later while the answer it was asking about stayed
+   * armed.
+   *
+   * @param {string} msg
+   * @param {string} [color]
+   */
+  function setPersistentMessage(msg, color = 'yellow') {
+    clearTimeout(messageTimerRef.current);
+    setMessage(msg);
+    setMessageColor(color);
   }
 
   useEffect(() => () => clearTimeout(messageTimerRef.current), []);
@@ -66,7 +84,10 @@ export function useContainerActions({ containers, onAction }) {
       safeCall(onAction);
     } catch (err) {
       setTimedMessage(
-        `Failed to ${actionVerb ?? actionLabel} container: ${err.message}`,
+        withContext(
+          `Failed to ${actionVerb ?? actionLabel} container`,
+          err.message
+        ),
         'red'
       );
     }
@@ -76,6 +97,7 @@ export function useContainerActions({ containers, onAction }) {
     message,
     setMessage,
     setTimedMessage,
+    setPersistentMessage,
     messageColor,
     setMessageColor,
     handleAction,

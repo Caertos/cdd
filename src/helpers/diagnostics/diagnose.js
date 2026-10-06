@@ -67,17 +67,22 @@ export function describeWhat(verdict) {
   const facts = verdict?.facts ?? {};
   const code = verdict?.code;
 
-  if (code === 'crashed') {
+  // A quick death is classed as a crash-loop even when the container has a
+  // restart policy of "no" and has only died once, so "Docker restarts it" is
+  // only true once the restart count says so.
+  const restarted = (facts.restartCount ?? 0) > 0;
+
+  if (code === 'crash-loop' && restarted) {
+    return `It keeps dying${facts.uptimeMs ? ` after ${Math.max(1, Math.round(facts.uptimeMs / 1000))}s` : ''} and Docker restarts it.`;
+  }
+
+  if (code === 'crashed' || code === 'crash-loop') {
     const uptime = facts.uptimeMs;
     const when =
       typeof uptime === 'number'
         ? ` after ${Math.max(1, Math.round(uptime / 1000))}s`
         : '';
     return `It died${when} with exit code ${facts.exitCode ?? 'unknown'}.`;
-  }
-
-  if (code === 'crash-loop') {
-    return `It keeps dying${facts.uptimeMs ? ` after ${Math.max(1, Math.round(facts.uptimeMs / 1000))}s` : ''} and Docker restarts it.`;
   }
 
   if (code === 'restarting') {
@@ -168,6 +173,14 @@ export function diagnose(ctx, rules = DIAGNOSTIC_RULES) {
   const context = ctx ?? {};
   const logLines = Array.isArray(context.logLines) ? context.logLines : [];
   const tail = logLines.slice(-TAIL_LINES);
+  const honest = {
+    what: describeWhat(context.verdict),
+    why: null,
+    ruleId: null,
+    evidence: [],
+    fix: null,
+    tail,
+  };
 
   const winner = (rules ?? [])
     .filter((rule) => {
@@ -181,23 +194,41 @@ export function diagnose(ctx, rules = DIAGNOSTIC_RULES) {
     .sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0))[0];
 
   if (!winner) {
-    return {
-      what: describeWhat(context.verdict),
-      why: null,
-      ruleId: null,
-      evidence: [],
-      fix: null,
-      tail,
-    };
+    return honest;
   }
 
-  const fix = typeof winner.fix === 'function' ? winner.fix(context) : null;
+  // explain and fix run inside the guard too. A rule that throws on either used
+  // to propagate out of diagnose(), and the caller then cached nothing — so the
+  // log was read again on every refresh, forever, with no error shown.
+  let why;
+  try {
+    why = winner.explain(context);
+  } catch {
+    return honest;
+  }
+
+  let fix = null;
+  if (typeof winner.fix === 'function') {
+    try {
+      fix = winner.fix(context);
+    } catch {
+      // The cause is still worth showing even if its repair cannot be built.
+      fix = null;
+    }
+  }
+
+  let evidence = [];
+  try {
+    evidence = evidenceFor(logLines, winner);
+  } catch {
+    evidence = [];
+  }
 
   return {
-    what: describeWhat(context.verdict),
-    why: winner.explain(context),
+    what: honest.what,
+    why,
     ruleId: winner.id,
-    evidence: evidenceFor(logLines, winner),
+    evidence,
     fix: fix ?? null,
     tail,
   };

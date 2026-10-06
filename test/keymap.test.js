@@ -4,6 +4,7 @@
 import fs from 'fs';
 import path from 'path';
 import { getActiveContext, getBindings, resolveKey, keyNameOf, KEYMAP } from '../src/helpers/keymap.js';
+import { displayKeys } from '../src/helpers/keyLabels.js';
 
 describe('getActiveContext — pure function', () => {
   test('returns list when no special state is active', () => {
@@ -211,5 +212,86 @@ describe('keymap ↔ useControls handlers', () => {
   test.failing('every keymap binding has a handler in useControls', () => {
     const ids = [...new Set(Object.values(KEYMAP).flat().map((b) => b.id))];
     expect(ids.filter((id) => !hasHandler(id))).toEqual([]); // today: logs.up/down/pageup/pagedown/follow
+  });
+});
+
+describe('the fix key (TASK-8)', () => {
+  const state = { hasSelection: true, canFix: true };
+
+  test('F opens the fix only when a fix is available', () => {
+    const ids = getBindings('list', state).map((b) => b.id);
+    expect(ids).toContain('container.fix');
+    expect(getBindings('list', { ...state, canFix: false }).map((b) => b.id))
+      .not.toContain('container.fix');
+  });
+
+  test('F needs a selection', () => {
+    expect(
+      getBindings('list', { hasSelection: false, canFix: true }).map(
+        (b) => b.id
+      )
+    ).not.toContain('container.fix');
+  });
+
+  test('both uppercase spellings resolve', () => {
+    // keyNameOf() turns shift+f into 'shift+F', not 'F'.
+    expect(resolveKey('list', 'F', { shift: true }, state).id).toBe(
+      'container.fix'
+    );
+    expect(resolveKey('list', 'F', {}, state).id).toBe('container.fix');
+  });
+
+  test('lowercase f is left free for the filter TASK-9 adds', () => {
+    expect(resolveKey('list', 'f', {}, state)).toBeNull();
+  });
+
+  test('the cleanup question only appears once asked', () => {
+    const asked = getBindings('list', { confirmCleanup: true }).map((b) => b.id);
+    expect(asked).toContain('cleanup.delete');
+    expect(asked).toContain('cleanup.keep');
+    const idle = getBindings('list', { confirmCleanup: false }).map((b) => b.id);
+    expect(idle).not.toContain('cleanup.delete');
+    expect(idle).not.toContain('cleanup.keep');
+  });
+
+  test('no binding repeats its own key as its label', () => {
+    for (const [context, bindings] of Object.entries(KEYMAP)) {
+      for (const b of bindings) {
+        const shown = displayKeys(b.keys)[0];
+        expect(`${context}/${b.id}: ${String(b.label).toLowerCase()}`).not.toBe(
+          `${context}/${b.id}: ${String(shown).toLowerCase()}`
+        );
+        expect(String(b.label).trim()).not.toBe('');
+      }
+    }
+  });
+
+  test('the cleanup question is labelled Yes and No', () => {
+    const byId = Object.fromEntries(
+      getBindings('list', { confirmCleanup: true }).map((b) => [b.id, b])
+    );
+    expect(byId['cleanup.delete'].label).toBe('Yes');
+    expect(byId['cleanup.keep'].label).toBe('No');
+  });
+
+  test('y and n answer the question rather than starting an erase', () => {
+    const asked = { confirmCleanup: true };
+    expect(resolveKey('list', 'y', {}, asked).id).toBe('cleanup.delete');
+    expect(resolveKey('list', 'n', {}, asked).id).toBe('cleanup.keep');
+    // Without the question, y does nothing at all: erasing needs 'e' + confirm.
+    expect(resolveKey('list', 'y', {}, { confirmCleanup: false })).toBeNull();
+  });
+
+  test('the bindings added here all have handlers', () => {
+    // The whole-keymap assertion belongs to D21 and stays test.failing until
+    // TASK-10 adds the log scroll handlers. This one covers only what this
+    // change introduced.
+    const source = fs.readFileSync(
+      path.resolve('src/hooks/useControls.js'),
+      'utf8'
+    );
+    for (const id of ['container.fix', 'cleanup.delete', 'cleanup.keep']) {
+      expect(source).toContain(`'${id}'`);
+    }
   });
 });

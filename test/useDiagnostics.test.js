@@ -15,8 +15,8 @@ await jest.unstable_mockModule(
 const { useDiagnostics, diagnosticCacheKey } =
   await import('../src/hooks/useDiagnostics.js');
 
-function HookTester({ container, verdict, expose }) {
-  const hook = useDiagnostics(container, verdict);
+function HookTester({ container, verdict, details, expose }) {
+  const hook = useDiagnostics(container, verdict, details);
   useEffect(() => {
     expose.current = hook;
   });
@@ -393,7 +393,10 @@ describe('useDiagnostics — caching', () => {
 });
 
 describe('useDiagnostics — when the read fails', () => {
-  test('a rejected read leaves no panel rather than throwing', async () => {
+  test('a rejected read still explains what happened, and admits no cause', async () => {
+    // Not "no panel": the verdict alone can say the container died, and saying
+    // that is more useful than a silent screen. What it cannot do is guess a
+    // cause, so `why` stays null and the tail stays empty.
     mockGetLogsTail.mockReset().mockRejectedValue(new Error('boom'));
     const container = row();
     const expose = { current: null };
@@ -406,7 +409,11 @@ describe('useDiagnostics — when the read fails', () => {
     );
     await act(async () => {});
 
-    expect(expose.current.diagnosis).toBeNull();
+    expect(expose.current.diagnosis).not.toBeNull();
+    expect(expose.current.diagnosis.what).toBeTruthy();
+    expect(expose.current.diagnosis.why).toBeNull();
+    expect(expose.current.diagnosis.tail).toEqual([]);
+    expect(expose.current.diagnosis.ruleId).toBeNull();
     expect(expose.current.isLoading).toBe(false);
   });
 
@@ -425,8 +432,139 @@ describe('useDiagnostics — when the read fails', () => {
 
     expect(expose.current.diagnosis.why).toBeNull();
     expect(expose.current.diagnosis.tail).toEqual([]);
-    // A container that dies inside CRASH_LOOP_MAX_UPTIME is a crash-loop, so
-    // the sentence is about restarts rather than an exit code.
-    expect(expose.current.diagnosis.what).toContain('keeps dying');
+    // A container that dies inside CRASH_LOOP_MAX_UPTIME is a crash-loop, but
+    // with no restarts the sentence must not claim Docker restarted it.
+    expect(expose.current.diagnosis.what).toMatch(/^It died/);
+    expect(expose.current.diagnosis.what).not.toMatch(/restart/i);
+  });
+});
+
+describe('useDiagnostics — inspect data arriving late', () => {
+  beforeEach(() => {
+    mockGetLogsTail.mockReset().mockResolvedValue(['something unrecognised']);
+  });
+
+  const row = {
+    id: 'c7',
+    name: 'app-db',
+    image: 'postgres:17-alpine',
+    state: 'exited',
+    status: 'Exited (1) 2 seconds ago',
+    ports: ['5432:5432'],
+  };
+  const verdict = verdictFor(row, crashed(1, 60_000));
+
+  test('the profile rule fires once inspect hands over the env', async () => {
+    // A log that names nothing: only Config.Env can identify this one. The
+    // rule used to read container.env, which getContainers() never provides,
+    // so it matched only inside the tests.
+    const expose = { current: null };
+    const { rerender } = render(
+      <HookTester container={row} verdict={verdict} expose={expose} />
+    );
+    await act(async () => {});
+    expect(expose.current.diagnosis.why).toBeNull();
+
+    rerender(
+      <HookTester
+        container={row}
+        verdict={verdict}
+        details={{ env: ['POSTGRES_DB=app'] }}
+        expose={expose}
+      />
+    );
+    await act(async () => {});
+
+    expect(expose.current.diagnosis.ruleId).toBe('missing-required-env');
+    expect(expose.current.diagnosis.why).toContain('POSTGRES_PASSWORD');
+  });
+
+  test('and the log is read exactly once across both passes', async () => {
+    const expose = { current: null };
+    const { rerender } = render(
+      <HookTester container={row} verdict={verdict} expose={expose} />
+    );
+    await act(async () => {});
+    expect(mockGetLogsTail).toHaveBeenCalledTimes(1);
+
+    rerender(
+      <HookTester
+        container={row}
+        verdict={verdict}
+        details={{ env: ['POSTGRES_DB=app'] }}
+        expose={expose}
+      />
+    );
+    await act(async () => {});
+
+    // Rebuilding the diagnosis must not re-read what we already have.
+    expect(mockGetLogsTail).toHaveBeenCalledTimes(1);
+  });
+
+  test('inspect landing mid-read does not make the log be read twice', async () => {
+    // The first effect is cancelled by the second one, and its result used to
+    // be thrown away with it.
+    let release;
+    mockGetLogsTail.mockReturnValue(
+      new Promise((resolve) => {
+        release = () => resolve(['something unrecognised']);
+      })
+    );
+    const expose = { current: null };
+    const { rerender } = render(
+      <HookTester container={row} verdict={verdict} expose={expose} />
+    );
+    await act(async () => {});
+
+    // Inspect arrives before the log does.
+    rerender(
+      <HookTester
+        container={row}
+        verdict={verdict}
+        details={{ env: ['POSTGRES_DB=app'] }}
+        expose={expose}
+      />
+    );
+    await act(async () => {
+      release();
+    });
+
+    expect(mockGetLogsTail).toHaveBeenCalledTimes(1);
+    expect(expose.current.diagnosis.ruleId).toBe('missing-required-env');
+  });
+
+  test('the fix still carries the variable that is missing', async () => {
+    const expose = { current: null };
+    const { rerender } = render(
+      <HookTester container={row} verdict={verdict} expose={expose} />
+    );
+    await act(async () => {});
+    rerender(
+      <HookTester
+        container={row}
+        verdict={verdict}
+        details={{ env: [] }}
+        expose={expose}
+      />
+    );
+    await act(async () => {});
+    expect(expose.current.diagnosis.fix.patch.env).toHaveProperty(
+      'POSTGRES_PASSWORD'
+    );
+  });
+
+  test('a container stopped on purpose still gets no panel', async () => {
+    const container = { ...row, status: 'Exited (0) 1 hour ago' };
+    const expose = { current: null };
+    render(
+      <HookTester
+        container={container}
+        verdict={verdictFor(container, crashed(0, 60_000))}
+        details={{ env: [] }}
+        expose={expose}
+      />
+    );
+    await act(async () => {});
+    expect(expose.current.diagnosis).toBeNull();
   });
 });

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Box, Text } from 'ink';
 import { STRINGS } from '../helpers/strings.js';
+import { displayKeys } from '../helpers/keyLabels.js';
 
 /**
  * Full help panel for the current context.
@@ -29,7 +30,9 @@ export function HelpPanel({ context, bindings }) {
       {bindings.map((binding) => (
         <Box key={binding.id} columnGap={2}>
           <Text color="cyan">
-            {binding.keys.map((k) => `[${k}]`).join(' ')}
+            {displayKeys(binding.keys)
+              .map((k) => `[${k}]`)
+              .join(' ')}
           </Text>
           <Text>{binding.help ?? binding.label}</Text>
         </Box>

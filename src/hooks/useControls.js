@@ -10,9 +10,20 @@ import { useConfirmation } from './useConfirmation.js';
 import { useExitHandler } from './useExitHandler.js';
 import { useShellMode } from './useShellMode.js';
 import { getLogsStream } from '../helpers/dockerService/serviceComponents/containerLogs.js';
+import {
+  getContainerDetails,
+  getImageEnv,
+} from '../helpers/dockerService/serviceComponents/containerInspect.js';
 import { createContainer as svcCreateContainer } from '../helpers/dockerService/serviceComponents/containerActions.js';
 import { buildContainerOptions } from '../helpers/containerOptionsBuilder.js';
+import {
+  containerToCreationValues,
+  applyFix,
+} from '../helpers/diagnostics/prefill.js';
+import { hostPortsOf } from '../helpers/portUtils.js';
+import { withContext } from '../helpers/errorMessage.js';
 import { DB_IMAGES } from '../helpers/constants.js';
+import { useDiagnostics } from './useDiagnostics.js';
 import {
   getActiveContext,
   getBindings,
@@ -32,6 +43,13 @@ const NOOP_LAUNCHER = {
 };
 
 // Principal hook to manage user inputs and control the app state
+/** The fix creates the replacement stopped; say how to start it. */
+function startHint(replacement) {
+  return replacement
+    ? ` ${replacement} is stopped — select it and press [i] to start it.`
+    : '';
+}
+
 /**
  * Main hook that wires user input, creation, actions and logs viewing.
  * It coordinates the modular hooks and exposes a compact API consumed by the App.
@@ -39,13 +57,31 @@ const NOOP_LAUNCHER = {
  * @param {Array<Object>} containers - Current list of Docker containers
  * @param {Object} [overrides] - Test hooks and optional connection state
  * @param {Object} [overrides.connection] - Docker connection state from useContainers
+ * @param {Map<string, import('../helpers/health.js').HealthVerdict>} [overrides.health]
+ *   - Health verdicts by container id. Lived here rather than in App so the
+ *   diagnosis and the F key read the same one instead of each owning a hook.
+ * @param {Map<string, import('../helpers/dockerService/serviceComponents/containerInspect.js').ContainerDetails>} [overrides.details]
+ *   - The inspect data useContainerHealth already fetched, for the rules that
+ *   need Config.Env.
  * @returns {Object} controls - API for the App component
  */
 export function useControls(containers = [], overrides = {}) {
   const connection = overrides.connection ?? null;
   const launcher = overrides.launcher ?? NOOP_LAUNCHER;
+  const health = overrides.health ?? new Map();
+  // Inspect data that useContainerHealth already fetched. Kept because the
+  // profile-based diagnostic rules need Config.Env, and re-inspecting here
+  // would double the Docker calls for no new information.
+  const details = overrides.details ?? new Map();
   const [creatingContainer, setCreatingContainer] = React.useState(false);
   const [showHelp, setShowHelp] = React.useState(false);
+  // The failed container a recreation supersedes, pending a yes/no.
+  const [pendingCleanup, setPendingCleanup] = React.useState(null);
+  // Set by the F key, consumed by onCreate: the fix may rename the new
+  // container to keep this one.
+  const supersededRef = React.useRef(null);
+  // True while a fix is being prepared, so a second F cannot interleave.
+  const fixInFlightRef = React.useRef(false);
   const lastCreationRef = React.useRef(null);
 
   // — Modular hooks —
@@ -78,23 +114,59 @@ export function useControls(containers = [], overrides = {}) {
               .map((p) => `${p.hostPort}→${p.containerPort}/${p.protocol}`)
               .join(', ');
         }
-        actions.setTimedMessage(`Created container ${id}${portMsg}`, 'green');
+        const superseded = supersededRef.current;
+        supersededRef.current = null;
+        if (superseded) {
+          // Never deleted without an answer: that container may hold something
+          // the user has not looked at yet.
+          setPendingCleanup({
+            ...superseded,
+            replacement: containerName || id,
+          });
+          // Persistent, not timed: the question must stay until it is answered
+          // or something else disarms it.
+          actions.setPersistentMessage(
+            `Created ${containerName || id}. Delete ${superseded.name}, the container that failed? [y] Yes  [n] No`
+          );
+        } else {
+          actions.setTimedMessage(`Created container ${id}${portMsg}`, 'green');
+        }
       } catch (err) {
+        // Nothing was created, so there is no replacement to ask about. Left
+        // armed, a later plain creation would end up offering to delete a
+        // container it had nothing to do with.
+        supersededRef.current = null;
+        setPendingCleanup(null);
         actions.setTimedMessage(
-          `Error creating container: ${err.message}`,
+          withContext('Error creating container', err.message),
           'red'
         );
       } finally {
         setCreatingContainer(false);
       }
     },
-    onCancel: () => setCreatingContainer(false),
+    onCancel: () => {
+      supersededRef.current = null;
+      setCreatingContainer(false);
+    },
     dbImages: DB_IMAGES,
   });
 
   const logsViewer = useLogsViewer();
   const selection = useContainerSelection(containers.length);
   const debugLogs = useDebugLogs();
+
+  const selectedContainer = containers[selection.selected] ?? null;
+  const selectedVerdict = selectedContainer
+    ? (health.get(selectedContainer.id) ?? null)
+    : null;
+  // One diagnosis for the panel and for the F key, so the log is read once.
+  const diagnostics = useDiagnostics(
+    selectedContainer,
+    selectedVerdict,
+    selectedContainer ? (details.get(selectedContainer.id) ?? null) : null
+  );
+  const canFix = Boolean(diagnostics.diagnosis?.fix);
 
   // Allow overrides for testability (e.g. injecting a mock triggerHubSearch)
   const triggerHubSearch =
@@ -203,6 +275,8 @@ export function useControls(containers = [], overrides = {}) {
       disconnected: connection?.status === 'error' && containers.length === 0,
       canLaunch: launcher.canLaunch,
       launchStatus: launcher.status,
+      canFix,
+      confirmCleanup: pendingCleanup !== null,
     }),
     [
       eraseConfirmation.confirmErase,
@@ -221,11 +295,34 @@ export function useControls(containers = [], overrides = {}) {
       connection?.status,
       launcher.canLaunch,
       launcher.status,
+      canFix,
+      pendingCleanup,
     ]
   );
 
   const context = getActiveContext(uiState);
+  // Not memoised on purpose. getBindings() filters and sorts at most a dozen
+  // bindings, and uiState is a fresh object every render, so a dependency that
+  // tracked it would rebuild the array anyway — the memo would only look like
+  // an optimisation. An earlier version of this file claimed otherwise.
   const keymapBindings = getBindings(context, uiState);
+
+  // The help panel describes the screen it was opened from, not itself. Without
+  // this, pressing ? listed exactly one key — its own close — and every real
+  // binding became undiscoverable (H1).
+  const helpContext = getActiveContext({ ...uiState, showHelp: false });
+  const helpBindings = showHelp
+    ? [
+        ...getBindings(helpContext, uiState),
+        {
+          id: 'help.close',
+          keys: ['escape', '?'],
+          label: 'Esc',
+          help: 'Close this help panel',
+          priority: 90,
+        },
+      ]
+    : [];
 
   // Action handlers for the keymap
   const handlers = React.useMemo(
@@ -290,10 +387,109 @@ export function useControls(containers = [], overrides = {}) {
         );
         actions.setMessageColor('yellow');
       },
+      // TASK-8: recreate the failed container with the diagnosis applied.
+      // The fix is never applied directly — the wizard opens on the review
+      // step with the touched rows marked, so the user confirms the diff.
+      'container.fix': async () => {
+        // Two F presses in quick succession would interleave two reads of the
+        // same container and open the wizard twice.
+        if (fixInFlightRef.current) return;
+        const container = containers[selection.selected];
+        const fix = diagnostics.diagnosis?.fix;
+        if (!container || !fix) return;
+        fixInFlightRef.current = true;
+
+        // One try around the whole body: a throw anywhere between arming the
+        // lock and releasing it would otherwise leave F dead for the rest of
+        // the session, with nothing on screen to explain why. An explanation
+        // feature that silently disables its own key is worse than one that
+        // says it failed.
+        try {
+          actions.setTimedMessage(
+            `Reading ${container.name}'s configuration...`,
+            'cyan'
+          );
+
+          const details = await getContainerDetails(container.id).catch(
+            () => null
+          );
+          if (!details) {
+            // Refusing here, because carrying on means building a container
+            // with no environment at all: a postgres without
+            // POSTGRES_PASSWORD would die the same way it just did, and the
+            // review would say "Env (none)" as if that were the plan. The
+            // wizard is one key away and it never pretends to know what the
+            // user needs.
+            actions.setTimedMessage(
+              `Couldn't read ${container.name}'s configuration — press C to create one from scratch`,
+              'red'
+            );
+            return;
+          }
+
+          // The image's own env is what tells us which variables are the
+          // user's. getImageEnv answers null rather than throwing, but a
+          // rejection here would still strand the lock without this catch.
+          const imageEnv = await getImageEnv(container.image);
+
+          const base = containerToCreationValues(
+            container,
+            { env: details.env, cmd: details.cmd },
+            imageEnv
+          );
+          const takenNames = new Set(containers.map((c) => c.name));
+          const usedHostPorts = new Set(containers.flatMap(hostPortsOf));
+          const { values, changedFields } = applyFix(base, fix, {
+            takenNames,
+            usedHostPorts,
+          });
+
+          supersededRef.current = { id: container.id, name: container.name };
+          backHintShownRef.current = false;
+          setCreatingContainer(true);
+          await creation.prefillCreation(values, changedFields);
+        } catch (err) {
+          actions.setTimedMessage(
+            withContext(
+              `Couldn't prepare the fix for ${container.name}`,
+              err.message
+            ),
+            'red'
+          );
+        } finally {
+          fixInFlightRef.current = false;
+        }
+      },
       'container.create': () => {
+        supersededRef.current = null;
         backHintShownRef.current = false;
         creation.resetCreation();
         setCreatingContainer(true);
+      },
+      'cleanup.delete': async () => {
+        const target = pendingCleanup;
+        setPendingCleanup(null);
+        if (!target) return;
+        actions.setTimedMessage('Removing the failed container...', 'yellow');
+        try {
+          await actions.removeContainer(target.id);
+          actions.setTimedMessage(
+            `Removed ${target.name}, the container that failed.${startHint(target.replacement)}`,
+            'green'
+          );
+        } catch (err) {
+          actions.setTimedMessage(
+            withContext(`Could not remove ${target.name}`, err.message),
+            'red'
+          );
+        }
+      },
+      'cleanup.keep': () => {
+        setPendingCleanup(null);
+        actions.setTimedMessage(
+          `${pendingCleanup?.name ?? 'The failed container'} kept.${startHint(pendingCleanup?.replacement)}`,
+          'gray'
+        );
       },
       'nav.up': () => selection.handleNavigation('', { upArrow: true }),
       'nav.down': () => selection.handleNavigation('', { downArrow: true }),
@@ -425,7 +621,39 @@ export function useControls(containers = [], overrides = {}) {
       exitHandler,
       connection,
       launcher,
+      diagnostics,
+      pendingCleanup,
     ]
+  );
+
+  /**
+   * The one way a binding takes effect.
+   *
+   * The cleanup question only stays armed while it is on screen: any other key
+   * overwrites the message, and an invisible `y` that deletes a container is
+   * what principle 1 rules out. Living here rather than in useInput means the
+   * rule cannot be bypassed by reaching a handler another way.
+   *
+   * @param {string} bindingId
+   */
+  const dispatch = React.useCallback(
+    (bindingId) => {
+      if (pendingCleanup && !bindingId.startsWith('cleanup.')) {
+        setPendingCleanup(null);
+        // The question is gone; leaving its text behind would invite the very
+        // y it no longer answers.
+        if (actions.message.includes('[y] Yes')) {
+          actions.setMessage('');
+        }
+      }
+      const handler = handlers[bindingId];
+      if (handler) handler();
+    },
+    // `actions` is a fresh object every render (useContainerActions returns a
+    // new literal), so this callback is recreated too. That is harmless — the
+    // message read happens at dispatch time — but it is why no stable-identity
+    // claim can be made about any dependency here.
+    [pendingCleanup, handlers, actions]
   );
 
   // Single keyboard entry point — declarative keymap dispatch
@@ -449,8 +677,8 @@ export function useControls(containers = [], overrides = {}) {
     }
 
     const binding = resolveKey(ctx, input, key, uiState);
-    if (binding && handlers[binding.id]) {
-      handlers[binding.id]();
+    if (binding) {
+      dispatch(binding.id);
       return;
     }
 
@@ -479,10 +707,15 @@ export function useControls(containers = [], overrides = {}) {
     exitLogs: logsViewer.closeLogs,
     creatingContainer,
     startCreation: () => {
+      supersededRef.current = null;
       backHintShownRef.current = false;
       creation.resetCreation();
       setCreatingContainer(true);
     },
+    // One diagnosis, shared with the panel: the log is read once.
+    diagnosis: diagnostics.diagnosis,
+    isDiagnosing: diagnostics.isLoading,
+    pendingCleanup,
     creationStep: creation.step,
     imageNameInput: creation.imageName,
     containerNameInput: creation.containerName,
@@ -499,5 +732,12 @@ export function useControls(containers = [], overrides = {}) {
     showHelp,
     context,
     keymapBindings,
+    // Title source for the help panel: the context underneath it.
+    helpContext,
+    helpBindings,
+    // Exposed so the keymap can be exercised end to end in tests without
+    // simulating a terminal.
+    handlers,
+    dispatch,
   };
 }

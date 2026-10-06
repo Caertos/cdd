@@ -55,6 +55,9 @@ export const STRINGS = {
     // Fix labels — shown on the key that applies them.
     fix: {
       addEnv: (key) => `Recreate with ${key}`,
+      // Used when the fix cannot invent the value — a password. The button has
+      // to admit that, or it promises a container that will fail again.
+      addEnvInputNeeded: (key) => `Recreate and set ${key}`,
       changePort: (port) => `Recreate with another host port (${port} is busy)`,
     },
     // One explanation per rule id. Plain language, no jargon.

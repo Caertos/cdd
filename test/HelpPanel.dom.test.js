@@ -39,8 +39,25 @@ describe('HelpPanel', () => {
     );
     expect(getByText('[e] [E]')).toBeTruthy();
     expect(getByText('Exit viewer')).toBeTruthy();
-    expect(getByText('[space]')).toBeTruthy();
+    expect(getByText('[Space]')).toBeTruthy();
     expect(getByText('Pause stream')).toBeTruthy();
+  });
+
+  test('shows friendly key names and lists a shifted twin once', () => {
+    const { getByText, queryByText } = render(
+      <HelpPanel
+        context="list"
+        bindings={[
+          binding('fix', ['F', 'shift+F'], { help: 'Fix it' }),
+          binding('up', ['up'], { help: 'Move up' }),
+          binding('close', ['escape', '?'], { help: 'Close' }),
+        ]}
+      />
+    );
+    expect(getByText('[F]')).toBeTruthy();
+    expect(queryByText('[F] [shift+F]')).toBeNull();
+    expect(getByText('[↑]')).toBeTruthy();
+    expect(getByText('[Esc] [?]')).toBeTruthy();
   });
 
   // §5.5 (D16)

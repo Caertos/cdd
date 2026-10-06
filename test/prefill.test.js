@@ -9,6 +9,7 @@ import {
   withFreeName,
   FIELD_STEPS,
 } from '../src/helpers/diagnostics/prefill.js';
+import { DIAGNOSTIC_RULES } from '../src/helpers/diagnostics/rules.js';
 
 const container = {
   id: 'c1',
@@ -160,7 +161,7 @@ describe('applyFix — adding an env variable', () => {
 
   test('adds the variable the diagnosis asked for', () => {
     const { values } = applyFix(base, addEnvFix);
-    expect(values.envInput).toBe('POSTGRES_USER=app,POSTGRES_PASSWORD');
+    expect(values.envInput).toBe('POSTGRES_USER=app,POSTGRES_PASSWORD=');
   });
 
   test('reports which field changed', () => {
@@ -188,7 +189,7 @@ describe('applyFix — adding an env variable', () => {
 
   test('an empty env field gains the variable', () => {
     const { values } = applyFix({ ...base, envInput: '' }, addEnvFix);
-    expect(values.envInput).toBe('POSTGRES_PASSWORD');
+    expect(values.envInput).toBe('POSTGRES_PASSWORD=');
   });
 
   test('nothing is added when the variable is already present', () => {
@@ -362,5 +363,47 @@ describe('FIELD_STEPS', () => {
       portInput: 2,
       envInput: 3,
     });
+  });
+});
+
+describe('applyFix — a fix that needs the user to type something', () => {
+  const base = {
+    imageName: 'postgres:17-alpine',
+    containerName: 'db-2',
+    portInput: '',
+    envInput: 'POSTGRES_USER=app',
+  };
+
+  test('the variable is written with a value, never as a bare key', () => {
+    // "POSTGRES_PASSWORD" with no '=' made validateEnvVars report a syntax
+    // error for something the diagnosis itself had written.
+    const { values } = applyFix(base, addEnvFix);
+    expect(values.envInput).toContain('POSTGRES_PASSWORD=');
+    for (const entry of values.envInput.split(',')) {
+      expect(entry).toContain('=');
+    }
+  });
+
+  test('it says it needs input when the fix is marked that way', () => {
+    const context = {
+      container: { id: 'p', name: 'db', image: 'postgres:17-alpine' },
+      logLines: ['superuser password is not specified'],
+    };
+    const rule = DIAGNOSTIC_RULES.find((r) => r.id === 'postgres-missing-password');
+    const fix = rule.fix(context);
+    expect(fix.needsUserInput).toBe(true);
+    // The label must not promise a working container it cannot build.
+    expect(fix.label).toMatch(/set|fill|enter/i);
+  });
+
+  test('a fix with a value needs no input and says so', () => {
+    const context = {
+      container: { id: 'm', name: 'sql', image: 'mssql:2022-latest' },
+      logLines: ['ACCEPT_EULA is not set'],
+    };
+    const rule = DIAGNOSTIC_RULES.find((r) => r.id === 'mssql-missing-eula');
+    const fix = rule.fix(context);
+    expect(fix.needsUserInput).toBe(false);
+    expect(fix.label).not.toMatch(/set|fill|enter/i);
   });
 });

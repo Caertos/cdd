@@ -124,3 +124,92 @@ describe('CreationSummary', () => {
     expect(queryByText(/Checking image/)).toBeNull();
   });
 });
+
+describe('CreationSummary — rows CDD changed', () => {
+  const renderRows = (rows, revealSecrets = false) =>
+    render(
+      <CreationSummary
+        rows={rows}
+        warnings={[]}
+        focusedRow={0}
+        isLoadingPreview={false}
+        revealSecrets={revealSecrets}
+      />
+    );
+
+  test('a changed row says so', () => {
+    const { getByText } = renderRows([
+      { key: 'env', step: 3, label: 'Env', values: ['POSTGRES_PASSWORD'], changed: true },
+    ]);
+    expect(getByText(/changed by CDD/)).toBeTruthy();
+  });
+
+  test('an untouched row does not', () => {
+    const { queryByText } = renderRows([
+      { key: 'env', step: 3, label: 'Env', values: ['POSTGRES_PASSWORD'] },
+    ]);
+    expect(queryByText(/changed by CDD/)).toBeNull();
+  });
+
+  test('only the changed rows are marked', () => {
+    const { getAllByText } = renderRows([
+      { key: 'name', step: 1, label: 'Name', values: ['db-2'], changed: true },
+      { key: 'env', step: 3, label: 'Env', values: ['A=1'] },
+    ]);
+    expect(getAllByText(/changed by CDD/)).toHaveLength(1);
+  });
+
+  test('a changed row keeps its origin line', () => {
+    const { getByText } = renderRows([
+      {
+        key: 'ports',
+        step: 2,
+        label: 'Ports',
+        values: ['8081→80/tcp'],
+        origin: 'assigned by CDD',
+        changed: true,
+      },
+    ]);
+    expect(getByText(/↓ assigned by CDD/)).toBeTruthy();
+    expect(getByText(/changed by CDD/)).toBeTruthy();
+  });
+
+  test('a changed env row still masks its secrets', () => {
+    const { getByText } = renderRows([
+      {
+        key: 'env',
+        step: 3,
+        label: 'Env',
+        values: ['POSTGRES_PASSWORD=•••••• [^R]'],
+        changed: true,
+      },
+    ]);
+    expect(getByText('POSTGRES_PASSWORD=•••••• [^R]')).toBeTruthy();
+  });
+
+  describe('empty secret values', () => {
+    const emptyRow = [
+      { key: 'env', step: 3, label: 'Env', values: ['POSTGRES_PASSWORD=(empty)'] },
+    ];
+
+    test('shows (empty) with no mask hint while secrets are hidden', () => {
+      const { getByText, queryByText } = renderRows(emptyRow, false);
+      expect(getByText('POSTGRES_PASSWORD=(empty)')).toBeTruthy();
+      expect(queryByText(/\[\^R\]/)).toBeNull();
+    });
+
+    test('shows (empty) with no mask hint while secrets are revealed', () => {
+      const { getByText, queryByText } = renderRows(emptyRow, true);
+      expect(getByText('POSTGRES_PASSWORD=(empty)')).toBeTruthy();
+      expect(queryByText(/\[\^R\]/)).toBeNull();
+    });
+
+    test('a filled secret still carries the hint, and reveals on demand', () => {
+      const rows = [
+        { key: 'env', step: 3, label: 'Env', values: ['POSTGRES_PASSWORD=hunter2'] },
+      ];
+      expect(renderRows(rows, false).getByText('POSTGRES_PASSWORD=•••••• [^R]')).toBeTruthy();
+      expect(renderRows(rows, true).getByText('POSTGRES_PASSWORD=hunter2')).toBeTruthy();
+    });
+  });
+});

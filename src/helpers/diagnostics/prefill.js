@@ -168,7 +168,10 @@ export function applyFix(values, fix, ctx = {}) {
     const present = new Set(entries.map(envKey));
     for (const [key, value] of additions) {
       if (present.has(key)) continue;
-      entries.push(value === '' ? key : `${key}=${value}`);
+      // Always with the '=' sign. A bare "KEY" made validateEnvVars report a
+      // syntax error for something the diagnosis itself had written, and left
+      // Docker receiving a valueless variable.
+      entries.push(`${key}=${value}`);
       present.add(key);
       changedFields.push('envInput');
     }

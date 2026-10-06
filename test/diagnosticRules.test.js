@@ -100,10 +100,18 @@ describe('out-of-memory', () => {
     expect(matched(context)[0]).toBe('out-of-memory');
   });
 
-  test('exit code 137 counts too', () => {
-    expect(matched(ctx({ details: exited({ exitCode: 137 }) }))).toContain(
+  test('exit 137 alone is not proof: it is SIGKILL, sent by docker kill too', () => {
+    // 137 also comes from `docker kill` and from a stop that timed out.
+    // Calling that "out of memory" would be inventing the cause.
+    expect(matched(ctx({ details: exited({ exitCode: 137 }) }))).not.toContain(
       'out-of-memory'
     );
+  });
+
+  test('an OOM-killed container with any exit code is still recognised', () => {
+    expect(
+      matched(ctx({ details: { ...exited({ exitCode: 9 }), oomKilled: true } }))
+    ).toContain('out-of-memory');
   });
 
   test('an ordinary crash is not an OOM', () => {
@@ -161,7 +169,8 @@ describe('mysql-missing-password', () => {
 
   test('the fix names the profile key, not a hardcoded one', () => {
     const context = ctx({
-      container: { id: 'b', name: 'db', image: 'mariadb:11-alpine', env: [] },
+      container: { id: 'b', name: 'db', image: 'mariadb:11-alpine' },
+      details: { env: [] },
       logLines: ['you need to specify one of MYSQL_ROOT_PASSWORD'],
     });
     expect(bestRule(context).fix(context).patch.env).toHaveProperty(
@@ -257,13 +266,11 @@ describe('clean-exit', () => {
 
 describe('missing-required-env', () => {
   test('fires once inspect has told us the variable is absent', () => {
+    // details.env is the real shape: getContainers() rows carry no env, and a
+    // rule reading container.env matched only inside the tests.
     const context = ctx({
-      container: {
-        id: 'f',
-        name: 'db',
-        image: 'postgres:17-alpine',
-        env: ['POSTGRES_DB=app'],
-      },
+      container: { id: 'f', name: 'db', image: 'postgres:17-alpine' },
+      details: { env: ['POSTGRES_DB=app'] },
     });
     expect(matched(context)).toContain('missing-required-env');
     expect(bestRule(context).fix(context).patch.env).toHaveProperty(
@@ -273,12 +280,8 @@ describe('missing-required-env', () => {
 
   test('stays silent when the variable is there', () => {
     const context = ctx({
-      container: {
-        id: 'f',
-        name: 'db',
-        image: 'postgres:17-alpine',
-        env: ['POSTGRES_PASSWORD=x', 'POSTGRES_DB=app'],
-      },
+      container: { id: 'f', name: 'db', image: 'postgres:17-alpine' },
+      details: { env: ['POSTGRES_PASSWORD=x', 'POSTGRES_DB=app'] },
     });
     expect(matched(context)).not.toContain('missing-required-env');
   });
@@ -294,12 +297,8 @@ describe('missing-required-env', () => {
 
   test('loses to a concrete log message', () => {
     const context = ctx({
-      container: {
-        id: 'f',
-        name: 'db',
-        image: 'postgres:17-alpine',
-        env: [],
-      },
+      container: { id: 'f', name: 'db', image: 'postgres:17-alpine' },
+      details: { env: [] },
       logLines: ['superuser password is not specified'],
     });
     expect(matched(context)[0]).toBe('postgres-missing-password');
@@ -307,7 +306,8 @@ describe('missing-required-env', () => {
 
   test('says nothing about images with no required env', () => {
     const context = ctx({
-      container: { id: 'g', name: 'web', image: 'nginx:1.27-alpine', env: [] },
+      container: { id: 'g', name: 'web', image: 'nginx:1.27-alpine' },
+      details: { env: [] },
     });
     expect(matched(context)).not.toContain('missing-required-env');
   });
