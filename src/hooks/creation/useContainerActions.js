@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { safeCall } from '../../helpers/safeCall.js';
+import { withContext } from '../../helpers/errorMessage.js';
 import {
   startContainer as svcStartContainer,
   stopContainer as svcStopContainer,
@@ -66,7 +67,10 @@ export function useContainerActions({ containers, onAction }) {
       safeCall(onAction);
     } catch (err) {
       setTimedMessage(
-        `Failed to ${actionVerb ?? actionLabel} container: ${err.message}`,
+        withContext(
+          `Failed to ${actionVerb ?? actionLabel} container`,
+          err.message
+        ),
         'red'
       );
     }

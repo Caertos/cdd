@@ -21,6 +21,7 @@ import {
   applyFix,
 } from '../helpers/diagnostics/prefill.js';
 import { hostPortsOf } from '../helpers/portUtils.js';
+import { withContext } from '../helpers/errorMessage.js';
 import { DB_IMAGES } from '../helpers/constants.js';
 import { useDiagnostics } from './useDiagnostics.js';
 import {
@@ -117,7 +118,7 @@ export function useControls(containers = [], overrides = {}) {
         supersededRef.current = null;
         setPendingCleanup(null);
         actions.setTimedMessage(
-          `Error creating container: ${err.message}`,
+          withContext('Error creating container', err.message),
           'red'
         );
       } finally {
