@@ -10,9 +10,17 @@ import { useConfirmation } from './useConfirmation.js';
 import { useExitHandler } from './useExitHandler.js';
 import { useShellMode } from './useShellMode.js';
 import { getLogsStream } from '../helpers/dockerService/serviceComponents/containerLogs.js';
+import { getContainerDetails } from '../helpers/dockerService/serviceComponents/containerInspect.js';
+import { getImageEnv } from '../helpers/dockerService/serviceComponents/containerInspect.js';
 import { createContainer as svcCreateContainer } from '../helpers/dockerService/serviceComponents/containerActions.js';
 import { buildContainerOptions } from '../helpers/containerOptionsBuilder.js';
+import {
+  containerToCreationValues,
+  applyFix,
+} from '../helpers/diagnostics/prefill.js';
+import { hostPortsOf } from '../helpers/portUtils.js';
 import { DB_IMAGES } from '../helpers/constants.js';
+import { useDiagnostics } from './useDiagnostics.js';
 import {
   getActiveContext,
   getBindings,
@@ -39,13 +47,22 @@ const NOOP_LAUNCHER = {
  * @param {Array<Object>} containers - Current list of Docker containers
  * @param {Object} [overrides] - Test hooks and optional connection state
  * @param {Object} [overrides.connection] - Docker connection state from useContainers
+ * @param {Map<string, import('../helpers/health.js').HealthVerdict>} [overrides.health]
+ *   - Health verdicts by container id. Lived here rather than in App so the
+ *   diagnosis and the F key read the same one instead of each owning a hook.
  * @returns {Object} controls - API for the App component
  */
 export function useControls(containers = [], overrides = {}) {
   const connection = overrides.connection ?? null;
   const launcher = overrides.launcher ?? NOOP_LAUNCHER;
+  const health = overrides.health ?? new Map();
   const [creatingContainer, setCreatingContainer] = React.useState(false);
   const [showHelp, setShowHelp] = React.useState(false);
+  // The failed container a recreation supersedes, pending a yes/no.
+  const [pendingCleanup, setPendingCleanup] = React.useState(null);
+  // Set by the F key, consumed by onCreate: the fix may rename the new
+  // container to keep this one.
+  const supersededRef = React.useRef(null);
   const lastCreationRef = React.useRef(null);
 
   // — Modular hooks —
@@ -78,7 +95,19 @@ export function useControls(containers = [], overrides = {}) {
               .map((p) => `${p.hostPort}→${p.containerPort}/${p.protocol}`)
               .join(', ');
         }
-        actions.setTimedMessage(`Created container ${id}${portMsg}`, 'green');
+        const superseded = supersededRef.current;
+        supersededRef.current = null;
+        if (superseded) {
+          // Never deleted without an answer: that container may hold something
+          // the user has not looked at yet.
+          setPendingCleanup(superseded);
+          actions.setMessage(
+            `Created ${containerName || id}. Delete ${superseded.name}, the container that failed? [y] Yes  [n] No`
+          );
+          actions.setMessageColor('yellow');
+        } else {
+          actions.setTimedMessage(`Created container ${id}${portMsg}`, 'green');
+        }
       } catch (err) {
         actions.setTimedMessage(
           `Error creating container: ${err.message}`,
@@ -88,13 +117,24 @@ export function useControls(containers = [], overrides = {}) {
         setCreatingContainer(false);
       }
     },
-    onCancel: () => setCreatingContainer(false),
+    onCancel: () => {
+      supersededRef.current = null;
+      setCreatingContainer(false);
+    },
     dbImages: DB_IMAGES,
   });
 
   const logsViewer = useLogsViewer();
   const selection = useContainerSelection(containers.length);
   const debugLogs = useDebugLogs();
+
+  const selectedContainer = containers[selection.selected] ?? null;
+  const selectedVerdict = selectedContainer
+    ? (health.get(selectedContainer.id) ?? null)
+    : null;
+  // One diagnosis for the panel and for the F key, so the log is read once.
+  const diagnostics = useDiagnostics(selectedContainer, selectedVerdict);
+  const canFix = Boolean(diagnostics.diagnosis?.fix);
 
   // Allow overrides for testability (e.g. injecting a mock triggerHubSearch)
   const triggerHubSearch =
@@ -203,6 +243,8 @@ export function useControls(containers = [], overrides = {}) {
       disconnected: connection?.status === 'error' && containers.length === 0,
       canLaunch: launcher.canLaunch,
       launchStatus: launcher.status,
+      canFix,
+      confirmCleanup: pendingCleanup !== null,
     }),
     [
       eraseConfirmation.confirmErase,
@@ -221,6 +263,8 @@ export function useControls(containers = [], overrides = {}) {
       connection?.status,
       launcher.canLaunch,
       launcher.status,
+      canFix,
+      pendingCleanup,
     ]
   );
 
@@ -290,10 +334,68 @@ export function useControls(containers = [], overrides = {}) {
         );
         actions.setMessageColor('yellow');
       },
+      // TASK-8: recreate the failed container with the diagnosis applied.
+      // The fix is never applied directly — the wizard opens on the review
+      // step with the touched rows marked, so the user confirms the diff.
+      'container.fix': async () => {
+        const container = containers[selection.selected];
+        const fix = diagnostics.diagnosis?.fix;
+        if (!container || !fix) return;
+
+        actions.setTimedMessage(
+          `Reading ${container.name}'s configuration...`,
+          'cyan'
+        );
+
+        const details = await getContainerDetails(container.id).catch(
+          () => null
+        );
+        // The image's own env is what tells us which variables are the user's.
+        const imageEnv = await getImageEnv(container.image);
+
+        const base = containerToCreationValues(
+          container,
+          details ? { env: details.env, cmd: details.cmd } : null,
+          imageEnv
+        );
+        const takenNames = new Set(containers.map((c) => c.name));
+        const usedHostPorts = new Set(containers.flatMap(hostPortsOf));
+        const { values, changedFields } = applyFix(base, fix, {
+          takenNames,
+          usedHostPorts,
+        });
+
+        supersededRef.current = { id: container.id, name: container.name };
+        backHintShownRef.current = false;
+        setCreatingContainer(true);
+        await creation.prefillCreation(values, changedFields);
+      },
       'container.create': () => {
         backHintShownRef.current = false;
         creation.resetCreation();
         setCreatingContainer(true);
+      },
+      'cleanup.delete': async () => {
+        const target = pendingCleanup;
+        setPendingCleanup(null);
+        if (!target) return;
+        actions.setTimedMessage('Removing the failed container...', 'yellow');
+        try {
+          await actions.removeContainer(target.id);
+          actions.setTimedMessage(
+            `Removed ${target.name}, the container that failed.`,
+            'green'
+          );
+        } catch (err) {
+          actions.setTimedMessage(`Could not remove ${target.name}`, 'red');
+        }
+      },
+      'cleanup.keep': () => {
+        setPendingCleanup(null);
+        actions.setTimedMessage(
+          `${pendingCleanup?.name ?? 'The failed container'} kept.`,
+          'gray'
+        );
       },
       'nav.up': () => selection.handleNavigation('', { upArrow: true }),
       'nav.down': () => selection.handleNavigation('', { downArrow: true }),
@@ -425,6 +527,8 @@ export function useControls(containers = [], overrides = {}) {
       exitHandler,
       connection,
       launcher,
+      diagnostics,
+      pendingCleanup,
     ]
   );
 
@@ -483,6 +587,10 @@ export function useControls(containers = [], overrides = {}) {
       creation.resetCreation();
       setCreatingContainer(true);
     },
+    // One diagnosis, shared with the panel: the log is read once.
+    diagnosis: diagnostics.diagnosis,
+    isDiagnosing: diagnostics.isLoading,
+    pendingCleanup,
     creationStep: creation.step,
     imageNameInput: creation.imageName,
     containerNameInput: creation.containerName,
@@ -499,5 +607,8 @@ export function useControls(containers = [], overrides = {}) {
     showHelp,
     context,
     keymapBindings,
+    // Exposed so the keymap can be exercised end to end in tests without
+    // simulating a terminal.
+    handlers,
   };
 }
