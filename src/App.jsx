@@ -80,8 +80,8 @@ export default function App() {
         />
         {controls.showHelp && (
           <HelpPanel
-            context={controls.context}
-            bindings={controls.keymapBindings}
+            context={controls.helpContext}
+            bindings={controls.helpBindings}
           />
         )}
       </>
@@ -163,8 +163,8 @@ export default function App() {
       </Box>
       {controls.showHelp && (
         <HelpPanel
-          context={controls.context}
-          bindings={controls.keymapBindings}
+          context={controls.helpContext}
+          bindings={controls.helpBindings}
         />
       )}
       {controls.showLogs && (

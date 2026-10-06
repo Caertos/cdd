@@ -1327,3 +1327,90 @@ describe('useControls — the cleanup question cannot go stale', () => {
     expect(removeContainer).not.toHaveBeenCalled();
   });
 });
+
+describe('useControls — the help panel describes the screen underneath (H1)', () => {
+  const containers = [
+    { id: 'a', name: 'web', image: 'nginx:1.27-alpine', state: 'running', status: 'Up 1 minute', ports: ['8080:80'] },
+  ];
+
+  async function setup() {
+    const expose = { current: null };
+    render(
+      <HookTester
+        containers={containers}
+        expose={expose}
+        overrides={{ health: new Map() }}
+      />
+    );
+    await act(async () => {});
+    return expose;
+  }
+
+  test('with help closed there is nothing to list yet', async () => {
+    const expose = await setup();
+    expect(expose.current.helpBindings).toEqual([]);
+  });
+
+  test('opening help lists the keys of the screen beneath it', async () => {
+    const expose = await setup();
+    await act(async () => {
+      expose.current.handlers['app.help']();
+    });
+    const ids = expose.current.helpBindings.map((b) => b.id);
+    expect(ids).toContain('container.start');
+    expect(ids).toContain('container.erase');
+    expect(ids).toContain('app.quit');
+  });
+
+  test('and closes with the one key of its own', async () => {
+    const expose = await setup();
+    await act(async () => {
+      expose.current.handlers['app.help']();
+    });
+    const ids = expose.current.helpBindings.map((b) => b.id);
+    expect(ids.filter((id) => id === 'help.close')).toHaveLength(1);
+  });
+
+  test('the title names the screen it describes, not "Help"', async () => {
+    const expose = await setup();
+    await act(async () => {
+      expose.current.handlers['app.help']();
+    });
+    // STRINGS.contextLabels.list === 'Container List'
+    expect(expose.current.helpContext).toBe('list');
+  });
+
+  test('every listed binding explains itself', async () => {
+    const expose = await setup();
+    await act(async () => {
+      expose.current.handlers['app.help']();
+    });
+    for (const binding of expose.current.helpBindings) {
+      expect(typeof binding.help).toBe('string');
+      expect(binding.help.length).toBeGreaterThan(0);
+      expect(Array.isArray(binding.keys)).toBe(true);
+      expect(binding.keys.length).toBeGreaterThan(0);
+    }
+  });
+
+  test('the HUD still shows only Esc while the panel is open', async () => {
+    const expose = await setup();
+    await act(async () => {
+      expose.current.handlers['app.help']();
+    });
+    // The keymap context is 'help', so the HUD keeps its single close key.
+    expect(expose.current.context).toBe('help');
+    expect(expose.current.keymapBindings.map((b) => b.id)).toEqual([
+      'help.close',
+    ]);
+  });
+
+  test('closing help empties the list again', async () => {
+    const expose = await setup();
+    await act(async () => {
+      expose.current.handlers['app.help']();
+      expose.current.handlers['app.help']();
+    });
+    expect(expose.current.helpBindings).toEqual([]);
+  });
+});

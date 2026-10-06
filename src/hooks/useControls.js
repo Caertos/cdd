@@ -279,6 +279,29 @@ export function useControls(containers = [], overrides = {}) {
   const context = getActiveContext(uiState);
   const keymapBindings = getBindings(context, uiState);
 
+  // The help panel describes the screen it was opened from, not itself. Without
+  // this, pressing ? listed exactly one key — its own close — and every real
+  // binding became undiscoverable (H1).
+  const helpContext = getActiveContext({ ...uiState, showHelp: false });
+  const helpBindings = React.useMemo(
+    () =>
+      showHelp
+        ? [
+            ...getBindings(helpContext, uiState),
+            {
+              id: 'help.close',
+              keys: ['escape', '?'],
+              label: 'Esc',
+              help: 'Close this help panel',
+              priority: 90,
+            },
+          ]
+        : [],
+    // keymapBindings stands in for uiState: it is derived from it, and listing
+    // the whole state here would rebuild this on every render for nothing.
+    [showHelp, helpContext, keymapBindings]
+  );
+
   // Action handlers for the keymap
   const handlers = React.useMemo(
     () => ({
@@ -651,6 +674,9 @@ export function useControls(containers = [], overrides = {}) {
     showHelp,
     context,
     keymapBindings,
+    // Title source for the help panel: the context underneath it.
+    helpContext,
+    helpBindings,
     // Exposed so the keymap can be exercised end to end in tests without
     // simulating a terminal.
     handlers,
