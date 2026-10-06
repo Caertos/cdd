@@ -72,6 +72,17 @@ export const KEYMAP = {
       when: (s) => s.hasSelection,
     },
     {
+      id: 'container.fix',
+      // keyNameOf() turns shift+f into 'shift+F', not 'F', so both spellings
+      // are listed. Lowercase 'f' is deliberately left free for the filter
+      // TASK-9 adds.
+      keys: ['F', 'shift+F'],
+      label: 'Fix',
+      help: 'Recreate the container with the diagnosis applied',
+      priority: 75,
+      when: (s) => s.hasSelection && s.canFix,
+    },
+    {
       id: 'container.create',
       keys: ['c'],
       label: 'Create',
@@ -119,6 +130,25 @@ export const KEYMAP = {
       label: '?',
       help: 'Show this help',
       priority: 5,
+    },
+    {
+      // Asked once, right after the replacement exists. The failed container
+      // may hold something nobody has looked at yet, so it is never deleted
+      // without an answer (principle 1).
+      id: 'cleanup.delete',
+      keys: ['y'],
+      label: 'y',
+      help: 'Delete the container that failed',
+      priority: 95,
+      when: (s) => s.confirmCleanup,
+    },
+    {
+      id: 'cleanup.keep',
+      keys: ['n'],
+      label: 'n',
+      help: 'Keep the container that failed',
+      priority: 94,
+      when: (s) => s.confirmCleanup,
     },
   ],
   wizard: [
