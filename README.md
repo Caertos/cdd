@@ -11,9 +11,38 @@
 
 ---
 
-## 🎉 What's new in v4.8
+## 🎉 What's new in v4.10
 
-**Start Docker without leaving the terminal.**
+**CDD explains why a container died — and offers to fix it.**
+
+Every other tool here — lazydocker, ctop, Docker Desktop — shows you `EXITED (1)` and hands you the log. None of them tell you why. The person who installed a TUI to avoid typing `docker ps` is exactly the person who does not want to read 200 lines of Postgres startup to find out a variable was missing.
+
+Select a failing container and a panel appears on its own:
+
+```
+╭─ Diagnosis: mi-basedatos ─────────────────────────────────────╮
+│                                                                │
+│  It keeps dying after 2s and Docker restarts it.              │
+│                                                                │
+│  Likely cause:                                                 │
+│    Postgres refuses to start without a password. The image     │
+│    needs POSTGRES_PASSWORD defined.                           │
+│                                                                │
+│  Last lines:                                                   │
+│    Error: Database is uninitialized and superuser password…   │
+│                                                                │
+│  [F] Recreate and set POSTGRES_PASSWORD  [L] Full log          │
+╰────────────────────────────────────────────────────────────────╯
+```
+
+- **No key to press.** If something is wrong, it explains itself. A container you stopped on purpose gets no panel at all.
+- **`F` recreates it with the fix applied** — the wizard opens already filled in and already on the review step, with every changed value marked `↑ changed by CDD`. Nothing is applied behind your back, and the failed container keeps its name: the new one becomes `mi-basedatos-2`.
+- **Then it asks.** *"Created mi-basedatos-2. Delete mi-basedatos, the container that failed?"* Answer "no" and it stays exactly where it was.
+- **When it doesn't know, it says so** — and shows the last lines. That is the rule, not a fallback: a plausible-sounding wrong cause costs more trust than ten correct ones earn.
+
+**Eleven rules ship now:** missing Postgres / MySQL / SQL Server credentials, busy host port, image with no command, out of memory, volume permission denied, executable not found, a job that finished instead of serving, and a refused connection to another host. The catalog is data — adding one is adding an element to a list, not touching the logic.
+
+### v4.8 — Start Docker without leaving the terminal
 
 When Docker is unreachable, CDD checks whether it knows how to start it. If it does, the `S` key appears on the connection screen and walks you through launching Docker.
 
@@ -102,6 +131,9 @@ This is what developer experience should feel like.
 - ⌨️ Keyboard-driven actions: start, stop, restart, log streaming, removal
 - 🎨 **Health verdicts** — running, starting, stopped, crashed, crash-loop, restarting or unhealthy, read from Docker's own data
 - ⚪ Stopped vs crashed — a container you stopped is grey; red is reserved for real failures
+- 🔍 **Explains why it failed** — a panel with the probable cause and the last log lines, unprompted, for every failing container
+- 🔧 **One-key fix** — `F` recreates the container with the correction applied, on a review screen that shows exactly what changed
+- 🤝 **"I don't recognise it"** — when no rule matches, CDD says so instead of guessing, and shows the evidence
 - ✨ **Interactive creation wizard** — step-by-step container setup with curated profiles and live Hub search
 - 🪵 Real-time log streaming for any selected container
 - 🐛 Toggleable live debug panel (`D` key)
@@ -150,12 +182,15 @@ Use `↑` / `↓` to navigate containers. The **HUD** at the bottom shows availa
 | `P`       | Stop selected container                                   |
 | `R`       | Restart selected container                                |
 | `C`       | Open creation wizard                                      |
+| `F`       | **Fix** — recreate with the diagnosis applied (only shown when there is a fix) |
 | `L`       | Stream logs for selected container                        |
 | `S`       | Open interactive shell inside selected container          |
 | `E`       | Erase (remove) selected container — confirmation required |
 | `D`       | Toggle live debug panel                                   |
 | `Q`       | Quit                                                      |
-| `?`       | Show help panel                                           |
+| `?`       | Show help panel for the current screen                    |
+
+After `F` creates the replacement, `y` deletes the container that failed and `n` keeps it. Those two keys only exist while the question is on screen.
 
 ### Connection Screen
 
@@ -208,6 +243,67 @@ After starting, CDD waits for the daemon to respond, then reloads your container
 | --- | --------------------- |
 | `y` | Confirm the action    |
 | `n` | Cancel the action     |
+
+---
+
+## The Diagnosis Panel
+
+When the selected container is failing, CDD explains it. You do not press anything.
+
+**It appears only when there is something to say.** A container you stopped, or one still starting up, gets no panel — there is nothing to explain and the space is better kept.
+
+**It always has the same three parts**, in this order:
+
+1. **What happened** — from the container's health verdict. Always present.
+2. **Likely cause** — from the rule catalog. May be missing, and when it is, the panel says so.
+3. **Last lines** — the last five lines of its log. It is what you were about to go and look at.
+
+### When CDD doesn't know
+
+```
+  Likely cause:
+    I don't recognise it. This is the last thing the container
+    said before it died:
+```
+
+This is principle 5 of the project and it is not negotiable. A confident-sounding wrong cause costs more trust than ten correct ones build — and "I don't know, but here is the evidence" is still useful, because it saves you opening the log viewer.
+
+### The rules
+
+| Rule | Recognised by | What it offers |
+|---|---|---|
+| Missing Postgres password | `superuser password is not specified` | Recreate with `POSTGRES_PASSWORD` |
+| Missing MySQL / MariaDB password | `you need to specify one of MYSQL_ROOT_PASSWORD` | Recreate with the variable |
+| Missing SQL Server EULA | `ACCEPT_EULA` in the log | Recreate with `ACCEPT_EULA=Y` |
+| Host port in use | `port is already allocated` / `address already in use` | Recreate with another free port |
+| Image has no command | `no command specified` | Explains; no automatic fix |
+| Out of memory | `OOMKilled` in Docker's own data | Explains; suggests raising the limit |
+| Volume permission denied | `permission denied` on a path | Explains; no automatic fix |
+| Executable not found | `executable file not found in $PATH` | Explains |
+| Clean quick exit | Exit code 0 in under 2 seconds | Explains that the image finished its job and is not a service |
+| Connection refused | `connection refused` | Explains; may mean a missing network |
+
+They are **data**, not code: an array of rules with a priority. A rule only fires on evidence CDD actually read — a log line or an inspect fact. Adding one is adding an element to a list and a case to its test file.
+
+### Recreating with the fix
+
+`F` opens the wizard already filled in and **already on the review step**, because the interesting thing to check is the diff, not the image name:
+
+```
+[4] Env    POSTGRES_PASSWORD=••••••  ↑ changed by CDD
+           POSTGRES_DB=app
+```
+
+- **Nothing is applied behind your back.** The fix goes through the review, you confirm it.
+- **The failed container keeps its name**, so the replacement becomes `mi-basedatos-2`.
+- **The wizard's own env field is filtered.** Docker merges the image's variables into the container's, so `PATH`, `LANG` and `PG_VERSION` would otherwise fill the form. CDD subtracts the image's own before showing yours.
+- **Secrets start masked**, every time, even if you revealed them in an earlier wizard.
+- **When the fix needs a value only you have** — a password — the key says *"Recreate and set POSTGRES_PASSWORD"* and the review warns that the variable is set but empty. CDD will not invent a password.
+
+### Two limits worth knowing
+
+- Recreating carries over the image, name, ports and variables. It does **not** carry over `Cmd`, `Entrypoint`, volumes, networks or restart policy — the wizard has no fields for them.
+- The env field is comma-separated and Docker allows commas inside a value. A variable with a comma is split. The `kafka` profile already ships one.
 
 ---
 
@@ -314,6 +410,10 @@ CDD_LOG_LEVEL=debug cdd > cdd-debug.log 2>&1
 
 - **No containers visible?** If Docker is running but no containers appear, you may have none running or created. Press `C` to create one. If Docker is unreachable, CDD now shows a clear error screen with instructions to fix it.
 - **Docker connection error?** CDD will show "Can't reach Docker" with specific steps to resolve it. Press `R` to retry after fixing the issue, wait for the live countdown, or press `Q` to quit.
+- **The panel says "I don't recognise it"?** CDD only explains what its rule catalog recognises, and it would rather admit that than guess. The last lines are right there — press `L` for the full log.
+- **`F` isn't showing?** The key appears only when the diagnosis carries a fix. Most causes are explained but not repairable (an image with no command, a denied volume), and a key that opens a wizard with nothing to change would be noise.
+- **`F` says it couldn't read the container's configuration?** CDD refuses to recreate a container whose environment it could not read, rather than building one with no variables — which would die the same way. Press `C` to create one from scratch.
+- **A fix left a password field empty on purpose.** CDD will not invent a password. Fill it in on the review screen before creating, or the container will fail again exactly as it just did.
 - **Permission errors on Linux/macOS?** Try `sudo cdd` or add your user to the `docker` group.
 - **Windows?** Run your terminal as Administrator.
 - **`dist/` missing?** Run `pnpm run build` — it's in `.gitignore` and not committed.

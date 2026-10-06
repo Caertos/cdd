@@ -11,9 +11,38 @@
 
 ---
 
-## 🎉 Novedades en v4.8
+## 🎉 Novedades en v4.10
 
-**Arranca Docker sin salir de la terminal.**
+**CDD explica por qué murió un contenedor — y te ofrece arreglarlo.**
+
+Todas las demás herramientas de este nicho — lazydocker, ctop, Docker Desktop — te enseñan `EXITED (1)` y te pasan el log. Ninguna te dice por qué. Quien instala una TUI para no escribir `docker ps` es exactamente quien no quiere leer 200 líneas de arranque de Postgres para descubrir que faltaba una variable.
+
+Selecciona un contenedor que está fallando y el panel aparece solo:
+
+```
+╭─ Diagnosis: mi-basedatos ─────────────────────────────────────╮
+│                                                                │
+│  It keeps dying after 2s and Docker restarts it.              │
+│                                                                │
+│  Likely cause:                                                 │
+│    Postgres refuses to start without a password. The image     │
+│    needs POSTGRES_PASSWORD defined.                           │
+│                                                                │
+│  Last lines:                                                   │
+│    Error: Database is uninitialized and superuser password…   │
+│                                                                │
+│  [F] Recreate and set POSTGRES_PASSWORD  [L] Full log          │
+╰────────────────────────────────────────────────────────────────╯
+```
+
+- **Sin pulsar ninguna tecla.** Si algo está mal, se explica solo. Un contenedor que paraste tú no recibe panel alguno.
+- **`F` lo recrea con la corrección aplicada** — el asistente se abre ya relleno y ya en el paso de revisión, con cada valor que CDD cambió marcado como `↑ changed by CDD`. Nada se aplica a tus espaldas, y el contenedor que falló conserva su nombre: el nuevo se llama `mi-basedatos-2`.
+- **Después pregunta.** *"Created mi-basedatos-2. Delete mi-basedatos, the container that failed?"* Responde "no" y se queda exactamente donde estaba.
+- **Cuando no lo sabe, lo dice** — y muestra las últimas líneas. Esa es la regla, no un plan B: una causa plausible pero equivocada cuesta más confianza de la que construyen diez aciertos.
+
+**Once reglas se publican ya:** credenciales faltantes de Postgres / MySQL / SQL Server, puerto de host ocupado, imagen sin comando, falta de memoria, permiso denegado en un volumen, ejecutable no encontrado, un job que terminó en vez de servir, y conexión rechazada a otro host. El catálogo es **datos**, no código: añadir una regla es añadir un elemento a una lista.
+
+### v4.8 — Arranca Docker sin salir de la terminal
 
 Cuando Docker no es accesible, CDD comprueba si sabe cómo iniciarlo. Si lo sabe, aparece la tecla `S` en la pantalla de conexión y te guía para lanzar Docker.
 
@@ -102,6 +131,9 @@ Así debería sentirse la experiencia de desarrollo.
 - ⌨️ Acciones controladas por teclado: iniciar, detener, reiniciar, ver logs, eliminar
 - 🎨 **Veredictos de salud** — running, starting, stopped, crashed, crash-loop, restarting o unhealthy, leídos de los propios datos de Docker
 - ⚪ Detenido vs caído — un contenedor que paraste tú se ve gris; el rojo se reserva para fallos reales
+- 🔍 **Explica por qué falló** — un panel con la causa probable y las últimas líneas del log, sin que tengas que pedirlo
+- 🔧 **Arreglo en una tecla** — `F` recrea el contenedor con la corrección aplicada, en una revisión que muestra exactamente qué cambió
+- 🤝 **"No lo reconozco"** — cuando ninguna regla encaja, CDD lo dice en vez de adivinar, y muestra la evidencia
 - ✨ **Asistente de creación interactivo** — configuración paso a paso con perfiles curados y búsqueda en Hub
 - 🪵 Streaming de logs en tiempo real para el contenedor seleccionado
 - 🐛 Panel de debug en vivo activable con la tecla `D`
@@ -150,12 +182,15 @@ Usa `↑` / `↓` para navegar por los contenedores. El **HUD** en la parte infe
 | `P`       | Detener el contenedor seleccionado                          |
 | `R`       | Reiniciar el contenedor seleccionado                        |
 | `C`       | Abrir el asistente de creación                              |
+| `F`       | **Arreglar** — recrear con el diagnóstico aplicado (solo aparece cuando hay arreglo) |
 | `L`       | Ver logs del contenedor seleccionado en tiempo real         |
 | `S`       | Abrir shell interactivo dentro del contenedor seleccionado  |
 | `E`       | Eliminar el contenedor seleccionado — requiere confirmación |
 | `D`       | Activar/desactivar panel de debug en vivo                   |
 | `Q`       | Salir                                                       |
-| `?`       | Mostrar panel de ayuda                                      |
+| `?`       | Mostrar la ayuda de la pantalla actual                      |
+
+Tras crear el reemplazo con `F`, `y` borra el contenedor que falló y `n` lo conserva. Esas dos teclas solo existen mientras la pregunta está en pantalla.
 
 ### Pantalla de Conexión
 
@@ -211,6 +246,67 @@ Después de iniciarlo, CDD espera a que el daemon responda y recarga tus contene
 
 ---
 
+## El Panel de Diagnóstico
+
+Cuando el contenedor seleccionado está fallando, CDD lo explica. No tienes que pulsar nada.
+
+**Aparece solo cuando hay algo que decir.** Un contenedor que paraste tú, o uno que todavía está arrancando, no recibe panel: no hay nada que explicar y ese espacio está mejor reservado.
+
+**Siempre tiene las mismas tres partes**, en este orden:
+
+1. **Qué pasó** — a partir del veredicto de salud. Siempre está.
+2. **Causa probable** — del catálogo de reglas. Puede faltar, y cuando falta el panel lo dice.
+3. **Últimas líneas** — las últimas cinco líneas de su log. Es justo lo que ibas a ir a mirar.
+
+### Cuando CDD no lo sabe
+
+```
+  Likely cause:
+    I don't recognise it. This is the last thing the container
+    said before it died:
+```
+
+Esto es el principio 5 del proyecto y no se negocia. Una causa plausible pero equivocada cuesta más confianza de la que construyen diez aciertos — y "no lo sé, pero aquí está la evidencia" sigue siendo útil, porque te ahorra abrir el visor de logs.
+
+### Las reglas
+
+| Regla | Se reconoce por | Qué ofrece |
+|---|---|---|
+| Falta la contraseña de Postgres | `superuser password is not specified` | Recrear con `POSTGRES_PASSWORD` |
+| Falta la contraseña de MySQL / MariaDB | `you need to specify one of MYSQL_ROOT_PASSWORD` | Recrear con la variable |
+| Falta la EULA de SQL Server | `ACCEPT_EULA` en el log | Recrear con `ACCEPT_EULA=Y` |
+| Puerto de host ocupado | `port is already allocated` / `address already in use` | Recrear con otro puerto libre |
+| La imagen no trae comando | `no command specified` | Explica; sin arreglo automático |
+| Sin memoria | `OOMKilled` en los propios datos de Docker | Explica; sugiere subir el límite |
+| Permiso denegado en un volumen | `permission denied` sobre una ruta | Explica; sin arreglo automático |
+| Ejecutable no encontrado | `executable file not found in $PATH` | Explica |
+| Salida limpia inmediata | Código 0 en menos de 2 segundos | Explica que la imagen terminó su trabajo y no es un servicio |
+| Conexión rechazada | `connection refused` | Explica; puede faltar una red compartida |
+
+Son **datos**, no código: un array de reglas con prioridad. Una regla solo dispara con evidencia que CDD leyó de verdad — una línea de log o un dato del inspect. Añadir una es añadir un elemento a una lista y un caso a su fichero de test.
+
+### Recrear con la corrección
+
+`F` abre el asistente ya relleno y **ya en el paso de revisión**, porque lo interesante de revisar es el diff, no el nombre de la imagen:
+
+```
+[4] Env    POSTGRES_PASSWORD=(empty)  ↑ changed by CDD
+           POSTGRES_DB=app
+```
+
+- **Nada se aplica a tus espaldas.** El arreglo pasa por la revisión y tú lo confirmas.
+- **El contenedor que falló conserva su nombre**, así que el reemplazo se llama `mi-basedatos-2`.
+- **El campo de env del asistente viene filtrado.** Docker mezcla las variables de la imagen en las del contenedor, así que `PATH`, `LANG` y `PG_VERSION` llenarían el formulario. CDD resta las propias de la imagen antes de mostrar las tuyas.
+- **Los secretos empiezan enmascarados**, siempre, aunque los hayas revelado en un asistente anterior.
+- **Cuando el arreglo necesita un valor que solo tienes tú** — una contraseña — la tecla dice *"Recreate and set POSTGRES_PASSWORD"* y la revisión avisa de que la variable está puesta pero vacía. CDD no inventa contraseñas.
+
+### Dos límites que conviene conocer
+
+- Recrear arrastra imagen, nombre, puertos y variables. **No** arrastra `Cmd`, `Entrypoint`, volúmenes, redes ni política de reinicio: el asistente no tiene campos para ellos.
+- El campo de env se separa por comas y Docker permite comas dentro del valor. Una variable con coma se parte. El perfil de `kafka` ya trae una.
+
+---
+
 ## El Asistente de Creación
 
 Presiona `C` desde el dashboard para abrir el asistente. Un **HUD sensible al contexto** en la parte inferior siempre muestra qué teclas están activas en cada paso — sin adivinar.
@@ -248,6 +344,7 @@ Ingresa pares `CLAVE=VALOR` de a uno. Las **sugerencias contextuales** muestran 
 Presiona `Enter` en una línea vacía para terminar y crear el contenedor.
 
 ---
+
 
 ## Shell Interactivo
 
@@ -314,6 +411,10 @@ CDD_LOG_LEVEL=debug cdd > cdd-debug.log 2>&1
 
 - **¿No ves contenedores?** Si Docker está ejecutándose pero no hay contenedores, puede que no tengas ninguno ejecutándose o creado. Presiona `C` para crear uno. Si Docker no es accesible, CDD ahora muestra una pantalla de error clara con instrucciones para solucionarlo.
 - **¿Error de conexión con Docker?** CDD mostrará "Can't reach Docker" con pasos específicos para resolverlo. Presiona `R` para reintentar después de solucionar el problema, espera la cuenta atrás en vivo o presiona `Q` para salir.
+- **¿El panel dice "No lo reconozco"?** CDD solo explica lo que su catálogo de reglas reconoce, y prefiere admitirlo antes que adivinar. Las últimas líneas están ahí mismo — presiona `L` para el log completo.
+- **¿No aparece `F`?** La tecla solo aparece cuando el diagnóstico trae un arreglo. La mayoría de las causas se explican pero no se pueden reparar (una imagen sin comando, un volumen denegado), y una tecla que abre un asistente sin nada que cambiar sería ruido.
+- **`F` dice que no pudo leer la configuración del contenedor?** CDD se niega a recrear un contenedor cuya configuración no pudo leer, en vez de construir uno sin variables — que moriría igual. Presiona `C` para crear uno desde cero.
+- **¿Un arreglo dejó un campo de contraseña vacío a propósito?** CDD no inventa contraseñas. Rellénalo en la pantalla de revisión antes de crear, o el contenedor fallará otra vez igual.
 - **¿Errores de permisos en Linux/macOS?** Prueba con `sudo cdd` o agrega tu usuario al grupo `docker`.
 - **¿Windows?** Ejecuta la terminal como Administrador.
 - **¿Falta el directorio `dist/`?** Ejecuta `pnpm run build` — está en `.gitignore` y no se incluye en el repositorio.

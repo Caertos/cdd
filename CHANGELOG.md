@@ -7,13 +7,92 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 - Nothing yet.
 
+## [4.10.0] - 2026-10-05
+
+CDD stops showing you state and starts explaining it.
+
+Every other tool in this space — lazydocker, ctop, Docker Desktop — shows you
+that a container is `EXITED (1)` and hands you the log. None of them tell you
+why. The person who installed a TUI to avoid typing `docker ps` is exactly the
+person who does not want to read 200 lines of Postgres startup to find out a
+variable was missing.
+
+### Added
+- **CDD now explains why a container died**, on its own, in a sentence, with
+  the last lines of its log underneath:
+  > *It keeps dying after 2s and Docker restarts it.*
+  > *Likely cause: Postgres refuses to start without a password. The image needs
+  > POSTGRES_PASSWORD defined.*
+  > *Last lines: `Error: Database is uninitialized and superuser password is not specified.`*
+- **A new `F` key recreates the container with the fix applied.** It opens the
+  wizard already filled in and already on the review step, with every value CDD
+  changed marked `↑ changed by CDD`. Nothing is applied behind your back, and
+  the container that failed keeps its name — the new one becomes `name-2`.
+- **After creating the replacement, CDD asks what to do with the old one.**
+  Answering "no" leaves it exactly where it was. It is never deleted unasked,
+  because it may hold something you have not looked at yet.
+- **Eleven diagnostic rules, shippable now:** missing Postgres/MySQL/SQL Server
+  credentials, busy host port, image with no command, out of memory, volume
+  permission denied, executable not found, a job that finished instead of
+  serving, and a refused connection to another host.
+- **Press `?` and the help panel finally lists the screen you are on.** It used
+  to show a single row — its own close key — which made every binding in the app
+  undiscoverable, including `F`.
+- **Keys are shown the way you write them.** `[Esc]`, `[PgUp]`, `[Enter]`,
+  and one `[F]` instead of a `[F]` and a `[shift+F]` for the same key.
+- **Secrets in a prefilled review always start masked.** Reveal is per session:
+  having pressed `Ctrl+R` in an earlier wizard used to leave the next one's
+  passwords in plain text.
+- **An empty value reads `(empty)`, not six dots.** Masking nothing claimed a
+  six-character secret existed.
+
+### Changed
+- **Failure messages no longer repeat their own prefix.** "Error creating
+  container: Error creating container: (HTTP code 409)…" now reads once. Same
+  for the erase path.
+- **The cleanup question after creating a replacement cannot expire while still
+  armed**, so no container is deleted behind a message that has already gone.
+- **A recreated container's review says which ports are new.** A recreation used
+  to read as a copy of the original, because ports carried over verbatim were
+  labelled "assigned by CDD".
+- A prefilled field starts with its cursor at the end, so `Backspace` works and
+  typing does not insert at the beginning.
+
+### Fixed
+- **CDD no longer invents causes.** Two cases produced confident, wrong
+  explanations and both are gone: a container that had just started was
+  reported as "it finished its work and exited on purpose", and any container
+  killed with SIGKILL was reported as "out of memory" even when a `docker kill`
+  or a stop that timed out was the cause.
+- **When CDD cannot recognise the failure it says so** — and shows the last
+  lines — rather than guessing. This is not a fallback; it is the rule.
+- **Two diagnostic rules could never fire.** They read the environment from the
+  container list, which does not carry it. A MySQL container that died for a
+  missing password, whose log did not spell it out, got "I don't recognise it".
+- **An explanation feature that broke down no longer disables its own key:** a
+  fix that fails says why, and `F` keeps working.
+- Reading a failing container's log no longer leaves a stream behind, and the
+  8-byte headers of a `Tty: false` container are stripped instead of reaching
+  the screen as garbage.
+
+### Notes
+- Recreating a container does not carry over its `Cmd`, `Entrypoint`, volumes,
+  networks or restart policy — the wizard has no fields for them. The review
+  shows exactly what *will* be created.
+- An environment value containing a comma is split by the wizard's
+  comma-separated env field. The `kafka` profile already ships one; recreating
+  such a container reproduces the existing behaviour rather than causing it.
+- CDD cannot invent a password. `F` on a missing-credential container adds the
+  variable, the review says it is set but empty, and the key reads "Recreate and
+  set POSTGRES_PASSWORD". You type the value.
+
 ## [4.9.2] - 2026-10-05
 
 ### Fixed
 - Review step now warns when the container name or a host port is already in use.
 - Auto-assigned host ports no longer collide with ports already published.
 - Port validation rejects decimal, hexadecimal and exponent values (e.g. `80.5`, `0x50`).
-- Help panel shows a readable title in every context.
+- Help panel reads its context titles from `STRINGS` instead of a private copy. (It still listed only its own close key — that was 4.10.0.)
 - Auto port mapping never proposes a port above 65535.
 - Failed start/stop/restart/erase messages read correctly ("Failed to stop container").
 
