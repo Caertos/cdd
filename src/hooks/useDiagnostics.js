@@ -50,26 +50,42 @@ function profileOf(container) {
 /**
  * Diagnose the selected container, but only when it deserves it.
  *
- * Reads the log once per container and status and caches the result, so
- * arrowing past a container and back does not re-read it.
+ * Reads the log once per failure and caches it, so arrowing past a container
+ * and back does not re-read it.
+ *
+ * The log and the diagnosis are cached separately, on purpose. Inspect data
+ * arrives after the first render, and the profile-based rules need Config.Env,
+ * so the diagnosis has to be recomputed once it lands — without that, the first
+ * (env-blind) verdict would be cached and the rule would never fire. Keeping
+ * the lines means the recompute costs nothing.
  *
  * @param {Object|null} container - The selected row from getContainers()
  * @param {import('../helpers/health.js').HealthVerdict|null} verdict - Its health verdict
+ * @param {import('../helpers/dockerService/serviceComponents/containerInspect.js').ContainerDetails|null} [details]
+ *   - Inspect data already fetched by useContainerHealth; no extra Docker call
  * @returns {{diagnosis: import('../helpers/diagnostics/diagnose.js').Diagnosis|null, isLoading: boolean}}
  */
-export function useDiagnostics(container, verdict) {
+export function useDiagnostics(container, verdict, details = null) {
   const [diagnosis, setDiagnosis] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [nonce, setNonce] = useState(0);
-  const cacheRef = useRef(new Map());
+  // Two caches: lines per failure, diagnosis per (failure + what we knew).
+  const logsRef = useRef(new Map());
+  const diagnosesRef = useRef(new Map());
 
   const wanted = Boolean(container) && shouldDiagnose(verdict);
   const key = wanted ? diagnosticCacheKey(container, verdict) : null;
+  // Included so the diagnosis is rebuilt when inspect lands, but the cached
+  // log lines are reused.
+  const knowledge = details ? 'inspected' : 'blind';
 
   const refresh = useCallback(() => {
-    // Drop the entry *and* bump the nonce: without the token the effect would
-    // not re-run, because neither `key` nor `wanted` changed.
-    if (key) cacheRef.current.delete(key);
+    // Drop both *and* bump the nonce: without the token the effect would not
+    // re-run, because neither `key` nor `wanted` changed.
+    if (key) {
+      logsRef.current.delete(key);
+      diagnosesRef.current.delete(key);
+    }
     setNonce((n) => n + 1);
   }, [key]);
 
@@ -80,38 +96,52 @@ export function useDiagnostics(container, verdict) {
       return undefined;
     }
 
-    const cached = cacheRef.current.get(key);
-    if (cached) {
-      setDiagnosis(cached);
+    // One entry per failure, tagged with how much we knew when it was built.
+    // Keyed by `key` alone so refresh() can drop it in one go.
+    const cached = diagnosesRef.current.get(key);
+    if (cached && cached.knowledge === knowledge) {
+      setDiagnosis(cached.result);
       setIsLoading(false);
       return undefined;
+    }
+
+    const run = (logLines) => {
+      const result = diagnose({
+        container,
+        details,
+        logLines,
+        profile: profileOf(container),
+        verdict,
+      });
+      diagnosesRef.current.set(key, { knowledge, result });
+      setDiagnosis(result);
+    };
+
+    // The cache holds the *promise*, not its value: when inspect lands while a
+    // read is in flight, the next effect run has to be able to join that read
+    // instead of starting a second one. Caching the resolved lines only worked
+    // when the first read happened to finish first.
+    let pending = logsRef.current.get(key);
+    if (!pending) {
+      pending = getLogsTail(container.id, DIAGNOSTIC_LOG_LINES);
+      // Never rejected (getLogsTail resolves empty on failure), but a stray
+      // rejection must not become an unhandled promise.
+      pending = pending.catch((err) => {
+        // An explanation panel must not be the thing that breaks the dashboard.
+        logger.error('Failed to read log for %s', container.id, err);
+        return [];
+      });
+      logsRef.current.set(key, pending);
     }
 
     let cancelled = false;
     setIsLoading(true);
     setDiagnosis(null);
 
-    getLogsTail(container.id, DIAGNOSTIC_LOG_LINES)
+    pending
       .then((logLines) => {
         if (cancelled) return;
-        // `details` is null here on purpose: every rule reads verdict.facts,
-        // which already carries what inspect told us. Passing inspect data
-        // again would mean a second inspect call for no gain.
-        const result = diagnose({
-          container,
-          details: null,
-          logLines,
-          profile: profileOf(container),
-          verdict,
-        });
-        cacheRef.current.set(key, result);
-        setDiagnosis(result);
-      })
-      .catch((err) => {
-        // getLogsTail does not reject today; if it ever does, an explanation
-        // panel must not become the thing that breaks the dashboard.
-        logger.error('Failed to diagnose container %s', container.id, err);
-        if (!cancelled) setDiagnosis(null);
+        run(logLines);
       })
       .finally(() => {
         if (!cancelled) setIsLoading(false);
@@ -120,12 +150,11 @@ export function useDiagnostics(container, verdict) {
     return () => {
       cancelled = true;
     };
-    // `container` and `verdict` are intentionally out of the dependency list.
-    // They are fresh objects on every list refresh, and including them would
-    // re-read the log every 3 s — which is what the cache key exists to
-    // prevent. The verdict's code, exit code and restart count are already in
-    // `key`, so a genuinely different failure still gets read.
-  }, [key, wanted, nonce]);
+    // container and verdict are fresh objects on every 3 s list refresh, so this
+    // effect re-runs often. That is deliberate and cheap: the log cache means a
+    // re-run is a Map lookup and a diagnose() over lines already in memory,
+    // never a Docker read.
+  }, [key, wanted, knowledge, details, container, verdict, nonce]);
 
   return { diagnosis, isLoading, refresh };
 }

@@ -15,10 +15,18 @@ const MAX_CONCURRENCY = 5;
  * CDD having to track history of its own.
  *
  * @param {Array<Object>} containers - Normalized list from getContainers()
- * @returns {{ health: Map<string, import('../helpers/health.js').HealthVerdict>, refresh: (id: string) => void }}
+ * @returns {{
+ *   health: Map<string, import('../helpers/health.js').HealthVerdict>,
+ *   details: Map<string, import('../helpers/dockerService/serviceComponents/containerInspect.js').ContainerDetails>,
+ *   refresh: (id: string) => void
+ * }}
  */
 export function useContainerHealth(containers) {
   const [health, setHealth] = useState(() => new Map());
+  // The inspect data is already being fetched; it used to be discarded after
+  // the verdict was computed. TASK-8's profile-based rules need Config.Env, and
+  // re-inspecting here would double the Docker calls for no new information.
+  const [details, setDetails] = useState(() => new Map());
   const [refreshToken, setRefreshToken] = useState(0);
   const cacheRef = useRef(new Map());
 
@@ -74,6 +82,15 @@ export function useContainerHealth(containers) {
           }
           return updated;
         });
+        setDetails((prev) => {
+          const updated = new Map(prev);
+          for (const container of list) {
+            if (!changedIds.has(container.id)) continue;
+            const found = detailsMap.get(container.id);
+            if (found) updated.set(container.id, found);
+          }
+          return updated;
+        });
       }
     );
 
@@ -87,5 +104,5 @@ export function useContainerHealth(containers) {
     setRefreshToken((token) => token + 1);
   }, []);
 
-  return { health, refresh };
+  return { health, details, refresh };
 }

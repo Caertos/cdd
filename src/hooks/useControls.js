@@ -53,12 +53,19 @@ const NOOP_LAUNCHER = {
  * @param {Map<string, import('../helpers/health.js').HealthVerdict>} [overrides.health]
  *   - Health verdicts by container id. Lived here rather than in App so the
  *   diagnosis and the F key read the same one instead of each owning a hook.
+ * @param {Map<string, import('../helpers/dockerService/serviceComponents/containerInspect.js').ContainerDetails>} [overrides.details]
+ *   - The inspect data useContainerHealth already fetched, for the rules that
+ *   need Config.Env.
  * @returns {Object} controls - API for the App component
  */
 export function useControls(containers = [], overrides = {}) {
   const connection = overrides.connection ?? null;
   const launcher = overrides.launcher ?? NOOP_LAUNCHER;
   const health = overrides.health ?? new Map();
+  // Inspect data that useContainerHealth already fetched. Kept because the
+  // profile-based diagnostic rules need Config.Env, and re-inspecting here
+  // would double the Docker calls for no new information.
+  const details = overrides.details ?? new Map();
   const [creatingContainer, setCreatingContainer] = React.useState(false);
   const [showHelp, setShowHelp] = React.useState(false);
   // The failed container a recreation supersedes, pending a yes/no.
@@ -144,7 +151,11 @@ export function useControls(containers = [], overrides = {}) {
     ? (health.get(selectedContainer.id) ?? null)
     : null;
   // One diagnosis for the panel and for the F key, so the log is read once.
-  const diagnostics = useDiagnostics(selectedContainer, selectedVerdict);
+  const diagnostics = useDiagnostics(
+    selectedContainer,
+    selectedVerdict,
+    selectedContainer ? (details.get(selectedContainer.id) ?? null) : null
+  );
   const canFix = Boolean(diagnostics.diagnosis?.fix);
 
   // Allow overrides for testability (e.g. injecting a mock triggerHubSearch)

@@ -31,11 +31,16 @@ import { STRINGS } from './helpers/strings.js';
 export default function App() {
   const { suspendTerminal } = useApp();
   const { containers, connection } = useContainers();
-  const { health } = useContainerHealth(containers);
+  const { health, details } = useContainerHealth(containers);
   const launcher = useDockerLauncher();
   // health goes in so useControls owns the one diagnosis the panel renders and
   // the F key acts on. Two hooks would mean reading the log twice.
-  const controls = useControls(containers, { connection, launcher, health });
+  const controls = useControls(containers, {
+    connection,
+    launcher,
+    health,
+    details,
+  });
 
   const selectedContainer = containers[controls.selected] ?? null;
 

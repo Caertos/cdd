@@ -206,10 +206,18 @@ describe('describeWhat', () => {
     ).toBe('It died after 2s with exit code 1.');
   });
 
-  test('crash-loop mentions the restarts', () => {
-    expect(describeWhat(verdictOf('crash-loop', { exitCode: 1 }))).toContain(
-      'keeps dying'
+  test('crash-loop mentions the restarts once Docker has restarted it', () => {
+    expect(
+      describeWhat(verdictOf('crash-loop', { exitCode: 1, restartCount: 2 }))
+    ).toContain('keeps dying');
+  });
+
+  test('a quick death that was never restarted does not claim a restart', () => {
+    const what = describeWhat(
+      verdictOf('crash-loop', { exitCode: 3, restartCount: 0 })
     );
+    expect(what).toBe('It died with exit code 3.');
+    expect(what).not.toMatch(/restart|keeps dying/i);
   });
 
   test('restarting counts them', () => {
@@ -341,8 +349,20 @@ describe('describeWhat — every code', () => {
 
   test('crash-loop mentions how long it survived when we know', () => {
     expect(
-      describeWhat(verdictOf('crash-loop', { exitCode: 1, uptimeMs: 3000 }))
+      describeWhat(
+        verdictOf('crash-loop', {
+          exitCode: 1,
+          uptimeMs: 3000,
+          restartCount: 1,
+        })
+      )
     ).toBe('It keeps dying after 3s and Docker restarts it.');
+  });
+
+  test('a never-restarted quick death still says how long it survived', () => {
+    expect(
+      describeWhat(verdictOf('crash-loop', { exitCode: 1, uptimeMs: 3000 }))
+    ).toBe('It died after 3s with exit code 1.');
   });
 
   test('a crash with no uptime still reads as a sentence', () => {

@@ -85,7 +85,10 @@ function factsOf(ctx) {
  */
 function missingRequiredEnv(ctx) {
   const required = ctx.profile?.requiredEnv;
-  const given = ctx.container?.env;
+  // Read from inspect, not from the list row: getContainers() does not carry
+  // env, so a rule reading ctx.container.env matched only inside the tests.
+  // ctx.container.env stays as a fallback so a caller that does have it wins.
+  const given = ctx.details?.env ?? ctx.container?.env;
   if (!Array.isArray(required) || required.length === 0) return null;
   if (!Array.isArray(given)) return null;
   const flat = given.join('\n').toLowerCase();
@@ -114,11 +117,12 @@ function busyHostPort(ctx) {
 /** @type {DiagnosticRule[]} */
 export const DIAGNOSTIC_RULES = [
   {
-    // An inspect fact, not a log guess: the kernel told us why.
+    // Only the flag, never the exit code. 137 is SIGKILL, which Docker also
+    // sends for `docker kill` and a stop that timed out — calling that "out of
+    // memory" is exactly the invented cause this catalog must not produce.
     id: 'out-of-memory',
     priority: 100,
-    match: (ctx) =>
-      factsOf(ctx).oomKilled === true || factsOf(ctx).exitCode === 137,
+    match: (ctx) => factsOf(ctx).oomKilled === true,
     explain: () => STRINGS.diagnostics.explain['out-of-memory'],
   },
   {

@@ -60,6 +60,16 @@ describeE2E('E2E — diagnosis panel', () => {
 
       // No diagnosis is requested: selecting a failing container is enough.
       await ui.waitForText('Diagnosis:', { label: 'the diagnosis panel' });
+      // The log read is async and inspect lands separately, so the panel can
+      // still be loading when the title first appears.
+      await ui
+        .waitForTextGone('Reading the log...', {
+          timeout: 10000,
+          label: 'the log read to finish',
+        })
+        .catch(() => {
+          throw new Error('Panel never finished loading its log');
+        });
 
       const frame = ui.frame();
       expect(frame).toContain(name.slice(0, 17));
