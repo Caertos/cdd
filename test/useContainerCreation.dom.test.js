@@ -810,3 +810,63 @@ describe('useContainerCreation — prefillCreation (TASK-8)', () => {
     );
   });
 });
+
+describe('useContainerCreation — secrets never inherit a reveal (TASK-8)', () => {
+  const values = {
+    imageName: 'postgres:17-alpine',
+    containerName: 'db-2',
+    portInput: '5433:5432',
+    envInput: 'POSTGRES_PASSWORD=hunter2',
+  };
+
+  const renderHook = () => {
+    const expose = { current: null };
+    render(
+      <HookTester onCreate={() => {}} onCancel={() => {}} dbImages={[]} expose={expose} />
+    );
+    return expose;
+  };
+
+  test('a reveal from an earlier wizard does not carry over', async () => {
+    const expose = renderHook();
+    await act(async () => {
+      expose.current.prefillCreation(values, []);
+    });
+    expect(expose.current.revealSecrets).toBe(false);
+
+    // User reveals the secrets while checking the fix...
+    await act(async () => {
+      expose.current.toggleRevealSecrets();
+    });
+    expect(expose.current.revealSecrets).toBe(true);
+
+    // ...then goes back to the plain wizard and comes through the fix again.
+    await act(async () => {
+      expose.current.resetCreation();
+      await expose.current.prefillCreation(values, []);
+    });
+    expect(expose.current.revealSecrets).toBe(false);
+  });
+
+  test('a prefill always starts masked, whatever was asked before', async () => {
+    const expose = renderHook();
+    await act(async () => {
+      expose.current.toggleRevealSecrets();
+    });
+    expect(expose.current.revealSecrets).toBe(true);
+
+    await act(async () => {
+      await expose.current.prefillCreation(values, ['envInput']);
+    });
+    expect(expose.current.revealSecrets).toBe(false);
+  });
+
+  test('resetCreation clears the reveal on its own', async () => {
+    const expose = renderHook();
+    await act(async () => {
+      expose.current.toggleRevealSecrets();
+      expose.current.resetCreation();
+    });
+    expect(expose.current.revealSecrets).toBe(false);
+  });
+});

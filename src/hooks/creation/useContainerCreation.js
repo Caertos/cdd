@@ -777,6 +777,9 @@ export function useContainerCreation({
     setChangedFields([]);
     setReviewRows([]);
     setReviewWarnings([]);
+    // Reveal is a per-session toggle, and a wizard that starts with every
+    // secret already showing is not what anyone asked for.
+    setRevealSecrets(false);
   }
 
   /**
@@ -796,6 +799,9 @@ export function useContainerCreation({
       payload: { ...INITIAL_FORM, ...values, step: 4 },
     });
     setChangedFields(changed);
+    // The prefilled env carries the container's real secrets, so the review
+    // must not inherit a reveal the user asked for somewhere else.
+    setRevealSecrets(false);
     await prepareReview(values, changed);
   }
 
