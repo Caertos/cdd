@@ -10,8 +10,10 @@ import { useConfirmation } from './useConfirmation.js';
 import { useExitHandler } from './useExitHandler.js';
 import { useShellMode } from './useShellMode.js';
 import { getLogsStream } from '../helpers/dockerService/serviceComponents/containerLogs.js';
-import { getContainerDetails } from '../helpers/dockerService/serviceComponents/containerInspect.js';
-import { getImageEnv } from '../helpers/dockerService/serviceComponents/containerInspect.js';
+import {
+  getContainerDetails,
+  getImageEnv,
+} from '../helpers/dockerService/serviceComponents/containerInspect.js';
 import { createContainer as svcCreateContainer } from '../helpers/dockerService/serviceComponents/containerActions.js';
 import { buildContainerOptions } from '../helpers/containerOptionsBuilder.js';
 import {
@@ -350,12 +352,25 @@ export function useControls(containers = [], overrides = {}) {
         const details = await getContainerDetails(container.id).catch(
           () => null
         );
+        if (!details) {
+          // Refusing here, because carrying on means building a container with
+          // no environment at all: a postgres without POSTGRES_PASSWORD would
+          // die the same way it just did, and the review would say "Env (none)"
+          // as if that were the plan. The wizard is one key away and it never
+          // pretends to know what the user needs.
+          actions.setTimedMessage(
+            `Couldn't read ${container.name}'s configuration — press C to create one from scratch`,
+            'red'
+          );
+          return;
+        }
+
         // The image's own env is what tells us which variables are the user's.
         const imageEnv = await getImageEnv(container.image);
 
         const base = containerToCreationValues(
           container,
-          details ? { env: details.env, cmd: details.cmd } : null,
+          { env: details.env, cmd: details.cmd },
           imageEnv
         );
         const takenNames = new Set(containers.map((c) => c.name));

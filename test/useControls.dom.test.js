@@ -963,3 +963,89 @@ describe('useControls — the failed container is never deleted silently', () =>
     expect(expose.current.pendingCleanup).toBeNull();
   });
 });
+
+describe('useControls — F refuses to guess when inspect fails', () => {
+  const broken = {
+    id: 'c1',
+    name: 'mi-basedatos',
+    image: 'postgres:17-alpine',
+    state: 'exited',
+    status: 'Exited (1) 2 seconds ago',
+    ports: ['5432:5432'],
+  };
+  const verdictMap = new Map([
+    [
+      'c1',
+      {
+        code: 'crash-loop',
+        level: 'fail',
+        headline: 'died 2s',
+        facts: {
+          exitCode: 1,
+          uptimeMs: 2000,
+          restartCount: 0,
+          oomKilled: false,
+          healthStatus: null,
+        },
+      },
+    ],
+  ]);
+
+  afterEach(() => {
+    mockGetContainerDetails.mockReset();
+    mockGetImageEnv.mockReset();
+  });
+
+  test('a failed inspect does not open the wizard', async () => {
+    // Carrying on would build a container with no environment: a postgres
+    // without POSTGRES_PASSWORD dies the same way it just did.
+    const { getLogsTail } = await import(
+      '../src/helpers/dockerService/serviceComponents/containerLogs.js'
+    );
+    getLogsTail.mockResolvedValue(['superuser password is not specified']);
+    mockGetContainerDetails.mockResolvedValue(null);
+    mockGetImageEnv.mockResolvedValue([]);
+
+    const expose = { current: null };
+    render(
+      <HookTester
+        containers={[broken]}
+        expose={expose}
+        overrides={{ health: verdictMap }}
+      />
+    );
+    await act(async () => {});
+    await act(async () => {
+      expose.current.handlers['container.fix']();
+    });
+    await act(async () => {});
+
+    expect(expose.current.creatingContainer).toBe(false);
+  });
+
+  test('and it says why, pointing at the wizard', async () => {
+    const { getLogsTail } = await import(
+      '../src/helpers/dockerService/serviceComponents/containerLogs.js'
+    );
+    getLogsTail.mockResolvedValue(['superuser password is not specified']);
+    mockGetContainerDetails.mockRejectedValue(new Error('boom'));
+    mockGetImageEnv.mockResolvedValue([]);
+
+    const expose = { current: null };
+    render(
+      <HookTester
+        containers={[broken]}
+        expose={expose}
+        overrides={{ health: verdictMap }}
+      />
+    );
+    await act(async () => {});
+    await act(async () => {
+      expose.current.handlers['container.fix']();
+    });
+    await act(async () => {});
+
+    expect(expose.current.message).toContain("Couldn't read");
+    expect(expose.current.message).toContain('C');
+  });
+});
