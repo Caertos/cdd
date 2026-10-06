@@ -239,7 +239,9 @@ export function buildCreationWarnings(values, ctx) {
   // thing CDD just diagnosed. TASK-8's password fix lands here on purpose —
   // CDD cannot invent a password — so the review has to say so out loud.
   if (profile?.requiredEnv?.length) {
-    const values = new Map(
+    // Named given, not values: `values` is the wizard-values parameter and
+    // shadowing it here made the two impossible to tell apart.
+    const given = new Map(
       (envInput || '')
         .split(',')
         .map((s) => s.trim())
@@ -252,8 +254,8 @@ export function buildCreationWarnings(values, ctx) {
         })
     );
     const empty = profile.requiredEnv.filter((k) => {
-      if (!values.has(k)) return false;
-      const v = values.get(k);
+      if (!given.has(k)) return false;
+      const v = given.get(k);
       return v !== null && v.trim() === '';
     });
     if (empty.length > 0) {

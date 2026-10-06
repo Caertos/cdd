@@ -280,30 +280,28 @@ export function useControls(containers = [], overrides = {}) {
   );
 
   const context = getActiveContext(uiState);
+  // Not memoised on purpose. getBindings() filters and sorts at most a dozen
+  // bindings, and uiState is a fresh object every render, so a dependency that
+  // tracked it would rebuild the array anyway — the memo would only look like
+  // an optimisation. An earlier version of this file claimed otherwise.
   const keymapBindings = getBindings(context, uiState);
 
   // The help panel describes the screen it was opened from, not itself. Without
   // this, pressing ? listed exactly one key — its own close — and every real
   // binding became undiscoverable (H1).
   const helpContext = getActiveContext({ ...uiState, showHelp: false });
-  const helpBindings = React.useMemo(
-    () =>
-      showHelp
-        ? [
-            ...getBindings(helpContext, uiState),
-            {
-              id: 'help.close',
-              keys: ['escape', '?'],
-              label: 'Esc',
-              help: 'Close this help panel',
-              priority: 90,
-            },
-          ]
-        : [],
-    // keymapBindings stands in for uiState: it is derived from it, and listing
-    // the whole state here would rebuild this on every render for nothing.
-    [showHelp, helpContext, keymapBindings]
-  );
+  const helpBindings = showHelp
+    ? [
+        ...getBindings(helpContext, uiState),
+        {
+          id: 'help.close',
+          keys: ['escape', '?'],
+          label: 'Esc',
+          help: 'Close this help panel',
+          priority: 90,
+        },
+      ]
+    : [];
 
   // Action handlers for the keymap
   const handlers = React.useMemo(
@@ -630,8 +628,10 @@ export function useControls(containers = [], overrides = {}) {
       const handler = handlers[bindingId];
       if (handler) handler();
     },
-    // `actions` is a stable object from the same hook, listed so the disarm
-    // reads its current message.
+    // `actions` is a fresh object every render (useContainerActions returns a
+    // new literal), so this callback is recreated too. That is harmless — the
+    // message read happens at dispatch time — but it is why no stable-identity
+    // claim can be made about any dependency here.
     [pendingCleanup, handlers, actions]
   );
 
