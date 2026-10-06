@@ -4,6 +4,7 @@
 import fs from 'fs';
 import path from 'path';
 import { getActiveContext, getBindings, resolveKey, keyNameOf, KEYMAP } from '../src/helpers/keymap.js';
+import { displayKeys } from '../src/helpers/keyLabels.js';
 
 describe('getActiveContext — pure function', () => {
   test('returns list when no special state is active', () => {
@@ -251,6 +252,18 @@ describe('the fix key (TASK-8)', () => {
     const idle = getBindings('list', { confirmCleanup: false }).map((b) => b.id);
     expect(idle).not.toContain('cleanup.delete');
     expect(idle).not.toContain('cleanup.keep');
+  });
+
+  test('no binding repeats its own key as its label', () => {
+    for (const [context, bindings] of Object.entries(KEYMAP)) {
+      for (const b of bindings) {
+        const shown = displayKeys(b.keys)[0];
+        expect(`${context}/${b.id}: ${String(b.label).toLowerCase()}`).not.toBe(
+          `${context}/${b.id}: ${String(shown).toLowerCase()}`
+        );
+        expect(String(b.label).trim()).not.toBe('');
+      }
+    }
   });
 
   test('the cleanup question is labelled Yes and No', () => {
