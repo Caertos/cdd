@@ -23,6 +23,9 @@ const ROW_OF_FIELD = {
   envInput: 'env',
 };
 
+/** Shown in place of the mask for a secret that has no value. */
+export const EMPTY_VALUE = '(empty)';
+
 /**
  * @typedef {Object} Warning
  * @property {'image-pull'|'port-taken'|'name-taken'|'missing-env'|'secret-plain'} kind
@@ -40,6 +43,7 @@ const ROW_OF_FIELD = {
  * @param {Object} ctx.imageProfiles - Profile map
  * @param {Array} [ctx.previewedPorts] - Auto-assigned ports from preview, or null
  * @param {string[]} [ctx.changedFields] - Wizard fields CDD changed (TASK-8)
+ * @param {boolean} [ctx.recreating] - True when the values were prefilled from a failed container
  * @returns {SummaryRow[]}
  */
 export function buildCreationSummary(values, ctx) {
@@ -49,6 +53,7 @@ export function buildCreationSummary(values, ctx) {
     imageProfiles,
     previewedPorts,
     changedFields = [],
+    recreating = false,
   } = ctx;
 
   // The point of "recreate with the fix" is that the user can see what CDD
@@ -107,7 +112,11 @@ export function buildCreationSummary(values, ctx) {
       step: 2,
       label: 'Ports',
       values: portLines,
-      origin: 'assigned by CDD',
+      // A recreation reads like a copy of the original, so say when the
+      // ports are new rather than carried over.
+      origin: recreating
+        ? 'assigned by CDD \u2014 the original published no ports'
+        : 'assigned by CDD',
     });
   } else {
     rows.push({
@@ -128,9 +137,10 @@ export function buildCreationSummary(values, ctx) {
       const eqIdx = v.indexOf('=');
       if (eqIdx === -1) return v;
       const key = v.slice(0, eqIdx);
-      return isSecretKey(key)
-        ? `${key}=\u2022\u2022\u2022\u2022\u2022\u2022`
-        : v;
+      if (!isSecretKey(key)) return v;
+      // Nothing to hide in an empty value, and dots would claim otherwise.
+      if (!v.slice(eqIdx + 1).trim()) return `${key}=${EMPTY_VALUE}`;
+      return `${key}=\u2022\u2022\u2022\u2022\u2022\u2022`;
     });
     rows.push({ key: 'env', step: 3, label: 'Env', values: envLines });
   } else {
@@ -276,7 +286,8 @@ export function buildCreationWarnings(values, ctx) {
     const eqIdx = v.indexOf('=');
     if (eqIdx === -1) continue;
     const key = v.slice(0, eqIdx);
-    if (isSecretKey(key)) {
+    // No value, nothing in plain text: the empty-value warning covers it.
+    if (isSecretKey(key) && v.slice(eqIdx + 1).trim()) {
       warnings.push({
         kind: 'secret-plain',
         level: 'warn',

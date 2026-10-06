@@ -43,6 +43,13 @@ const NOOP_LAUNCHER = {
 };
 
 // Principal hook to manage user inputs and control the app state
+/** The fix creates the replacement stopped; say how to start it. */
+function startHint(replacement) {
+  return replacement
+    ? ` ${replacement} is stopped — select it and press [i] to start it.`
+    : '';
+}
+
 /**
  * Main hook that wires user input, creation, actions and logs viewing.
  * It coordinates the modular hooks and exposes a compact API consumed by the App.
@@ -112,7 +119,10 @@ export function useControls(containers = [], overrides = {}) {
         if (superseded) {
           // Never deleted without an answer: that container may hold something
           // the user has not looked at yet.
-          setPendingCleanup(superseded);
+          setPendingCleanup({
+            ...superseded,
+            replacement: containerName || id,
+          });
           // Persistent, not timed: the question must stay until it is answered
           // or something else disarms it.
           actions.setPersistentMessage(
@@ -464,7 +474,7 @@ export function useControls(containers = [], overrides = {}) {
         try {
           await actions.removeContainer(target.id);
           actions.setTimedMessage(
-            `Removed ${target.name}, the container that failed.`,
+            `Removed ${target.name}, the container that failed.${startHint(target.replacement)}`,
             'green'
           );
         } catch (err) {
@@ -477,7 +487,7 @@ export function useControls(containers = [], overrides = {}) {
       'cleanup.keep': () => {
         setPendingCleanup(null);
         actions.setTimedMessage(
-          `${pendingCleanup?.name ?? 'The failed container'} kept.`,
+          `${pendingCleanup?.name ?? 'The failed container'} kept.${startHint(pendingCleanup?.replacement)}`,
           'gray'
         );
       },

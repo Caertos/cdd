@@ -317,6 +317,36 @@ describe('buildCreationWarnings', () => {
     expect(warnings.some((w) => w.kind === 'secret-plain')).toBe(true);
   });
 
+  test('no secret-plain warning while the secret has no value yet', () => {
+    // There is nothing in plain text to warn about; the empty-value warning
+    // already says what is wrong, and saying both reads as a contradiction.
+    const warnings = buildCreationWarnings(
+      {
+        imageName: 'nginx',
+        containerName: '',
+        portInput: '',
+        envInput: 'DB_PASSWORD=,API_TOKEN=   ',
+      },
+      { containers: [], imageIsLocal: true, imageProfiles: profiles }
+    );
+    expect(warnings.some((w) => w.kind === 'secret-plain')).toBe(false);
+  });
+
+  test('secret-plain still fires for the secret that has a value', () => {
+    const warnings = buildCreationWarnings(
+      {
+        imageName: 'nginx',
+        containerName: '',
+        portInput: '',
+        envInput: 'DB_PASSWORD=,API_TOKEN=abc123',
+      },
+      { containers: [], imageIsLocal: true, imageProfiles: profiles }
+    );
+    const plain = warnings.filter((w) => w.kind === 'secret-plain');
+    expect(plain).toHaveLength(1);
+    expect(plain[0].text).toContain('API_TOKEN');
+  });
+
   test('multiple warnings at once', () => {
     const warnings = buildCreationWarnings(
       {
@@ -474,5 +504,59 @@ describe('a required variable that is set but empty', () => {
   test('images with no required vars are unaffected', () => {
     const kinds = warningsFor('FOO=', 'nginx').map((w) => w.kind);
     expect(kinds).not.toContain('missing-env');
+  });
+});
+
+describe('buildCreationSummary — empty secrets and recreations', () => {
+  const envRow = (envInput) =>
+    buildCreationSummary(
+      { imageName: 'postgres', containerName: '', portInput: '', envInput },
+      { rawImageInput: 'postgres', imageProfiles: profiles, previewedPorts: null }
+    ).find((r) => r.key === 'env');
+
+  const portsRow = (ctx) =>
+    buildCreationSummary(
+      { imageName: 'postgres', containerName: '', portInput: '', envInput: '' },
+      {
+        rawImageInput: 'postgres',
+        imageProfiles: profiles,
+        previewedPorts: [
+          { hostPort: '5433', containerPort: '5432', protocol: 'tcp' },
+        ],
+        ...ctx,
+      }
+    ).find((r) => r.key === 'ports');
+
+  test('an empty secret is shown as (empty), not as dots', () => {
+    expect(envRow('POSTGRES_PASSWORD=').values).toEqual([
+      'POSTGRES_PASSWORD=(empty)',
+    ]);
+  });
+
+  test('a whitespace-only secret value counts as empty', () => {
+    expect(envRow('POSTGRES_PASSWORD=   ').values).toEqual([
+      'POSTGRES_PASSWORD=(empty)',
+    ]);
+  });
+
+  test('a filled-in secret is still masked', () => {
+    expect(envRow('POSTGRES_PASSWORD=hunter2').values).toEqual([
+      'POSTGRES_PASSWORD=\u2022\u2022\u2022\u2022\u2022\u2022',
+    ]);
+  });
+
+  test('a non-secret key with an empty value is left alone', () => {
+    expect(envRow('POSTGRES_USER=').values).toEqual(['POSTGRES_USER=']);
+  });
+
+  test('a recreation says the original published no ports', () => {
+    expect(portsRow({ recreating: true }).origin).toBe(
+      'assigned by CDD \u2014 the original published no ports'
+    );
+  });
+
+  test('a normal wizard keeps the plain origin', () => {
+    expect(portsRow({}).origin).toBe('assigned by CDD');
+    expect(portsRow({ recreating: false }).origin).toBe('assigned by CDD');
   });
 });

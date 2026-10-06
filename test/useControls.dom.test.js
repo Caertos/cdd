@@ -1088,6 +1088,7 @@ describe('useControls — the failed container is never deleted silently', () =>
     expect(expose.current.pendingCleanup).toEqual({
       id: 'c1',
       name: 'mi-basedatos',
+      replacement: 'mi-basedatos-2',
     });
   });
 
@@ -1102,6 +1103,10 @@ describe('useControls — the failed container is never deleted silently', () =>
     });
     expect(removeContainer).not.toHaveBeenCalled();
     expect(expose.current.pendingCleanup).toBeNull();
+    expect(expose.current.message).toContain('mi-basedatos kept.');
+    expect(expose.current.message).toContain(
+      'mi-basedatos-2 is stopped — select it and press [i] to start it.'
+    );
   });
 
   test('answering yes removes it', async () => {
@@ -1115,6 +1120,26 @@ describe('useControls — the failed container is never deleted silently', () =>
     });
     expect(removeContainer).toHaveBeenCalledWith('c1');
     expect(expose.current.pendingCleanup).toBeNull();
+    expect(expose.current.message).toContain(
+      'Removed mi-basedatos, the container that failed.'
+    );
+    expect(expose.current.message).toContain(
+      'mi-basedatos-2 is stopped — select it and press [i] to start it.'
+    );
+  });
+
+  test('a failed removal keeps its own message, without the start hint', async () => {
+    const { removeContainer } =
+      await import('../src/helpers/dockerService/serviceComponents/containerActions.js');
+    removeContainer.mockRejectedValueOnce(new Error('busy'));
+    const expose = await setup();
+    await recreateAndConfirm(expose);
+
+    await act(async () => {
+      await expose.current.dispatch('cleanup.delete');
+    });
+    expect(expose.current.message).toContain('Could not remove mi-basedatos');
+    expect(expose.current.message).not.toContain('press [i]');
   });
 
   test('the question is only asked when a fix was used', async () => {
@@ -1330,7 +1355,14 @@ describe('useControls — the cleanup question cannot go stale', () => {
 
 describe('useControls — the help panel describes the screen underneath (H1)', () => {
   const containers = [
-    { id: 'a', name: 'web', image: 'nginx:1.27-alpine', state: 'running', status: 'Up 1 minute', ports: ['8080:80'] },
+    {
+      id: 'a',
+      name: 'web',
+      image: 'nginx:1.27-alpine',
+      state: 'running',
+      status: 'Up 1 minute',
+      ports: ['8080:80'],
+    },
   ];
 
   async function setup() {
@@ -1447,9 +1479,8 @@ describe('useControls — the cleanup question waits for an answer (N1)', () => 
       id: 'cid-new',
       ports: [],
     });
-    const { getLogsTail } = await import(
-      '../src/helpers/dockerService/serviceComponents/containerLogs.js'
-    );
+    const { getLogsTail } =
+      await import('../src/helpers/dockerService/serviceComponents/containerLogs.js');
     getLogsTail.mockResolvedValue(['superuser password is not specified']);
     mockGetContainerDetails.mockReset().mockResolvedValue({
       env: ['POSTGRES_PASSWORD=x'],
@@ -1495,9 +1526,8 @@ describe('useControls — the cleanup question waits for an answer (N1)', () => 
   test('the answer still works after the timer would have fired', async () => {
     jest.useFakeTimers({ doNotFake: ['nextTick'] });
     try {
-      const { removeContainer } = await import(
-        '../src/helpers/dockerService/serviceComponents/containerActions.js'
-      );
+      const { removeContainer } =
+        await import('../src/helpers/dockerService/serviceComponents/containerActions.js');
       removeContainer.mockClear();
       const expose = { current: null };
       render(
@@ -1590,9 +1620,8 @@ describe('useControls — F is not re-entrant', () => {
       cmd: [],
     });
     mockGetImageEnv.mockReset().mockResolvedValue([]);
-    const { getLogsTail } = await import(
-      '../src/helpers/dockerService/serviceComponents/containerLogs.js'
-    );
+    const { getLogsTail } =
+      await import('../src/helpers/dockerService/serviceComponents/containerLogs.js');
     getLogsTail.mockResolvedValue(['superuser password is not specified']);
   });
 
@@ -1600,8 +1629,7 @@ describe('useControls — F is not re-entrant', () => {
     let release;
     mockGetContainerDetails.mockReturnValue(
       new Promise((resolve) => {
-        release = () =>
-          resolve({ env: ['POSTGRES_PASSWORD=x'], cmd: [] });
+        release = () => resolve({ env: ['POSTGRES_PASSWORD=x'], cmd: [] });
       })
     );
 
@@ -1713,9 +1741,8 @@ describe('useControls — a failed fix never latches the key', () => {
       cmd: [],
     });
     mockGetImageEnv.mockReset().mockResolvedValue([]);
-    const { getLogsTail } = await import(
-      '../src/helpers/dockerService/serviceComponents/containerLogs.js'
-    );
+    const { getLogsTail } =
+      await import('../src/helpers/dockerService/serviceComponents/containerLogs.js');
     getLogsTail.mockResolvedValue(['superuser password is not specified']);
   });
 
@@ -1750,26 +1777,11 @@ describe('useControls — a failed fix never latches the key', () => {
     expect(expose.current.creationStep).toBe(4);
   });
 
-  test('a prefill that throws does not latch F either', async () => {
-    const expose = await setup();
-
-    // Make prefillCreation throw by giving the hook a values object whose
-    // shape breaks the review build.
-    await act(async () => {
-      expose.current.dispatch('container.fix');
-    });
-    await act(async () => {});
-    expect(expose.current.creationStep).toBe(4);
-
-    // Leaving and coming back must work.
-    await act(async () => {
-      expose.current.creation.cancelCreation();
-    });
-    await act(async () => {
-      await expose.current.dispatch('container.fix');
-    });
-    expect(expose.current.creationStep).toBe(4);
-  });
+  // The prefill site is inside the same try, but there is no seam to force a
+  // throw there from this harness, and a test that walks the happy path while
+  // claiming to test a throw is worse than no test. What is proven here is the
+  // property that matters: the catch fires, it says why, and the key works on
+  // the next press.
 
   test('and it says what went wrong rather than failing quietly', async () => {
     mockGetImageEnv.mockRejectedValue(new Error('daemon gone'));

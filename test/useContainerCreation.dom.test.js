@@ -33,6 +33,7 @@ await jest.unstable_mockModule(
 const { useContainerCreation } = await import('../src/hooks/creation/useContainerCreation.js');
 const { searchDockerHub } = await import('../src/helpers/dockerHubService.js');
 const { docker } = await import('../src/helpers/dockerService/dockerService.js');
+const { previewAutoPorts } = await import('../src/helpers/dockerService/serviceComponents/imageUtils.js');
 
 function HookTester({ onCreate, onCancel, dbImages, imageProfiles, expose }) {
   const hook = useContainerCreation({ onCreate, onCancel, dbImages, imageProfiles });
@@ -943,5 +944,92 @@ describe('useContainerCreation — editing a prefilled field (TASK-8)', () => {
       expose.current.handleFieldKey('A', {});
     });
     expect(expose.current.envInput).toBe('A');
+  });
+});
+
+describe('useContainerCreation — recreation port origin', () => {
+  const values = {
+    imageName: 'postgres:17-alpine',
+    containerName: 'mi-basedatos-2',
+    portInput: '',
+    envInput: 'POSTGRES_PASSWORD=hunter2',
+  };
+  const preview = [{ hostPort: '5433', containerPort: '5432', protocol: 'tcp' }];
+  const RECREATED = 'assigned by CDD \u2014 the original published no ports';
+
+  const originOf = (expose) =>
+    expose.current.reviewRows.find((r) => r.key === 'ports').origin;
+
+  beforeEach(() => {
+    previewAutoPorts.mockResolvedValue(preview);
+  });
+  afterEach(() => {
+    previewAutoPorts.mockResolvedValue(null);
+  });
+
+  function mount() {
+    const expose = { current: null };
+    render(
+      <HookTester onCreate={() => {}} onCancel={() => {}} dbImages={[]} expose={expose} />
+    );
+    return expose;
+  }
+
+  // A fresh, normal wizard run to the review with empty ports.
+  async function normalWizardToReview(expose) {
+    act(() => { expose.current.setImageName('redis'); });
+    act(() => { expose.current.nextStep(); });
+    act(() => { expose.current.nextStep(); });
+    act(() => { expose.current.nextStep(); });
+    await act(async () => { await expose.current.nextStep(); });
+    expect(expose.current.step).toBe(4);
+  }
+
+  test('a prefilled review says the original published no ports', async () => {
+    const expose = mount();
+    await act(async () => {
+      await expose.current.prefillCreation(values, []);
+    });
+    expect(originOf(expose)).toBe(RECREATED);
+  });
+
+  test('the flag survives Esc back and returning to the review', async () => {
+    const expose = mount();
+    await act(async () => {
+      await expose.current.prefillCreation(values, []);
+    });
+    await act(async () => {
+      expose.current.prevStep();
+    });
+    expect(expose.current.step).toBe(3);
+    await act(async () => {
+      await expose.current.nextStep();
+    });
+    expect(expose.current.step).toBe(4);
+    expect(originOf(expose)).toBe(RECREATED);
+  });
+
+  test('resetCreation makes the next wizard a normal one', async () => {
+    const expose = mount();
+    await act(async () => {
+      await expose.current.prefillCreation(values, []);
+    });
+    await act(async () => {
+      expose.current.resetCreation();
+    });
+    await normalWizardToReview(expose);
+    expect(originOf(expose)).toBe('assigned by CDD');
+  });
+
+  test('cancelCreation also clears it', async () => {
+    const expose = mount();
+    await act(async () => {
+      await expose.current.prefillCreation(values, []);
+    });
+    await act(async () => {
+      expose.current.cancelCreation();
+    });
+    await normalWizardToReview(expose);
+    expect(originOf(expose)).toBe('assigned by CDD');
   });
 });

@@ -359,6 +359,9 @@ export function useContainerCreation({
   // Wizard fields CDD itself changed when coming from a diagnosis (TASK-8), so
   // the review can point at exactly what moved.
   const [changedFields, setChangedFields] = useState([]);
+  // True for the whole recreation session, so the review keeps saying the
+  // ports are new after the user goes back to a step and returns.
+  const [recreating, setRecreating] = useState(false);
   const [focusedReviewRow, setFocusedReviewRow] = useState(0);
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
   const returnToReviewRef = useRef(false);
@@ -553,11 +556,17 @@ export function useContainerCreation({
    * Prepares the review step: builds summary rows, warnings,
    * and previews auto-ports if the image is local.
    */
-  async function prepareReview(overrideValues, overrideChanged) {
+  async function prepareReview(
+    overrideValues,
+    overrideChanged,
+    overrideRecreating
+  ) {
     const f = formRef.current;
     // A prefill sets changedFields in the same tick, so reading it from the
     // closure here would get the previous render's empty list.
     const changed = overrideChanged ?? changedFields;
+    // Same stale-closure reason as `changed`.
+    const isRecreating = overrideRecreating ?? recreating;
     // A prefill dispatches its values and then calls this; reading formRef
     // instead would get the previous render's values.
     const currentValues = overrideValues ?? {
@@ -582,6 +591,7 @@ export function useContainerCreation({
       imageProfiles,
       previewedPorts: null,
       changedFields: changed,
+      recreating: isRecreating,
     });
     setReviewRows(rows);
 
@@ -619,6 +629,7 @@ export function useContainerCreation({
           imageProfiles,
           previewedPorts,
           changedFields: changed,
+          recreating: isRecreating,
         });
         setReviewRows(updatedRows);
       }
@@ -765,6 +776,7 @@ export function useContainerCreation({
    */
   function cancelCreation() {
     dispatch({ type: 'RESET' });
+    setRecreating(false);
     safeCall(onCancel);
   }
 
@@ -775,6 +787,7 @@ export function useContainerCreation({
   function resetCreation() {
     dispatch({ type: 'RESET_WIZARD' });
     setChangedFields([]);
+    setRecreating(false);
     setReviewRows([]);
     setReviewWarnings([]);
     // Reveal is a per-session toggle, and a wizard that starts with every
@@ -812,10 +825,11 @@ export function useContainerCreation({
       },
     });
     setChangedFields(changed);
+    setRecreating(true);
     // The prefilled env carries the container's real secrets, so the review
     // must not inherit a reveal the user asked for somewhere else.
     setRevealSecrets(false);
-    await prepareReview(values, changed);
+    await prepareReview(values, changed, true);
   }
 
   /**

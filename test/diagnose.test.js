@@ -469,3 +469,90 @@ describe('a running container is never told it finished', () => {
     expect(describeWhat(stopped)).toBe('It is stopped.');
   });
 });
+
+describe('diagnose — a rule that breaks cannot take the panel with it', () => {
+  const context = () =>
+    ctx({ logLines: ['permission denied'], verdict: verdictOf('crashed') });
+
+  test('a fix that throws still leaves the cause on screen', () => {
+    const rules = [
+      {
+        id: 'broken-fix',
+        priority: 10,
+        match: () => true,
+        explain: () => 'A real cause.',
+        fix: () => {
+          throw new Error('bad patch');
+        },
+      },
+    ];
+    const result = diagnose(context(), rules);
+    expect(result.why).toBe('A real cause.');
+    expect(result.ruleId).toBe('broken-fix');
+    expect(result.fix).toBeNull();
+  });
+
+  test('an explain that throws falls back to the honest answer', () => {
+    const rules = [
+      {
+        id: 'broken-explain',
+        priority: 10,
+        match: () => true,
+        explain: () => {
+          throw new Error('bad wording');
+        },
+      },
+    ];
+    const result = diagnose(context(), rules);
+    expect(result.why).toBeNull();
+    expect(result.ruleId).toBeNull();
+    expect(result.tail).toEqual(['permission denied']);
+  });
+
+  test('a broken rule yields a Diagnosis, never an exception', () => {
+    for (const rule of [
+      {
+        id: 'a',
+        priority: 1,
+        match: () => true,
+        explain: () => {
+          throw new Error('x');
+        },
+      },
+      {
+        id: 'b',
+        priority: 1,
+        match: () => true,
+        explain: () => 'ok',
+        fix: () => {
+          throw new Error('y');
+        },
+      },
+      {
+        id: 'c',
+        priority: 1,
+        match: () => true,
+        explain: () => 'ok',
+        needles: 42,
+      },
+    ]) {
+      expect(() => diagnose(context(), [rule])).not.toThrow();
+      expect(diagnose(context(), [rule])).toHaveProperty('what');
+    }
+  });
+
+  test('a broken rule is not offered as a fix either', () => {
+    const result = diagnose(context(), [
+      {
+        id: 'broken',
+        priority: 1,
+        match: () => true,
+        explain: () => 'ok',
+        fix: () => {
+          throw new Error('z');
+        },
+      },
+    ]);
+    expect(result.fix).toBeNull();
+  });
+});

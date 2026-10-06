@@ -2,6 +2,7 @@ import React from 'react';
 import { Box, Text } from 'ink';
 import PropTypes from 'prop-types';
 import { isSecretKey } from '../helpers/secrets.js';
+import { EMPTY_VALUE } from '../helpers/creationSummary.js';
 
 const WARNING_COLORS = {
   'image-pull': 'yellow',
@@ -52,7 +53,10 @@ export function CreationSummary({
                       const eqIdx = v.indexOf('=');
                       if (eqIdx !== -1) {
                         const key = v.slice(0, eqIdx);
-                        if (isSecretKey(key)) {
+                        const value = v.slice(eqIdx + 1).trim();
+                        // An empty secret has nothing to mask or reveal.
+                        const hasValue = value !== '' && value !== EMPTY_VALUE;
+                        if (isSecretKey(key) && hasValue) {
                           if (revealSecrets) {
                             return v; // Show full value
                           }
