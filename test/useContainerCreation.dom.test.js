@@ -870,3 +870,78 @@ describe('useContainerCreation — secrets never inherit a reveal (TASK-8)', () 
     expect(expose.current.revealSecrets).toBe(false);
   });
 });
+
+describe('useContainerCreation — editing a prefilled field (TASK-8)', () => {
+  const values = {
+    imageName: 'postgres:17-alpine',
+    containerName: 'mi-basedatos-2',
+    portInput: '5433:5432',
+    envInput: 'POSTGRES_PASSWORD=hunter2',
+  };
+
+  async function prefilled() {
+    const expose = { current: null };
+    render(
+      <HookTester onCreate={() => {}} onCancel={() => {}} dbImages={[]} expose={expose} />
+    );
+    await act(async () => {
+      await expose.current.prefillCreation(values, []);
+    });
+    // Land on the env step, the way [4] from the review does.
+    await act(async () => {
+      expose.current.editFromReview(3);
+    });
+    return expose;
+  }
+
+  test('the cursor starts at the end of the value, not at zero', async () => {
+    const expose = await prefilled();
+    await act(async () => {
+      expose.current.handleFieldKey('x', {});
+    });
+    expect(expose.current.envInput).toBe('POSTGRES_PASSWORD=hunter2x');
+  });
+
+  test('Backspace deletes the last character', async () => {
+    const expose = await prefilled();
+    await act(async () => {
+      expose.current.handleFieldKey('', { backspace: true });
+    });
+    expect(expose.current.envInput).toBe('POSTGRES_PASSWORD=hunter');
+  });
+
+  test('left arrow then Backspace edits in the middle', async () => {
+    const expose = await prefilled();
+    await act(async () => {
+      expose.current.handleFieldKey('', { leftArrow: true });
+    });
+    // Cursor sat between the trailing "2" and the "r" before it.
+    await act(async () => {
+      expose.current.handleFieldKey('', { backspace: true });
+    });
+    expect(expose.current.envInput).toBe('POSTGRES_PASSWORD=hunte2');
+    // A second backspace takes the "e" before that, not the "2".
+    await act(async () => {
+      expose.current.handleFieldKey('', { backspace: true });
+    });
+    expect(expose.current.envInput).toBe('POSTGRES_PASSWORD=hunt2');
+  });
+
+  test('an empty prefilled field starts a cursor that is still correct', async () => {
+    const expose = { current: null };
+    render(
+      <HookTester onCreate={() => {}} onCancel={() => {}} dbImages={[]} expose={expose} />
+    );
+    await act(async () => {
+      await expose.current.prefillCreation(
+        { ...values, envInput: '' },
+        []
+      );
+      expose.current.editFromReview(3);
+    });
+    await act(async () => {
+      expose.current.handleFieldKey('A', {});
+    });
+    expect(expose.current.envInput).toBe('A');
+  });
+});

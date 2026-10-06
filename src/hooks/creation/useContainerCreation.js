@@ -796,7 +796,20 @@ export function useContainerCreation({
   async function prefillCreation(values, changed = []) {
     dispatch({
       type: 'SET',
-      payload: { ...INITIAL_FORM, ...values, step: 4 },
+      payload: {
+        ...INITIAL_FORM,
+        ...values,
+        step: 4,
+        // At the end of what was there, not at 0. Prefilled fields start
+        // non-empty, and a cursor at 0 makes the first keystroke insert at the
+        // beginning and Backspace do nothing at all.
+        cursors: {
+          imageName: values.imageName?.length ?? 0,
+          containerName: values.containerName?.length ?? 0,
+          portInput: values.portInput?.length ?? 0,
+          envInput: values.envInput?.length ?? 0,
+        },
+      },
     });
     setChangedFields(changed);
     // The prefilled env carries the container's real secrets, so the review
