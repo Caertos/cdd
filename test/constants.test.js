@@ -24,6 +24,7 @@ describe('constants — scalar and grouped exports', () => {
       STARTING_GRACE: 5000,
       RESTART_WINDOW: 60000,
       RESTART_COUNT_ALERT: 3,
+      FAST_EXIT_MS: 2000,
     });
   });
 

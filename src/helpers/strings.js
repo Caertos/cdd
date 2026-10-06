@@ -36,6 +36,52 @@ export const STRINGS = {
     unknown: 'UNKNOWN',
   },
 
+  // ── Diagnostics (TASK-8) ──
+  // Copy for the diagnosis engine and its panel. Panel chrome lives here too
+  // so that every sentence CDD shows about a failure is rewordable in one
+  // place, and so the "I don't recognise it" wording is never improvised in a
+  // component.
+  diagnostics: {
+    panelTitle: (name) => `Diagnosis: ${name}`,
+    likelyCause: 'Likely cause:',
+    // The most important sentence in the feature. Saying "I don't know" plus
+    // the evidence is useful; inventing a plausible cause is not.
+    notRecognized:
+      "I don't recognise it. This is the last thing the container said before it died:",
+    lastLines: 'Last lines:',
+    readingLog: 'Reading the log...',
+    noOutput: 'The container wrote nothing to its log.',
+    viewFullLog: '[L] Full log',
+    // Fix labels — shown on the key that applies them.
+    fix: {
+      addEnv: (key) => `Recreate with ${key}`,
+      changePort: (port) => `Recreate with another host port (${port} is busy)`,
+    },
+    // One explanation per rule id. Plain language, no jargon.
+    explain: {
+      'postgres-missing-password':
+        'Postgres refuses to start without a password. The image needs POSTGRES_PASSWORD defined.',
+      'mysql-missing-password':
+        'MySQL/MariaDB refuses to start without a root password. The image needs the password variable defined.',
+      'mssql-missing-eula':
+        'SQL Server will not start until you accept its licence terms with ACCEPT_EULA=Y.',
+      'port-in-use':
+        'Another process already listens on that host port. Docker cannot bind it twice.',
+      'no-command':
+        'The image has no default command, so there was nothing for Docker to run.',
+      'out-of-memory':
+        'The container ran out of memory and was killed (exit 137 is the usual sign). Raising its memory limit would let it finish.',
+      'volume-permission-denied':
+        'The container was denied access to a volume path. The file is probably owned by a different user than the one in the image.',
+      'executable-not-found':
+        'The command names an executable that does not exist inside the image.',
+      'clean-exit':
+        'The image finished its work and exited on purpose. It is a job, not a service — leave it stopped or run it with a command that stays alive.',
+      'connection-refused':
+        'The container could not reach another host. That service is probably not running, or the two are not on a shared network.',
+    },
+  },
+
   // ── EmptyState ──
   emptyTitle: 'No containers yet.',
   emptyHint: 'Press [C] to create the first one — CDD guides you step by step.',
