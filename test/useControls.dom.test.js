@@ -14,7 +14,9 @@ await jest.unstable_mockModule('ink', () => ({
   Box: ({ children, ...props }) => React.createElement('div', props, children),
   Text: ({ children }) => React.createElement('span', null, children),
   Spacer: () => React.createElement('div', null),
-  useInput: (fn) => { _inputHandler = fn; },
+  useInput: (fn) => {
+    _inputHandler = fn;
+  },
   useApp: () => ({ exit: () => {} }),
   render: () => ({ unmount: () => {}, waitUntilExit: () => Promise.resolve() }),
 }));
@@ -89,15 +91,27 @@ function HookTester({ containers, expose, overrides }) {
 // Helper: advance the full wizard and fire onCreate.
 // 5 steps since TASK-4: image → name → ports → env → review.
 async function completeCreationWizard(expose, imageName = 'nginx') {
-  act(() => { expose.current.creation.setImageName(imageName); });
-  act(() => { expose.current.creation.nextStep(); }); // 0 → 1
-  act(() => { expose.current.creation.nextStep(); }); // 1 → 2
-  act(() => { expose.current.creation.nextStep(); }); // 2 → 3
+  act(() => {
+    expose.current.creation.setImageName(imageName);
+  });
+  act(() => {
+    expose.current.creation.nextStep();
+  }); // 0 → 1
+  act(() => {
+    expose.current.creation.nextStep();
+  }); // 1 → 2
+  act(() => {
+    expose.current.creation.nextStep();
+  }); // 2 → 3
   // 3 → 4 (review): prepareReview() is async (summary + warnings)
-  await act(async () => { await expose.current.creation.nextStep(); });
+  await act(async () => {
+    await expose.current.creation.nextStep();
+  });
   expect(expose.current.creation.step).toBe(4);
   // 4 (review) confirmed → onCreate
-  await act(async () => { expose.current.creation.nextStep(); });
+  await act(async () => {
+    expose.current.creation.nextStep();
+  });
 }
 
 describe('useControls (FR6 — port mapping in success message)', () => {
@@ -107,7 +121,12 @@ describe('useControls (FR6 — port mapping in success message)', () => {
 
   test('success message includes port mapping after container creation', async () => {
     const ports = [
-      { containerPort: '3306', hostPort: '3306', protocol: 'tcp', source: 'auto' },
+      {
+        containerPort: '3306',
+        hostPort: '3306',
+        protocol: 'tcp',
+        source: 'auto',
+      },
     ];
     mockSvcCreateContainer.mockResolvedValue({ id: 'cid-abc', ports });
 
@@ -136,8 +155,18 @@ describe('useControls (FR6 — port mapping in success message)', () => {
 
   test('success message includes multiple port mappings', async () => {
     const ports = [
-      { containerPort: '80', hostPort: '8080', protocol: 'tcp', source: 'user' },
-      { containerPort: '443', hostPort: '8443', protocol: 'tcp', source: 'user' },
+      {
+        containerPort: '80',
+        hostPort: '8080',
+        protocol: 'tcp',
+        source: 'user',
+      },
+      {
+        containerPort: '443',
+        hostPort: '8443',
+        protocol: 'tcp',
+        source: 'user',
+      },
     ];
     mockSvcCreateContainer.mockResolvedValue({ id: 'cid-multi', ports });
 
@@ -178,7 +207,9 @@ describe('useControls — step 0 keyboard routing integration', () => {
     // updateImageInput should be exposed through creation hook
     expect(typeof expose.current.creation.updateImageInput).toBe('function');
 
-    act(() => { expose.current.creation.updateImageInput('ng'); });
+    act(() => {
+      expose.current.creation.updateImageInput('ng');
+    });
 
     expect(expose.current.creation.suggestions).toContain('nginx');
     expect(expose.current.creation.selectedSuggestionIndex).toBe(-1);
@@ -188,9 +219,15 @@ describe('useControls — step 0 keyboard routing integration', () => {
     const expose = { current: null };
     render(<HookTester containers={[]} expose={expose} />);
 
-    act(() => { expose.current.creation.updateImageInput('ng'); });
-    act(() => { expose.current.creation.moveSuggestionSelection(1); });
-    act(() => { expose.current.creation.applyFocusedSuggestion(); });
+    act(() => {
+      expose.current.creation.updateImageInput('ng');
+    });
+    act(() => {
+      expose.current.creation.moveSuggestionSelection(1);
+    });
+    act(() => {
+      expose.current.creation.applyFocusedSuggestion();
+    });
 
     expect(expose.current.creation.imageName).toBe('nginx:1.27-alpine');
     expect(expose.current.creation.step).toBe(0);
@@ -201,9 +238,15 @@ describe('useControls — step 0 keyboard routing integration', () => {
     const expose = { current: null };
     render(<HookTester containers={[]} expose={expose} />);
 
-    act(() => { expose.current.creation.updateImageInput('ng'); });
-    act(() => { expose.current.creation.moveSuggestionSelection(1); });
-    act(() => { expose.current.creation.applyFocusedSuggestion(); });
+    act(() => {
+      expose.current.creation.updateImageInput('ng');
+    });
+    act(() => {
+      expose.current.creation.moveSuggestionSelection(1);
+    });
+    act(() => {
+      expose.current.creation.applyFocusedSuggestion();
+    });
 
     // Step must remain 0 — autocomplete applied, wizard did not advance
     expect(expose.current.creation.step).toBe(0);
@@ -213,8 +256,12 @@ describe('useControls — step 0 keyboard routing integration', () => {
     const expose = { current: null };
     render(<HookTester containers={[]} expose={expose} />);
 
-    act(() => { expose.current.creation.setImageName('nginx'); });
-    act(() => { expose.current.creation.nextStep(); });
+    act(() => {
+      expose.current.creation.setImageName('nginx');
+    });
+    act(() => {
+      expose.current.creation.nextStep();
+    });
 
     expect(expose.current.creation.step).toBe(1);
   });
@@ -235,7 +282,9 @@ describe('useControls — FR4/FR5/FR6 keyboard routing via processCreationInput'
     const expose = { current: null };
     render(<HookTester containers={containers} expose={expose} />);
     // Trigger creation mode ('c' command in handleDockerCommands)
-    act(() => { triggerInput('c', {}); });
+    act(() => {
+      triggerInput('c', {});
+    });
     return expose;
   }
 
@@ -245,22 +294,34 @@ describe('useControls — FR4/FR5/FR6 keyboard routing via processCreationInput'
     const expose = renderAndStartCreation();
 
     // Type 'n' to get suggestions (nginx, node, etc.)
-    act(() => { triggerInput('n', {}); });
+    act(() => {
+      triggerInput('n', {});
+    });
     const suggestionsAfterType = expose.current.creation.suggestions;
     expect(suggestionsAfterType.length).toBeGreaterThan(0);
 
-    act(() => { triggerInput('', { downArrow: true }); });
+    act(() => {
+      triggerInput('', { downArrow: true });
+    });
     expect(expose.current.creation.selectedSuggestionIndex).toBe(0);
   });
 
   test('FR4 — ↑ arrow on step 0 with suggestions moves selection up', () => {
     const expose = renderAndStartCreation();
 
-    act(() => { triggerInput('n', {}); });
+    act(() => {
+      triggerInput('n', {});
+    });
     // Move down twice, then up once → index should be 0
-    act(() => { triggerInput('', { downArrow: true }); });
-    act(() => { triggerInput('', { downArrow: true }); });
-    act(() => { triggerInput('', { upArrow: true }); });
+    act(() => {
+      triggerInput('', { downArrow: true });
+    });
+    act(() => {
+      triggerInput('', { downArrow: true });
+    });
+    act(() => {
+      triggerInput('', { upArrow: true });
+    });
     expect(expose.current.creation.selectedSuggestionIndex).toBe(0);
   });
 
@@ -268,12 +329,20 @@ describe('useControls — FR4/FR5/FR6 keyboard routing via processCreationInput'
     const expose = renderAndStartCreation();
 
     // Type something unlikely to match → no suggestions
-    act(() => { triggerInput('x', {}); });
-    act(() => { triggerInput('x', {}); });
-    act(() => { triggerInput('x', {}); });
+    act(() => {
+      triggerInput('x', {});
+    });
+    act(() => {
+      triggerInput('x', {});
+    });
+    act(() => {
+      triggerInput('x', {});
+    });
     expect(expose.current.creation.suggestions).toHaveLength(0);
 
-    act(() => { triggerInput('', { downArrow: true }); });
+    act(() => {
+      triggerInput('', { downArrow: true });
+    });
     // selectedSuggestionIndex stays at -1 (ignored)
     expect(expose.current.creation.selectedSuggestionIndex).toBe(-1);
   });
@@ -283,16 +352,28 @@ describe('useControls — FR4/FR5/FR6 keyboard routing via processCreationInput'
 
     // Advance to step 1: type an image name (opens suggestion list), close it
     // with Esc (context is wizard-list while open), then Enter to advance.
-    act(() => { triggerInput('n', {}); });
-    act(() => { triggerInput('g', {}); });
-    act(() => { expose.current.creation.setImageName('nginx'); });
-    act(() => { triggerInput('', { escape: true }); });
+    act(() => {
+      triggerInput('n', {});
+    });
+    act(() => {
+      triggerInput('g', {});
+    });
+    act(() => {
+      expose.current.creation.setImageName('nginx');
+    });
+    act(() => {
+      triggerInput('', { escape: true });
+    });
     expect(expose.current.creation.suggestions).toHaveLength(0);
-    act(() => { triggerInput('\r', {}); });
+    act(() => {
+      triggerInput('\r', {});
+    });
     expect(expose.current.creation.step).toBe(1);
 
     const prevSelection = expose.current.creation.selectedSuggestionIndex;
-    act(() => { triggerInput('', { downArrow: true }); });
+    act(() => {
+      triggerInput('', { downArrow: true });
+    });
     // selection is unchanged — arrow ignored on step 1
     expect(expose.current.creation.selectedSuggestionIndex).toBe(prevSelection);
   });
@@ -302,14 +383,20 @@ describe('useControls — FR4/FR5/FR6 keyboard routing via processCreationInput'
   test('FR5 — Enter with selectedSuggestionIndex >= 0 applies suggestion and stays on step 0', () => {
     const expose = renderAndStartCreation();
 
-    act(() => { triggerInput('n', {}); }); // type to get suggestions
+    act(() => {
+      triggerInput('n', {});
+    }); // type to get suggestions
     expect(expose.current.creation.suggestions.length).toBeGreaterThan(0);
 
-    act(() => { triggerInput('', { downArrow: true }); }); // select first suggestion
+    act(() => {
+      triggerInput('', { downArrow: true });
+    }); // select first suggestion
     expect(expose.current.creation.selectedSuggestionIndex).toBe(0);
 
     // Press Enter → should apply suggestion, NOT advance step
-    act(() => { triggerInput('\r', {}); });
+    act(() => {
+      triggerInput('\r', {});
+    });
 
     expect(expose.current.creation.step).toBe(0);
     expect(expose.current.creation.imageName).not.toBe('');
@@ -319,10 +406,16 @@ describe('useControls — FR4/FR5/FR6 keyboard routing via processCreationInput'
   test('FR5 — Enter with focused suggestion does NOT call nextStep (step stays 0)', () => {
     const expose = renderAndStartCreation();
 
-    act(() => { triggerInput('n', {}); });
-    act(() => { triggerInput('', { downArrow: true }); }); // focus first
+    act(() => {
+      triggerInput('n', {});
+    });
+    act(() => {
+      triggerInput('', { downArrow: true });
+    }); // focus first
 
-    act(() => { triggerInput('\r', {}); }); // Enter with focus
+    act(() => {
+      triggerInput('\r', {});
+    }); // Enter with focus
 
     // FR5: step must be 0 (nextStep was NOT called)
     expect(expose.current.creation.step).toBe(0);
@@ -333,20 +426,28 @@ describe('useControls — FR4/FR5/FR6 keyboard routing via processCreationInput'
   test('FR6 — Enter with selectedSuggestionIndex === -1 advances step', () => {
     const expose = renderAndStartCreation();
 
-    act(() => { expose.current.creation.setImageName('nginx'); });
+    act(() => {
+      expose.current.creation.setImageName('nginx');
+    });
     // No suggestion focused (index -1)
     expect(expose.current.creation.selectedSuggestionIndex).toBe(-1);
 
-    act(() => { triggerInput('\r', {}); }); // Enter without focus
+    act(() => {
+      triggerInput('\r', {});
+    }); // Enter without focus
     expect(expose.current.creation.step).toBe(1);
   });
 
   test('FR6 — Enter without focus does NOT apply suggestion (imageName unchanged)', () => {
     const expose = renderAndStartCreation();
 
-    act(() => { expose.current.creation.setImageName('nginx'); });
+    act(() => {
+      expose.current.creation.setImageName('nginx');
+    });
 
-    act(() => { triggerInput('\r', {}); }); // advance to step 1
+    act(() => {
+      triggerInput('\r', {});
+    }); // advance to step 1
 
     // nextStep resolves the tag — nginx becomes nginx:1.27-alpine; step advances to 1
     // applyFocusedSuggestion was NOT called (no suggestion was focused)
@@ -375,15 +476,27 @@ describe('useControls — Tab on step 3 calls insertNextSuggestedEnv', () => {
       />
     );
     // Enter creation mode
-    act(() => { triggerInput('c', {}); });
+    act(() => {
+      triggerInput('c', {});
+    });
     // Advance to step 3
-    act(() => { expose.current.creation.setImageName('postgres'); });
-    act(() => { triggerInput('\r', {}); }); // step 0 → 1
-    act(() => { triggerInput('\r', {}); }); // step 1 → 2
-    act(() => { triggerInput('\r', {}); }); // step 2 → 3
+    act(() => {
+      expose.current.creation.setImageName('postgres');
+    });
+    act(() => {
+      triggerInput('\r', {});
+    }); // step 0 → 1
+    act(() => {
+      triggerInput('\r', {});
+    }); // step 1 → 2
+    act(() => {
+      triggerInput('\r', {});
+    }); // step 2 → 3
     expect(expose.current.creation.step).toBe(3);
 
-    act(() => { triggerInput('', { tab: true }); });
+    act(() => {
+      triggerInput('', { tab: true });
+    });
 
     expect(mockInsertNextSuggestedEnv).toHaveBeenCalledTimes(1);
   });
@@ -397,15 +510,27 @@ describe('useControls — Tab on step 3 calls insertNextSuggestedEnv', () => {
         overrides={{ insertNextSuggestedEnv: undefined }}
       />
     );
-    act(() => { triggerInput('c', {}); });
-    act(() => { expose.current.creation.setImageName('nginx'); });
-    act(() => { triggerInput('\r', {}); });
-    act(() => { triggerInput('\r', {}); });
-    act(() => { triggerInput('\r', {}); });
+    act(() => {
+      triggerInput('c', {});
+    });
+    act(() => {
+      expose.current.creation.setImageName('nginx');
+    });
+    act(() => {
+      triggerInput('\r', {});
+    });
+    act(() => {
+      triggerInput('\r', {});
+    });
+    act(() => {
+      triggerInput('\r', {});
+    });
 
     // Should not throw
     expect(() => {
-      act(() => { triggerInput('', { tab: true }); });
+      act(() => {
+        triggerInput('', { tab: true });
+      });
     }).not.toThrow();
   });
 });
@@ -416,7 +541,10 @@ describe('useControls — FR7 Tab triggers hub search on step 0', () => {
   });
 
   /** Helper: render in creation mode with a triggerHubSearch mock override */
-  function renderCreationWithSearch({ isSearchingHub = false, imageName: initialImageName = '' } = {}) {
+  function renderCreationWithSearch({
+    isSearchingHub = false,
+    imageName: initialImageName = '',
+  } = {}) {
     const mockTriggerHubSearch = jest.fn();
     const expose = { current: null };
 
@@ -428,18 +556,26 @@ describe('useControls — FR7 Tab triggers hub search on step 0', () => {
       />
     );
     // Enter creation mode
-    act(() => { triggerInput('c', {}); });
+    act(() => {
+      triggerInput('c', {});
+    });
     // Set imageName if provided
     if (initialImageName) {
-      act(() => { expose.current.creation.setImageName(initialImageName); });
+      act(() => {
+        expose.current.creation.setImageName(initialImageName);
+      });
     }
     return { expose, mockTriggerHubSearch };
   }
 
   test('FR7 — Tab on step 0 calls triggerHubSearch()', () => {
-    const { mockTriggerHubSearch } = renderCreationWithSearch({ imageName: 'nginx' });
+    const { mockTriggerHubSearch } = renderCreationWithSearch({
+      imageName: 'nginx',
+    });
 
-    act(() => { triggerInput('', { tab: true }); });
+    act(() => {
+      triggerInput('', { tab: true });
+    });
 
     expect(mockTriggerHubSearch).toHaveBeenCalledTimes(1);
   });
@@ -450,27 +586,39 @@ describe('useControls — FR7 Tab triggers hub search on step 0', () => {
       imageName: 'nginx',
     });
 
-    act(() => { triggerInput('', { tab: true }); });
+    act(() => {
+      triggerInput('', { tab: true });
+    });
 
     expect(mockTriggerHubSearch).not.toHaveBeenCalled();
   });
 
   test('FR7 — Tab on step 0 when imageName is empty string does NOT call triggerHubSearch (guard)', () => {
-    const { mockTriggerHubSearch } = renderCreationWithSearch({ imageName: '' });
+    const { mockTriggerHubSearch } = renderCreationWithSearch({
+      imageName: '',
+    });
 
-    act(() => { triggerInput('', { tab: true }); });
+    act(() => {
+      triggerInput('', { tab: true });
+    });
 
     expect(mockTriggerHubSearch).not.toHaveBeenCalled();
   });
 
-    test('FR7 — Tab on step > 0 does NOT call triggerHubSearch (only active on step 0)', () => {
-    const { expose, mockTriggerHubSearch } = renderCreationWithSearch({ imageName: 'nginx' });
+  test('FR7 — Tab on step > 0 does NOT call triggerHubSearch (only active on step 0)', () => {
+    const { expose, mockTriggerHubSearch } = renderCreationWithSearch({
+      imageName: 'nginx',
+    });
 
     // Advance to step 1
-    act(() => { triggerInput('\r', {}); });
+    act(() => {
+      triggerInput('\r', {});
+    });
     expect(expose.current.creation.step).toBe(1);
 
-    act(() => { triggerInput('', { tab: true }); });
+    act(() => {
+      triggerInput('', { tab: true });
+    });
 
     expect(mockTriggerHubSearch).not.toHaveBeenCalled();
   });
@@ -480,7 +628,9 @@ describe('useControls — success/error message clears after 4000ms', () => {
   // Fake only the timer APIs: React's act() and the async wizard still need
   // the real microtask queue, nextTick and setImmediate.
   beforeEach(() => {
-    jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate', 'queueMicrotask'] });
+    jest.useFakeTimers({
+      doNotFake: ['nextTick', 'setImmediate', 'queueMicrotask'],
+    });
   });
   afterEach(() => {
     jest.useRealTimers();
@@ -495,10 +645,14 @@ describe('useControls — success/error message clears after 4000ms', () => {
     await completeCreationWizard(expose, 'nginx');
     expect(expose.current.actions.message).toBe('Created container cid-timer');
 
-    act(() => { jest.advanceTimersByTime(3999); });
+    act(() => {
+      jest.advanceTimersByTime(3999);
+    });
     expect(expose.current.actions.message).toBe('Created container cid-timer');
 
-    act(() => { jest.advanceTimersByTime(1); });
+    act(() => {
+      jest.advanceTimersByTime(1);
+    });
     expect(expose.current.actions.message).toBe('');
   });
 
@@ -511,7 +665,9 @@ describe('useControls — success/error message clears after 4000ms', () => {
     await completeCreationWizard(expose, 'badimage');
     expect(expose.current.actions.message).toContain('not found');
 
-    act(() => { jest.advanceTimersByTime(4000); });
+    act(() => {
+      jest.advanceTimersByTime(4000);
+    });
     expect(expose.current.actions.message).toBe('');
   });
 });
@@ -532,19 +688,27 @@ describe('useControls — pressing C calls resetCreation BEFORE onStartCreate', 
     render(<HookTester containers={[]} expose={expose} />);
 
     // Give the hook an existing state to verify it gets reset
-    act(() => { triggerInput('c', {}); }); // enter creation mode
-    act(() => { expose.current.creation.setImageName('dirty-state'); });
+    act(() => {
+      triggerInput('c', {});
+    }); // enter creation mode
+    act(() => {
+      expose.current.creation.setImageName('dirty-state');
+    });
 
     // Esc with data opens discard confirmation — the app stays in the wizard
     act(() => {
       if (_inputHandler) _inputHandler('', { escape: true });
     });
     expect(expose.current.confirmDiscard).toBe(true);
-    act(() => { triggerInput('y', {}); }); // confirm discard
+    act(() => {
+      triggerInput('y', {});
+    }); // confirm discard
     expect(expose.current.creatingContainer).toBe(false);
 
     // Re-enter via C — this should reset THEN show creation mode
-    act(() => { triggerInput('c', {}); });
+    act(() => {
+      triggerInput('c', {});
+    });
 
     // After pressing C: creatingContainer should be true AND imageName should be reset to ''
     expect(expose.current.creatingContainer).toBe(true);
@@ -556,10 +720,14 @@ describe('useControls — pressing C calls resetCreation BEFORE onStartCreate', 
     const expose = { current: null };
     render(<HookTester containers={[]} expose={expose} />);
 
-    act(() => { triggerInput('c', {}); });
+    act(() => {
+      triggerInput('c', {});
+    });
 
     expect(expose.current.creatingContainer).toBe(true);
-    expect(expose.current.creation.message).toBe('Insert the name of the image to create: ');
+    expect(expose.current.creation.message).toBe(
+      'Insert the name of the image to create: '
+    );
   });
 });
 
@@ -577,7 +745,9 @@ describe('useControls — D3 fix: hubResults navigation', () => {
     render(<HookTester containers={[]} expose={expose} />);
 
     // Enter creation mode
-    act(() => { triggerInput('c', {}); });
+    act(() => {
+      triggerInput('c', {});
+    });
 
     // Simulate hubResults being set (normally from triggerHubSearch)
     const mockHubResults = ['nginx', 'nginx-alpine', 'nginx-unstable'];
@@ -596,8 +766,12 @@ describe('useControls — D3 fix: hubResults navigation', () => {
     const expose = { current: null };
     render(<HookTester containers={[]} expose={expose} />);
 
-    act(() => { triggerInput('c', {}); });
-    act(() => { expose.current.creation.updateImageInput('ng'); });
+    act(() => {
+      triggerInput('c', {});
+    });
+    act(() => {
+      expose.current.creation.updateImageInput('ng');
+    });
 
     // activeItems should be the suggestions list (since hubResults is null)
     expect(expose.current.creation.activeItems).toEqual(
@@ -609,15 +783,23 @@ describe('useControls — D3 fix: hubResults navigation', () => {
     const expose = { current: null };
     render(<HookTester containers={[]} expose={expose} />);
 
-    act(() => { triggerInput('c', {}); });
-    act(() => { expose.current.creation.updateImageInput('ng'); });
+    act(() => {
+      triggerInput('c', {});
+    });
+    act(() => {
+      expose.current.creation.updateImageInput('ng');
+    });
 
     // Move to first suggestion
-    act(() => { expose.current.creation.moveSuggestionSelection(1); });
+    act(() => {
+      expose.current.creation.moveSuggestionSelection(1);
+    });
     expect(expose.current.creation.selectedSuggestionIndex).toBe(0);
 
     // Apply the suggestion
-    act(() => { expose.current.creation.applyFocusedSuggestion(); });
+    act(() => {
+      expose.current.creation.applyFocusedSuggestion();
+    });
 
     // Should have applied the suggestion
     expect(expose.current.creation.imageName).not.toBe('');
@@ -724,9 +906,8 @@ describe('useControls — the fix key (TASK-8)', () => {
   const logLine = ['Error: superuser password is not specified'];
 
   async function setup() {
-    const { getLogsTail } = await import(
-      '../src/helpers/dockerService/serviceComponents/containerLogs.js'
-    );
+    const { getLogsTail } =
+      await import('../src/helpers/dockerService/serviceComponents/containerLogs.js');
     getLogsTail.mockResolvedValue(logLine);
     mockGetContainerDetails.mockResolvedValue({
       env: ['POSTGRES_USER=app', 'PATH=/usr/bin'],
@@ -762,7 +943,7 @@ describe('useControls — the fix key (TASK-8)', () => {
   test('pressing F opens the wizard prefilled on the review step', async () => {
     const expose = await setup();
     await act(async () => {
-      expose.current.handlers['container.fix']();
+      expose.current.dispatch('container.fix');
     });
     await act(async () => {});
 
@@ -775,7 +956,7 @@ describe('useControls — the fix key (TASK-8)', () => {
   test('the image own variables never reach the form', async () => {
     const expose = await setup();
     await act(async () => {
-      expose.current.handlers['container.fix']();
+      expose.current.dispatch('container.fix');
     });
     await act(async () => {});
     expect(expose.current.envInput).not.toContain('PATH=');
@@ -784,7 +965,7 @@ describe('useControls — the fix key (TASK-8)', () => {
   test('the ports are carried over', async () => {
     const expose = await setup();
     await act(async () => {
-      expose.current.handlers['container.fix']();
+      expose.current.dispatch('container.fix');
     });
     await act(async () => {});
     expect(expose.current.portInput).toBe('5432:5432');
@@ -793,7 +974,7 @@ describe('useControls — the fix key (TASK-8)', () => {
   test('the review marks what the fix changed', async () => {
     const expose = await setup();
     await act(async () => {
-      expose.current.handlers['container.fix']();
+      expose.current.dispatch('container.fix');
     });
     await act(async () => {});
     const changed = expose.current.creation.reviewRows
@@ -803,9 +984,8 @@ describe('useControls — the fix key (TASK-8)', () => {
   });
 
   test('without a fix the key is not offered', async () => {
-    const { getLogsTail } = await import(
-      '../src/helpers/dockerService/serviceComponents/containerLogs.js'
-    );
+    const { getLogsTail } =
+      await import('../src/helpers/dockerService/serviceComponents/containerLogs.js');
     getLogsTail.mockResolvedValue(['something nobody recognises']);
     mockGetContainerDetails.mockResolvedValue({ env: [], cmd: [] });
     mockGetImageEnv.mockResolvedValue([]);
@@ -822,9 +1002,9 @@ describe('useControls — the fix key (TASK-8)', () => {
     await act(async () => {});
 
     expect(expose.current.diagnosis.fix).toBeNull();
-    expect(
-      expose.current.keymapBindings.map((b) => b.id)
-    ).not.toContain('container.fix');
+    expect(expose.current.keymapBindings.map((b) => b.id)).not.toContain(
+      'container.fix'
+    );
   });
 });
 
@@ -861,24 +1041,22 @@ describe('useControls — the failed container is never deleted silently', () =>
       id: 'cid-new',
       ports: [],
     });
-    const { getLogsTail } = await import(
-      '../src/helpers/dockerService/serviceComponents/containerLogs.js'
-    );
+    const { getLogsTail } =
+      await import('../src/helpers/dockerService/serviceComponents/containerLogs.js');
     getLogsTail.mockResolvedValue(['superuser password is not specified']);
     mockGetContainerDetails.mockResolvedValue({
       env: ['POSTGRES_PASSWORD=x'],
       cmd: [],
     });
     mockGetImageEnv.mockResolvedValue([]);
-    const { removeContainer } = await import(
-      '../src/helpers/dockerService/serviceComponents/containerActions.js'
-    );
+    const { removeContainer } =
+      await import('../src/helpers/dockerService/serviceComponents/containerActions.js');
     removeContainer.mockClear();
   });
 
   async function recreateAndConfirm(expose) {
     await act(async () => {
-      expose.current.handlers['container.fix']();
+      expose.current.dispatch('container.fix');
     });
     await act(async () => {});
     expect(expose.current.creationStep).toBe(4);
@@ -914,28 +1092,26 @@ describe('useControls — the failed container is never deleted silently', () =>
   });
 
   test('answering no leaves the failed container alone', async () => {
-    const { removeContainer } = await import(
-      '../src/helpers/dockerService/serviceComponents/containerActions.js'
-    );
+    const { removeContainer } =
+      await import('../src/helpers/dockerService/serviceComponents/containerActions.js');
     const expose = await setup();
     await recreateAndConfirm(expose);
 
     await act(async () => {
-      expose.current.handlers['cleanup.keep']();
+      expose.current.dispatch('cleanup.keep');
     });
     expect(removeContainer).not.toHaveBeenCalled();
     expect(expose.current.pendingCleanup).toBeNull();
   });
 
   test('answering yes removes it', async () => {
-    const { removeContainer } = await import(
-      '../src/helpers/dockerService/serviceComponents/containerActions.js'
-    );
+    const { removeContainer } =
+      await import('../src/helpers/dockerService/serviceComponents/containerActions.js');
     const expose = await setup();
     await recreateAndConfirm(expose);
 
     await act(async () => {
-      await expose.current.handlers['cleanup.delete']();
+      await expose.current.dispatch('cleanup.delete');
     });
     expect(removeContainer).toHaveBeenCalledWith('c1');
     expect(expose.current.pendingCleanup).toBeNull();
@@ -954,7 +1130,7 @@ describe('useControls — the failed container is never deleted silently', () =>
   test('cancelling the wizard forgets the superseded container', async () => {
     const expose = await setup();
     await act(async () => {
-      expose.current.handlers['container.fix']();
+      expose.current.dispatch('container.fix');
     });
     await act(async () => {});
     await act(async () => {
@@ -999,9 +1175,8 @@ describe('useControls — F refuses to guess when inspect fails', () => {
   test('a failed inspect does not open the wizard', async () => {
     // Carrying on would build a container with no environment: a postgres
     // without POSTGRES_PASSWORD dies the same way it just did.
-    const { getLogsTail } = await import(
-      '../src/helpers/dockerService/serviceComponents/containerLogs.js'
-    );
+    const { getLogsTail } =
+      await import('../src/helpers/dockerService/serviceComponents/containerLogs.js');
     getLogsTail.mockResolvedValue(['superuser password is not specified']);
     mockGetContainerDetails.mockResolvedValue(null);
     mockGetImageEnv.mockResolvedValue([]);
@@ -1016,7 +1191,7 @@ describe('useControls — F refuses to guess when inspect fails', () => {
     );
     await act(async () => {});
     await act(async () => {
-      expose.current.handlers['container.fix']();
+      expose.current.dispatch('container.fix');
     });
     await act(async () => {});
 
@@ -1024,9 +1199,8 @@ describe('useControls — F refuses to guess when inspect fails', () => {
   });
 
   test('and it says why, pointing at the wizard', async () => {
-    const { getLogsTail } = await import(
-      '../src/helpers/dockerService/serviceComponents/containerLogs.js'
-    );
+    const { getLogsTail } =
+      await import('../src/helpers/dockerService/serviceComponents/containerLogs.js');
     getLogsTail.mockResolvedValue(['superuser password is not specified']);
     mockGetContainerDetails.mockRejectedValue(new Error('boom'));
     mockGetImageEnv.mockResolvedValue([]);
@@ -1041,11 +1215,115 @@ describe('useControls — F refuses to guess when inspect fails', () => {
     );
     await act(async () => {});
     await act(async () => {
-      expose.current.handlers['container.fix']();
+      expose.current.dispatch('container.fix');
     });
     await act(async () => {});
 
     expect(expose.current.message).toContain("Couldn't read");
     expect(expose.current.message).toContain('C');
+  });
+});
+
+describe('useControls — the cleanup question cannot go stale', () => {
+  const broken = {
+    id: 'c1',
+    name: 'mi-basedatos',
+    image: 'postgres:17-alpine',
+    state: 'exited',
+    status: 'Exited (1) 2 seconds ago',
+    ports: ['5432:5432'],
+  };
+  const verdictMap = new Map([
+    [
+      'c1',
+      {
+        code: 'crash-loop',
+        level: 'fail',
+        headline: 'died 2s',
+        facts: {
+          exitCode: 1,
+          uptimeMs: 2000,
+          restartCount: 0,
+          oomKilled: false,
+          healthStatus: null,
+        },
+      },
+    ],
+  ]);
+
+  beforeEach(async () => {
+    mockSvcCreateContainer.mockReset().mockResolvedValue({
+      id: 'cid-new',
+      ports: [],
+    });
+    const { getLogsTail } =
+      await import('../src/helpers/dockerService/serviceComponents/containerLogs.js');
+    getLogsTail.mockResolvedValue(['superuser password is not specified']);
+    mockGetContainerDetails.mockReset().mockResolvedValue({
+      env: ['POSTGRES_PASSWORD=x'],
+      cmd: [],
+    });
+    mockGetImageEnv.mockReset().mockResolvedValue([]);
+  });
+
+  async function recreate(expose) {
+    await act(async () => {
+      expose.current.dispatch('container.fix');
+    });
+    await act(async () => {});
+    await act(async () => {
+      expose.current.creation.nextStep();
+    });
+    await act(async () => {});
+    return expose;
+  }
+
+  async function setup() {
+    const expose = { current: null };
+    render(
+      <HookTester
+        containers={[broken]}
+        expose={expose}
+        overrides={{ health: verdictMap }}
+      />
+    );
+    await act(async () => {});
+    return expose;
+  }
+
+  test('a failed creation does not leave the question armed', async () => {
+    mockSvcCreateContainer.mockRejectedValue(new Error('no such image'));
+    const expose = await setup();
+    await recreate(expose);
+
+    expect(expose.current.pendingCleanup).toBeNull();
+  });
+
+  test('opening a plain wizard forgets the superseded container', async () => {
+    const expose = await setup();
+    await recreate(expose);
+    expect(expose.current.pendingCleanup).not.toBeNull();
+
+    // The user forgot the question and pressed C for a new container.
+    await act(async () => {
+      expose.current.dispatch('container.create');
+    });
+    expect(expose.current.pendingCleanup).toBeNull();
+  });
+
+  test('another key disarms the question instead of deleting invisibly', async () => {
+    const { removeContainer } =
+      await import('../src/helpers/dockerService/serviceComponents/containerActions.js');
+    removeContainer.mockClear();
+    const expose = await setup();
+    await recreate(expose);
+    expect(expose.current.pendingCleanup).not.toBeNull();
+
+    // Any other key, through the same door the keyboard uses.
+    await act(async () => {
+      expose.current.dispatch('container.restart');
+    });
+    expect(expose.current.pendingCleanup).toBeNull();
+    expect(removeContainer).not.toHaveBeenCalled();
   });
 });

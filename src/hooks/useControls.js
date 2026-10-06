@@ -111,6 +111,11 @@ export function useControls(containers = [], overrides = {}) {
           actions.setTimedMessage(`Created container ${id}${portMsg}`, 'green');
         }
       } catch (err) {
+        // Nothing was created, so there is no replacement to ask about. Left
+        // armed, a later plain creation would end up offering to delete a
+        // container it had nothing to do with.
+        supersededRef.current = null;
+        setPendingCleanup(null);
         actions.setTimedMessage(
           `Error creating container: ${err.message}`,
           'red'
@@ -386,6 +391,7 @@ export function useControls(containers = [], overrides = {}) {
         await creation.prefillCreation(values, changedFields);
       },
       'container.create': () => {
+        supersededRef.current = null;
         backHintShownRef.current = false;
         creation.resetCreation();
         setCreatingContainer(true);
@@ -547,6 +553,27 @@ export function useControls(containers = [], overrides = {}) {
     ]
   );
 
+  /**
+   * The one way a binding takes effect.
+   *
+   * The cleanup question only stays armed while it is on screen: any other key
+   * overwrites the message, and an invisible `y` that deletes a container is
+   * what principle 1 rules out. Living here rather than in useInput means the
+   * rule cannot be bypassed by reaching a handler another way.
+   *
+   * @param {string} bindingId
+   */
+  const dispatch = React.useCallback(
+    (bindingId) => {
+      if (pendingCleanup && !bindingId.startsWith('cleanup.')) {
+        setPendingCleanup(null);
+      }
+      const handler = handlers[bindingId];
+      if (handler) handler();
+    },
+    [pendingCleanup, handlers]
+  );
+
   // Single keyboard entry point — declarative keymap dispatch
   useInput((input, key) => {
     const ctx = getActiveContext(uiState);
@@ -568,8 +595,8 @@ export function useControls(containers = [], overrides = {}) {
     }
 
     const binding = resolveKey(ctx, input, key, uiState);
-    if (binding && handlers[binding.id]) {
-      handlers[binding.id]();
+    if (binding) {
+      dispatch(binding.id);
       return;
     }
 
@@ -598,6 +625,7 @@ export function useControls(containers = [], overrides = {}) {
     exitLogs: logsViewer.closeLogs,
     creatingContainer,
     startCreation: () => {
+      supersededRef.current = null;
       backHintShownRef.current = false;
       creation.resetCreation();
       setCreatingContainer(true);
@@ -625,5 +653,6 @@ export function useControls(containers = [], overrides = {}) {
     // Exposed so the keymap can be exercised end to end in tests without
     // simulating a terminal.
     handlers,
+    dispatch,
   };
 }
