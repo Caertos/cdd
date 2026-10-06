@@ -137,7 +137,7 @@ export const KEYMAP = {
       // without an answer (principle 1).
       id: 'cleanup.delete',
       keys: ['y'],
-      label: 'y',
+      label: 'Yes',
       help: 'Delete the container that failed',
       priority: 95,
       when: (s) => s.confirmCleanup,
@@ -145,7 +145,7 @@ export const KEYMAP = {
     {
       id: 'cleanup.keep',
       keys: ['n'],
-      label: 'n',
+      label: 'No',
       help: 'Keep the container that failed',
       priority: 94,
       when: (s) => s.confirmCleanup,

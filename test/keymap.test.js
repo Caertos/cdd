@@ -253,6 +253,14 @@ describe('the fix key (TASK-8)', () => {
     expect(idle).not.toContain('cleanup.keep');
   });
 
+  test('the cleanup question is labelled Yes and No', () => {
+    const byId = Object.fromEntries(
+      getBindings('list', { confirmCleanup: true }).map((b) => [b.id, b])
+    );
+    expect(byId['cleanup.delete'].label).toBe('Yes');
+    expect(byId['cleanup.keep'].label).toBe('No');
+  });
+
   test('y and n answer the question rather than starting an erase', () => {
     const asked = { confirmCleanup: true };
     expect(resolveKey('list', 'y', {}, asked).id).toBe('cleanup.delete');

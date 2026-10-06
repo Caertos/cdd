@@ -1,5 +1,6 @@
 import React from 'react';
 import { Box, Text } from 'ink';
+import { displayKeys } from '../helpers/keyLabels.js';
 
 /**
  * Displays a single-line bar of active keyboard shortcuts.
@@ -17,7 +18,7 @@ export function KeyHUD({ bindings, maxWidth = 80 }) {
   let truncated = false;
 
   for (const binding of bindings) {
-    const keyText = binding.keys[0];
+    const keyText = displayKeys(binding.keys)[0];
     const labelText = binding.label;
     const itemWidth = keyText.length + labelText.length + 4;
 
