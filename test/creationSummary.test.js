@@ -9,6 +9,8 @@ beforeAll(async () => {
   detectPortConflicts = mod.detectPortConflicts;
 });
 
+import { IMAGE_PROFILES } from '../src/helpers/constants.js';
+
 const profiles = {
   postgres: {
     requiredEnv: ['POSTGRES_PASSWORD'],
@@ -27,8 +29,17 @@ const profiles = {
 describe('buildCreationSummary', () => {
   test('image with implicit tag shows resolved tag and origin', () => {
     const rows = buildCreationSummary(
-      { imageName: 'postgres:17-alpine', containerName: '', portInput: '', envInput: '' },
-      { rawImageInput: 'postgres', imageProfiles: profiles, previewedPorts: null }
+      {
+        imageName: 'postgres:17-alpine',
+        containerName: '',
+        portInput: '',
+        envInput: '',
+      },
+      {
+        rawImageInput: 'postgres',
+        imageProfiles: profiles,
+        previewedPorts: null,
+      }
     );
     const imageRow = rows.find((r) => r.key === 'image');
     expect(imageRow.values[0]).toBe('postgres:17-alpine');
@@ -37,8 +48,17 @@ describe('buildCreationSummary', () => {
 
   test('image with explicit tag shows no origin', () => {
     const rows = buildCreationSummary(
-      { imageName: 'nginx:1.27-alpine', containerName: '', portInput: '', envInput: '' },
-      { rawImageInput: 'nginx:1.27-alpine', imageProfiles: profiles, previewedPorts: null }
+      {
+        imageName: 'nginx:1.27-alpine',
+        containerName: '',
+        portInput: '',
+        envInput: '',
+      },
+      {
+        rawImageInput: 'nginx:1.27-alpine',
+        imageProfiles: profiles,
+        previewedPorts: null,
+      }
     );
     const imageRow = rows.find((r) => r.key === 'image');
     expect(imageRow.origin).toBeUndefined();
@@ -56,7 +76,12 @@ describe('buildCreationSummary', () => {
 
   test('named container shows name without origin', () => {
     const rows = buildCreationSummary(
-      { imageName: 'nginx', containerName: 'my-web', portInput: '', envInput: '' },
+      {
+        imageName: 'nginx',
+        containerName: 'my-web',
+        portInput: '',
+        envInput: '',
+      },
       { rawImageInput: 'nginx', imageProfiles: profiles, previewedPorts: null }
     );
     const nameRow = rows.find((r) => r.key === 'name');
@@ -66,7 +91,12 @@ describe('buildCreationSummary', () => {
 
   test('user-provided ports show without origin', () => {
     const rows = buildCreationSummary(
-      { imageName: 'nginx', containerName: '', portInput: '8080:80', envInput: '' },
+      {
+        imageName: 'nginx',
+        containerName: '',
+        portInput: '8080:80',
+        envInput: '',
+      },
       { rawImageInput: 'nginx', imageProfiles: profiles, previewedPorts: null }
     );
     const portsRow = rows.find((r) => r.key === 'ports');
@@ -75,10 +105,16 @@ describe('buildCreationSummary', () => {
   });
 
   test('empty ports with preview shows auto-assigned ports', () => {
-    const preview = [{ hostPort: '5432', containerPort: '5432', protocol: 'tcp' }];
+    const preview = [
+      { hostPort: '5432', containerPort: '5432', protocol: 'tcp' },
+    ];
     const rows = buildCreationSummary(
       { imageName: 'postgres', containerName: '', portInput: '', envInput: '' },
-      { rawImageInput: 'postgres', imageProfiles: profiles, previewedPorts: preview }
+      {
+        rawImageInput: 'postgres',
+        imageProfiles: profiles,
+        previewedPorts: preview,
+      }
     );
     const portsRow = rows.find((r) => r.key === 'ports');
     expect(portsRow.values[0]).toContain('5432');
@@ -91,7 +127,11 @@ describe('buildCreationSummary', () => {
     ];
     const rows = buildCreationSummary(
       { imageName: 'postgres', containerName: '', portInput: '', envInput: '' },
-      { rawImageInput: 'postgres', imageProfiles: profiles, previewedPorts: preview }
+      {
+        rawImageInput: 'postgres',
+        imageProfiles: profiles,
+        previewedPorts: preview,
+      }
     );
     const portsRow = rows.find((r) => r.key === 'ports');
     expect(portsRow.values[0]).toBe('(no free host port)→5432/tcp');
@@ -109,8 +149,17 @@ describe('buildCreationSummary', () => {
 
   test('env vars show values, password masked', () => {
     const rows = buildCreationSummary(
-      { imageName: 'postgres', containerName: '', portInput: '', envInput: 'POSTGRES_PASSWORD=secret,POSTGRES_DB=app' },
-      { rawImageInput: 'postgres', imageProfiles: profiles, previewedPorts: null }
+      {
+        imageName: 'postgres',
+        containerName: '',
+        portInput: '',
+        envInput: 'POSTGRES_PASSWORD=secret,POSTGRES_DB=app',
+      },
+      {
+        rawImageInput: 'postgres',
+        imageProfiles: profiles,
+        previewedPorts: null,
+      }
     );
     const envRow = rows.find((r) => r.key === 'env');
     expect(envRow.values.some((v) => v.includes('POSTGRES_DB=app'))).toBe(true);
@@ -158,7 +207,9 @@ describe('detectPortConflicts', () => {
 
   // D22. An exposed-but-unpublished port is not a host port.
   test('ignores an exposed-but-unpublished private port', () => {
-    const conflicts = detectPortConflicts('80:80', [{ name: 'web', id: 'a', ports: ['80'] }]);
+    const conflicts = detectPortConflicts('80:80', [
+      { name: 'web', id: 'a', ports: ['80'] },
+    ]);
     expect(conflicts).toEqual([]);
   });
 });
@@ -166,7 +217,12 @@ describe('detectPortConflicts', () => {
 describe('buildCreationWarnings', () => {
   test('image-pull warning when image is not local', () => {
     const warnings = buildCreationWarnings(
-      { imageName: 'postgres:17', containerName: '', portInput: '', envInput: '' },
+      {
+        imageName: 'postgres:17',
+        containerName: '',
+        portInput: '',
+        envInput: '',
+      },
       { containers: [], imageIsLocal: false, imageProfiles: profiles }
     );
     expect(warnings.some((w) => w.kind === 'image-pull')).toBe(true);
@@ -174,7 +230,12 @@ describe('buildCreationWarnings', () => {
 
   test('no image-pull warning when image is local', () => {
     const warnings = buildCreationWarnings(
-      { imageName: 'postgres:17', containerName: '', portInput: '', envInput: '' },
+      {
+        imageName: 'postgres:17',
+        containerName: '',
+        portInput: '',
+        envInput: '',
+      },
       { containers: [], imageIsLocal: true, imageProfiles: profiles }
     );
     expect(warnings.some((w) => w.kind === 'image-pull')).toBe(false);
@@ -182,7 +243,12 @@ describe('buildCreationWarnings', () => {
 
   test('no image-pull warning when imageIsLocal is null', () => {
     const warnings = buildCreationWarnings(
-      { imageName: 'postgres:17', containerName: '', portInput: '', envInput: '' },
+      {
+        imageName: 'postgres:17',
+        containerName: '',
+        portInput: '',
+        envInput: '',
+      },
       { containers: [], imageIsLocal: null, imageProfiles: profiles }
     );
     expect(warnings.some((w) => w.kind === 'image-pull')).toBe(false);
@@ -190,8 +256,17 @@ describe('buildCreationWarnings', () => {
 
   test('port-taken warning when host port is in use', () => {
     const warnings = buildCreationWarnings(
-      { imageName: 'nginx', containerName: '', portInput: '8080:80', envInput: '' },
-      { containers: [{ name: 'web', ports: ['8080:80'] }], imageIsLocal: true, imageProfiles: profiles }
+      {
+        imageName: 'nginx',
+        containerName: '',
+        portInput: '8080:80',
+        envInput: '',
+      },
+      {
+        containers: [{ name: 'web', ports: ['8080:80'] }],
+        imageIsLocal: true,
+        imageProfiles: profiles,
+      }
     );
     expect(warnings.some((w) => w.kind === 'port-taken')).toBe(true);
   });
@@ -199,7 +274,11 @@ describe('buildCreationWarnings', () => {
   test('name-taken warning when container name exists', () => {
     const warnings = buildCreationWarnings(
       { imageName: 'nginx', containerName: 'web', portInput: '', envInput: '' },
-      { containers: [{ name: 'web', ports: [] }], imageIsLocal: true, imageProfiles: profiles }
+      {
+        containers: [{ name: 'web', ports: [] }],
+        imageIsLocal: true,
+        imageProfiles: profiles,
+      }
     );
     expect(warnings.some((w) => w.kind === 'name-taken')).toBe(true);
   });
@@ -214,7 +293,12 @@ describe('buildCreationWarnings', () => {
 
   test('no missing-env when required vars are present', () => {
     const warnings = buildCreationWarnings(
-      { imageName: 'postgres', containerName: '', portInput: '', envInput: 'POSTGRES_PASSWORD=secret' },
+      {
+        imageName: 'postgres',
+        containerName: '',
+        portInput: '',
+        envInput: 'POSTGRES_PASSWORD=secret',
+      },
       { containers: [], imageIsLocal: true, imageProfiles: profiles }
     );
     expect(warnings.some((w) => w.kind === 'missing-env')).toBe(false);
@@ -222,7 +306,12 @@ describe('buildCreationWarnings', () => {
 
   test('secret-plain warning for PASSWORD in env', () => {
     const warnings = buildCreationWarnings(
-      { imageName: 'nginx', containerName: '', portInput: '', envInput: 'DB_PASSWORD=123456' },
+      {
+        imageName: 'nginx',
+        containerName: '',
+        portInput: '',
+        envInput: 'DB_PASSWORD=123456',
+      },
       { containers: [], imageIsLocal: true, imageProfiles: profiles }
     );
     expect(warnings.some((w) => w.kind === 'secret-plain')).toBe(true);
@@ -230,8 +319,17 @@ describe('buildCreationWarnings', () => {
 
   test('multiple warnings at once', () => {
     const warnings = buildCreationWarnings(
-      { imageName: 'postgres', containerName: 'db', portInput: '5432:5432', envInput: 'SECRET_KEY=abc' },
-      { containers: [{ name: 'db', ports: ['5432:5432'] }], imageIsLocal: false, imageProfiles: profiles }
+      {
+        imageName: 'postgres',
+        containerName: 'db',
+        portInput: '5432:5432',
+        envInput: 'SECRET_KEY=abc',
+      },
+      {
+        containers: [{ name: 'db', ports: ['5432:5432'] }],
+        imageIsLocal: false,
+        imageProfiles: profiles,
+      }
     );
     const kinds = warnings.map((w) => w.kind);
     expect(kinds).toContain('image-pull');
@@ -294,5 +392,87 @@ describe('buildCreationSummary — what CDD changed (TASK-8)', () => {
     const plain = build([]).find((r) => r.key === 'env');
     const flagged = build(['envInput']).find((r) => r.key === 'env');
     expect(flagged.values).toEqual(plain.values);
+  });
+});
+
+describe('a required variable that is set but empty', () => {
+  // The state TASK-8's password fix lands in on purpose: CDD cannot invent a
+  // password, so the review has to say the container will fail without one.
+  const warningsFor = (envInput, image = 'postgres') =>
+    buildCreationWarnings(
+      { imageName: image, containerName: '', portInput: '', envInput },
+      { containers: [], imageIsLocal: true, imageProfiles: profiles }
+    );
+
+  test('the review warns when a required var has no value', () => {
+    const warning = warningsFor('POSTGRES_PASSWORD=').find(
+      (w) => w.kind === 'missing-env'
+    );
+    expect(warning).toBeDefined();
+    expect(warning.text).toContain('POSTGRES_PASSWORD');
+    expect(warning.text).toMatch(/empty/i);
+  });
+
+  test('and says the container will fail without it', () => {
+    const warning = warningsFor('POSTGRES_PASSWORD=').find(
+      (w) => w.kind === 'missing-env'
+    );
+    expect(warning.text).toMatch(/fail/i);
+  });
+
+  test('a filled-in value produces no such warning', () => {
+    const kinds = warningsFor('POSTGRES_PASSWORD=hunter2').map((w) => w.kind);
+    expect(kinds).not.toContain('missing-env');
+  });
+
+  test('an absent var keeps the "missing" wording, not "empty"', () => {
+    const warning = warningsFor('POSTGRES_USER=app').find(
+      (w) => w.kind === 'missing-env'
+    );
+    expect(warning.text).toContain('Missing required env vars');
+    expect(warning.text).not.toContain('empty');
+  });
+
+  test('a var absent entirely is still reported once, not twice', () => {
+    const missing = warningsFor('POSTGRES_USER=app').filter(
+      (w) => w.kind === 'missing-env'
+    );
+    expect(missing).toHaveLength(1);
+  });
+
+  test('two empty vars are named together and read in the plural', () => {
+    // mssql requires two, so it exercises the plural branch.
+    const warning = buildCreationWarnings(
+      {
+        imageName: 'mssql',
+        containerName: '',
+        portInput: '',
+        envInput: 'ACCEPT_EULA=,SA_PASSWORD=',
+      },
+      { containers: [], imageIsLocal: true, imageProfiles: IMAGE_PROFILES }
+    ).find((w) => w.kind === 'missing-env');
+    expect(warning.text).toContain('ACCEPT_EULA');
+    expect(warning.text).toContain('SA_PASSWORD');
+    expect(warning.text).toMatch(/vars set but empty/);
+  });
+
+  test('a single empty var is worded in the singular', () => {
+    const warning = warningsFor('POSTGRES_PASSWORD=').find(
+      (w) => w.kind === 'missing-env'
+    );
+    expect(warning.text).toMatch(/var set but empty/);
+    expect(warning.text).toContain('POSTGRES_PASSWORD');
+  });
+
+  test('a whitespace-only value counts as empty', () => {
+    const warning = warningsFor('POSTGRES_PASSWORD=   ').find(
+      (w) => w.kind === 'missing-env'
+    );
+    expect(warning).toBeDefined();
+  });
+
+  test('images with no required vars are unaffected', () => {
+    const kinds = warningsFor('FOO=', 'nginx').map((w) => w.kind);
+    expect(kinds).not.toContain('missing-env');
   });
 });

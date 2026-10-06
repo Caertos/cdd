@@ -234,6 +234,37 @@ export function buildCreationWarnings(values, ctx) {
     }
   }
 
+  // Required vars that are present but carry no value. Distinct from "missing":
+  // the key is there, and the container will start, fail, and say the very
+  // thing CDD just diagnosed. TASK-8's password fix lands here on purpose —
+  // CDD cannot invent a password — so the review has to say so out loud.
+  if (profile?.requiredEnv?.length) {
+    const values = new Map(
+      (envInput || '')
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .map((s) => {
+          const at = s.indexOf('=');
+          return at === -1
+            ? [s, null]
+            : [s.slice(0, at).trim(), s.slice(at + 1)];
+        })
+    );
+    const empty = profile.requiredEnv.filter((k) => {
+      if (!values.has(k)) return false;
+      const v = values.get(k);
+      return v !== null && v.trim() === '';
+    });
+    if (empty.length > 0) {
+      warnings.push({
+        kind: 'missing-env',
+        level: 'warn',
+        text: `Required env var${empty.length === 1 ? '' : 's'} set but empty: ${empty.join(', ')}. Fill ${empty.length === 1 ? 'it' : 'them'} in before creating — the container will fail without ${empty.length === 1 ? 'a value' : 'values'}.`,
+      });
+    }
+  }
+
   // Secrets in plain text
   const envVars = (envInput || '')
     .split(',')
