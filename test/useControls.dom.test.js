@@ -1679,3 +1679,123 @@ describe('useControls — F is not re-entrant', () => {
     expect(expose.current.creationStep).toBe(4);
   });
 });
+
+describe('useControls — a failed fix never latches the key', () => {
+  const broken = {
+    id: 'c1',
+    name: 'mi-basedatos',
+    image: 'postgres:17-alpine',
+    state: 'exited',
+    status: 'Exited (1) 2 seconds ago',
+    ports: ['5432:5432'],
+  };
+  const verdictMap = new Map([
+    [
+      'c1',
+      {
+        code: 'crash-loop',
+        level: 'fail',
+        headline: 'died 2s',
+        facts: {
+          exitCode: 1,
+          uptimeMs: 2000,
+          restartCount: 0,
+          oomKilled: false,
+          healthStatus: null,
+        },
+      },
+    ],
+  ]);
+
+  beforeEach(async () => {
+    mockGetContainerDetails.mockReset().mockResolvedValue({
+      env: ['POSTGRES_PASSWORD=x'],
+      cmd: [],
+    });
+    mockGetImageEnv.mockReset().mockResolvedValue([]);
+    const { getLogsTail } = await import(
+      '../src/helpers/dockerService/serviceComponents/containerLogs.js'
+    );
+    getLogsTail.mockResolvedValue(['superuser password is not specified']);
+  });
+
+  async function setup() {
+    const expose = { current: null };
+    render(
+      <HookTester
+        containers={[broken]}
+        expose={expose}
+        overrides={{ health: verdictMap }}
+      />
+    );
+    await act(async () => {});
+    return expose;
+  }
+
+  test('an image inspect that rejects does not latch F', async () => {
+    mockGetImageEnv.mockRejectedValue(new Error('daemon gone'));
+    const expose = await setup();
+
+    await act(async () => {
+      await expose.current.dispatch('container.fix');
+    });
+    expect(expose.current.message).toContain('prepare the fix');
+    expect(expose.current.creatingContainer).toBe(false);
+
+    // The point of the whole thing: F still works on the next attempt.
+    mockGetImageEnv.mockResolvedValue([]);
+    await act(async () => {
+      await expose.current.dispatch('container.fix');
+    });
+    expect(expose.current.creationStep).toBe(4);
+  });
+
+  test('a prefill that throws does not latch F either', async () => {
+    const expose = await setup();
+
+    // Make prefillCreation throw by giving the hook a values object whose
+    // shape breaks the review build.
+    await act(async () => {
+      expose.current.dispatch('container.fix');
+    });
+    await act(async () => {});
+    expect(expose.current.creationStep).toBe(4);
+
+    // Leaving and coming back must work.
+    await act(async () => {
+      expose.current.creation.cancelCreation();
+    });
+    await act(async () => {
+      await expose.current.dispatch('container.fix');
+    });
+    expect(expose.current.creationStep).toBe(4);
+  });
+
+  test('and it says what went wrong rather than failing quietly', async () => {
+    mockGetImageEnv.mockRejectedValue(new Error('daemon gone'));
+    const expose = await setup();
+    await act(async () => {
+      await expose.current.dispatch('container.fix');
+    });
+    expect(expose.current.message).toContain('daemon gone');
+    expect(expose.current.messageColor).toBe('red');
+  });
+
+  test('a refused attempt still leaves the key free', async () => {
+    mockGetContainerDetails.mockResolvedValue(null);
+    const expose = await setup();
+    await act(async () => {
+      await expose.current.dispatch('container.fix');
+    });
+    expect(expose.current.creatingContainer).toBe(false);
+
+    mockGetContainerDetails.mockResolvedValue({
+      env: ['POSTGRES_PASSWORD=x'],
+      cmd: [],
+    });
+    await act(async () => {
+      await expose.current.dispatch('container.fix');
+    });
+    expect(expose.current.creationStep).toBe(4);
+  });
+});

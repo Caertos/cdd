@@ -380,48 +380,63 @@ export function useControls(containers = [], overrides = {}) {
         if (!container || !fix) return;
         fixInFlightRef.current = true;
 
-        actions.setTimedMessage(
-          `Reading ${container.name}'s configuration...`,
-          'cyan'
-        );
-
-        const details = await getContainerDetails(container.id).catch(
-          () => null
-        );
-        if (!details) {
-          // Refusing here, because carrying on means building a container with
-          // no environment at all: a postgres without POSTGRES_PASSWORD would
-          // die the same way it just did, and the review would say "Env (none)"
-          // as if that were the plan. The wizard is one key away and it never
-          // pretends to know what the user needs.
+        // One try around the whole body: a throw anywhere between arming the
+        // lock and releasing it would otherwise leave F dead for the rest of
+        // the session, with nothing on screen to explain why. An explanation
+        // feature that silently disables its own key is worse than one that
+        // says it failed.
+        try {
           actions.setTimedMessage(
-            `Couldn't read ${container.name}'s configuration — press C to create one from scratch`,
+            `Reading ${container.name}'s configuration...`,
+            'cyan'
+          );
+
+          const details = await getContainerDetails(container.id).catch(
+            () => null
+          );
+          if (!details) {
+            // Refusing here, because carrying on means building a container
+            // with no environment at all: a postgres without
+            // POSTGRES_PASSWORD would die the same way it just did, and the
+            // review would say "Env (none)" as if that were the plan. The
+            // wizard is one key away and it never pretends to know what the
+            // user needs.
+            actions.setTimedMessage(
+              `Couldn't read ${container.name}'s configuration — press C to create one from scratch`,
+              'red'
+            );
+            return;
+          }
+
+          // The image's own env is what tells us which variables are the
+          // user's. getImageEnv answers null rather than throwing, but a
+          // rejection here would still strand the lock without this catch.
+          const imageEnv = await getImageEnv(container.image);
+
+          const base = containerToCreationValues(
+            container,
+            { env: details.env, cmd: details.cmd },
+            imageEnv
+          );
+          const takenNames = new Set(containers.map((c) => c.name));
+          const usedHostPorts = new Set(containers.flatMap(hostPortsOf));
+          const { values, changedFields } = applyFix(base, fix, {
+            takenNames,
+            usedHostPorts,
+          });
+
+          supersededRef.current = { id: container.id, name: container.name };
+          backHintShownRef.current = false;
+          setCreatingContainer(true);
+          await creation.prefillCreation(values, changedFields);
+        } catch (err) {
+          actions.setTimedMessage(
+            withContext(
+              `Couldn't prepare the fix for ${container.name}`,
+              err.message
+            ),
             'red'
           );
-          fixInFlightRef.current = false;
-          return;
-        }
-
-        // The image's own env is what tells us which variables are the user's.
-        const imageEnv = await getImageEnv(container.image);
-
-        const base = containerToCreationValues(
-          container,
-          { env: details.env, cmd: details.cmd },
-          imageEnv
-        );
-        const takenNames = new Set(containers.map((c) => c.name));
-        const usedHostPorts = new Set(containers.flatMap(hostPortsOf));
-        const { values, changedFields } = applyFix(base, fix, {
-          takenNames,
-          usedHostPorts,
-        });
-
-        supersededRef.current = { id: container.id, name: container.name };
-        backHintShownRef.current = false;
-        setCreatingContainer(true);
-        try {
-          await creation.prefillCreation(values, changedFields);
         } finally {
           fixInFlightRef.current = false;
         }
