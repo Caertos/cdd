@@ -1414,3 +1414,145 @@ describe('useControls — the help panel describes the screen underneath (H1)', 
     expect(expose.current.helpBindings).toEqual([]);
   });
 });
+
+describe('useControls — the cleanup question waits for an answer (N1)', () => {
+  const broken = {
+    id: 'c1',
+    name: 'mi-basedatos',
+    image: 'postgres:17-alpine',
+    state: 'exited',
+    status: 'Exited (1) 2 seconds ago',
+    ports: ['5432:5432'],
+  };
+  const verdictMap = new Map([
+    [
+      'c1',
+      {
+        code: 'crash-loop',
+        level: 'fail',
+        headline: 'died 2s',
+        facts: {
+          exitCode: 1,
+          uptimeMs: 2000,
+          restartCount: 0,
+          oomKilled: false,
+          healthStatus: null,
+        },
+      },
+    ],
+  ]);
+
+  beforeEach(async () => {
+    mockSvcCreateContainer.mockReset().mockResolvedValue({
+      id: 'cid-new',
+      ports: [],
+    });
+    const { getLogsTail } = await import(
+      '../src/helpers/dockerService/serviceComponents/containerLogs.js'
+    );
+    getLogsTail.mockResolvedValue(['superuser password is not specified']);
+    mockGetContainerDetails.mockReset().mockResolvedValue({
+      env: ['POSTGRES_PASSWORD=x'],
+      cmd: [],
+    });
+    mockGetImageEnv.mockReset().mockResolvedValue([]);
+  });
+
+  test('the question is still on screen after the 4s message timer would fire', async () => {
+    jest.useFakeTimers({ doNotFake: ['nextTick'] });
+    try {
+      const expose = { current: null };
+      render(
+        <HookTester
+          containers={[broken]}
+          expose={expose}
+          overrides={{ health: verdictMap }}
+        />
+      );
+      await act(async () => {});
+      await act(async () => {
+        expose.current.dispatch('container.fix');
+      });
+      await act(async () => {});
+      await act(async () => {
+        expose.current.creation.nextStep();
+      });
+      await act(async () => {});
+
+      // "Creating container…" armed a 4s timer that setMessage never cancelled,
+      // so the question used to be wiped while pendingCleanup stayed armed.
+      await act(async () => {
+        jest.advanceTimersByTime(4000);
+      });
+
+      expect(expose.current.message).toContain('[y] Yes');
+      expect(expose.current.pendingCleanup).not.toBeNull();
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  test('the answer still works after the timer would have fired', async () => {
+    jest.useFakeTimers({ doNotFake: ['nextTick'] });
+    try {
+      const { removeContainer } = await import(
+        '../src/helpers/dockerService/serviceComponents/containerActions.js'
+      );
+      removeContainer.mockClear();
+      const expose = { current: null };
+      render(
+        <HookTester
+          containers={[broken]}
+          expose={expose}
+          overrides={{ health: verdictMap }}
+        />
+      );
+      await act(async () => {});
+      await act(async () => {
+        expose.current.dispatch('container.fix');
+      });
+      await act(async () => {});
+      await act(async () => {
+        expose.current.creation.nextStep();
+      });
+      await act(async () => {});
+      await act(async () => {
+        jest.advanceTimersByTime(4000);
+      });
+
+      await act(async () => {
+        await expose.current.dispatch('cleanup.delete');
+      });
+      expect(removeContainer).toHaveBeenCalledWith('c1');
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  test('another key clears the question text as well as disarming it', async () => {
+    const expose = { current: null };
+    render(
+      <HookTester
+        containers={[broken]}
+        expose={expose}
+        overrides={{ health: verdictMap }}
+      />
+    );
+    await act(async () => {});
+    await act(async () => {
+      expose.current.dispatch('container.fix');
+    });
+    await act(async () => {});
+    await act(async () => {
+      expose.current.creation.nextStep();
+    });
+    await act(async () => {});
+    expect(expose.current.message).toContain('[y] Yes');
+
+    await act(async () => {
+      expose.current.dispatch('container.restart');
+    });
+    // Leaving the text would invite the very y it no longer answers.
+    expect(expose.current.message).not.toContain('[y] Yes');
+  });
+});

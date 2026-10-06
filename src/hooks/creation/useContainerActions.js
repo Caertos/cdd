@@ -32,6 +32,23 @@ export function useContainerActions({ containers, onAction }) {
     }
   }
 
+  /**
+   * Show a message that waits for an answer instead of expiring.
+   *
+   * `setMessage` on its own does not cancel the timer a previous
+   * `setTimedMessage` armed, so a question written over a "Working..." line
+   * used to be wiped seconds later while the answer it was asking about stayed
+   * armed.
+   *
+   * @param {string} msg
+   * @param {string} [color]
+   */
+  function setPersistentMessage(msg, color = 'yellow') {
+    clearTimeout(messageTimerRef.current);
+    setMessage(msg);
+    setMessageColor(color);
+  }
+
   useEffect(() => () => clearTimeout(messageTimerRef.current), []);
 
   /**
@@ -80,6 +97,7 @@ export function useContainerActions({ containers, onAction }) {
     message,
     setMessage,
     setTimedMessage,
+    setPersistentMessage,
     messageColor,
     setMessageColor,
     handleAction,

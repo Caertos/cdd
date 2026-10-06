@@ -104,10 +104,11 @@ export function useControls(containers = [], overrides = {}) {
           // Never deleted without an answer: that container may hold something
           // the user has not looked at yet.
           setPendingCleanup(superseded);
-          actions.setMessage(
+          // Persistent, not timed: the question must stay until it is answered
+          // or something else disarms it.
+          actions.setPersistentMessage(
             `Created ${containerName || id}. Delete ${superseded.name}, the container that failed? [y] Yes  [n] No`
           );
-          actions.setMessageColor('yellow');
         } else {
           actions.setTimedMessage(`Created container ${id}${portMsg}`, 'green');
         }
@@ -591,11 +592,18 @@ export function useControls(containers = [], overrides = {}) {
     (bindingId) => {
       if (pendingCleanup && !bindingId.startsWith('cleanup.')) {
         setPendingCleanup(null);
+        // The question is gone; leaving its text behind would invite the very
+        // y it no longer answers.
+        if (actions.message.includes('[y] Yes')) {
+          actions.setMessage('');
+        }
       }
       const handler = handlers[bindingId];
       if (handler) handler();
     },
-    [pendingCleanup, handlers]
+    // `actions` is a stable object from the same hook, listed so the disarm
+    // reads its current message.
+    [pendingCleanup, handlers, actions]
   );
 
   // Single keyboard entry point — declarative keymap dispatch
