@@ -1,7 +1,9 @@
 /**
- * Pure helpers for filtering containers by free-text query.
- * Matching is case-insensitive and accent-insensitive, against the
- * container's name, image and state. No I/O, no state, no mutation.
+ * Pure helpers for filtering and sorting containers.
+ * Filtering matches a free-text query case-insensitively and
+ * accent-insensitively against the container's name, image and state;
+ * sorting orders the list by health trouble, name or creation time.
+ * No I/O, no state, no mutation.
  */
 
 /**
@@ -43,4 +45,145 @@ export function filterContainers(containers, query) {
     );
     return words.every((word) => haystack.includes(word));
   });
+}
+
+/** @typedef {'state'|'name'|'created'} SortMode */
+
+/**
+ * Weight of each verdict level for the 'state' sort: lower sorts first,
+ * so what is broken rises to the top of the list.
+ */
+const HEALTH_WEIGHTS = { fail: 0, warn: 1, ok: 2, idle: 3 };
+
+/**
+ * Compares two texts alphabetically, case- and accent-insensitively.
+ * When two different values normalize alike ('Web' vs 'web'), the raw
+ * text breaks the tie, so distinct values never compare equal.
+ *
+ * @param {unknown} left
+ * @param {unknown} right
+ * @returns {number} negative if left first, positive if right first, 0 on a tie
+ */
+function compareText(left, right) {
+  const a = normalizeForSearch(left);
+  const b = normalizeForSearch(right);
+  if (a !== b) return a < b ? -1 : 1;
+
+  const rawLeft = String(left ?? '');
+  const rawRight = String(right ?? '');
+  if (rawLeft === rawRight) return 0;
+  return rawLeft < rawRight ? -1 : 1;
+}
+
+/**
+ * Total tie-break shared by every mode: alphabetical by name, then by id.
+ * Ids are unique, so the final order never depends on the engine's sort
+ * stability.
+ *
+ * @param {Object} a
+ * @param {Object} b
+ * @returns {number}
+ */
+function compareByNameThenId(a, b) {
+  return compareText(a?.name, b?.name) || compareText(a?.id, b?.id);
+}
+
+/**
+ * Parses Docker's `Created` field: a Unix epoch timestamp in seconds.
+ * Zero or negative values are Docker's zero time and count as unusable.
+ *
+ * @param {unknown} value
+ * @returns {number|null} usable timestamp, or null when unusable
+ */
+function creationTime(value) {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0
+    ? value
+    : null;
+}
+
+/**
+ * Compares creation times descending (newest first). A missing, non-numeric
+ * or otherwise unusable `createdAt` sorts last: it is the least informative
+ * value, not the newest one.
+ *
+ * @param {unknown} left
+ * @param {unknown} right
+ * @returns {number}
+ */
+function compareCreated(left, right) {
+  const a = creationTime(left);
+  const b = creationTime(right);
+  if (a === null && b === null) return 0;
+  if (a === null) return 1;
+  if (b === null) return -1;
+  return b - a;
+}
+
+/**
+ * Sorts the list according to the mode. Does not mutate the received array,
+ * the container objects nor the health map: always returns a new array.
+ *
+ * 'state' (default): trouble first — fail, warn, ok, idle — then by name.
+ * 'name': alphabetical.
+ * 'created': newest first; a missing or unusable `createdAt` sorts last.
+ *
+ * Every comparison ends on name and id, so the same input always yields the
+ * same output regardless of the engine's sort stability.
+ *
+ * @param {Array<Object>} containers
+ * @param {SortMode} mode
+ * @param {Object} ctx
+ * @param {Map<string, HealthVerdict>} ctx.health - Used by mode 'state'.
+ *   May be incomplete: a container that has not been inspected yet has no
+ *   verdict, and that is not an error (see TASK-9 §3.2) — it weighs as idle.
+ * @returns {Array<Object>}
+ */
+export function sortContainers(containers, mode, ctx) {
+  if (!Array.isArray(containers)) return [];
+
+  const rawHealth = ctx == null ? undefined : ctx.health;
+  // Anything without a `get` (missing, not a Map) behaves as an empty map.
+  const healthMap =
+    rawHealth && typeof rawHealth.get === 'function' ? rawHealth : null;
+  const weightOf = (container) =>
+    healthWeight(healthMap ? healthMap.get(container?.id) : undefined);
+
+  const sorted = [...containers];
+
+  if (mode === 'name') {
+    sorted.sort((a, b) => compareByNameThenId(a, b));
+    return sorted;
+  }
+
+  if (mode === 'created') {
+    sorted.sort(
+      (a, b) =>
+        compareCreated(a?.createdAt, b?.createdAt) || compareByNameThenId(a, b)
+    );
+    return sorted;
+  }
+
+  // Default mode 'state': what is broken first, then by name.
+  sorted.sort((a, b) => weightOf(a) - weightOf(b) || compareByNameThenId(a, b));
+  return sorted;
+}
+
+/**
+ * Weight of a verdict for the 'state' sort: fail < warn < ok < idle, so
+ * lower sorts first and trouble rises to the top.
+ *
+ * Reads `verdict.level` ('ok' | 'idle' | 'warn' | 'fail'), not
+ * `verdict.code`: `code` names the symptom while `level` already means
+ * "this is worrying", which is exactly what the sort needs to know.
+ * A container without a verdict weighs as `idle`, and an unknown or absent
+ * level falls back to `idle` too, so a bad verdict can never produce a NaN
+ * that silently corrupts the sort.
+ *
+ * @param {HealthVerdict|undefined} verdict
+ * @returns {number}
+ */
+export function healthWeight(verdict) {
+  const level = verdict == null ? undefined : verdict.level;
+  const weight = HEALTH_WEIGHTS[level];
+  return typeof weight === 'number' ? weight : HEALTH_WEIGHTS.idle;
 }
