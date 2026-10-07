@@ -7,6 +7,7 @@ import {
   healthWeight,
   sortContainers,
   nextSortMode,
+  FOLD_LETTERS,
 } from '../src/helpers/containerFilters.js';
 
 /**
@@ -535,5 +536,101 @@ describe('nextSortMode', () => {
       }).not.toThrow();
       expect(sorted).toHaveLength(sortable.length);
     }
+  });
+});
+
+describe('normalizeForSearch folds letters that do not decompose', () => {
+  // NFD (and NFKD) leave these letters intact — 'ø'.normalize('NFD') === 'ø' —
+  // so the explicit FOLD_LETTERS table is the only thing folding them. The
+  // table is imported from the implementation, not copied here: a letter
+  // added later is covered by every assertion below without touching this
+  // file.
+
+  test.each(Object.entries(FOLD_LETTERS))(
+    'folds the lowercase %s to %s',
+    (letter, replacement) => {
+      expect(normalizeForSearch(letter)).toBe(replacement);
+    }
+  );
+
+  test.each(Object.entries(FOLD_LETTERS))(
+    'folds the uppercase %s to %s',
+    (letter, replacement) => {
+      // toLowerCase() runs before the fold, so the uppercase shape reaches
+      // it already lowercased and must land on the very same value.
+      expect(normalizeForSearch(letter.toUpperCase())).toBe(replacement);
+    }
+  );
+
+  test.each(Object.entries(FOLD_LETTERS))(
+    'is idempotent on the table entry %s → %s',
+    (letter, replacement) => {
+      const fromLower = normalizeForSearch(letter);
+      const fromUpper = normalizeForSearch(letter.toUpperCase());
+      expect(normalizeForSearch(fromLower)).toBe(fromLower);
+      expect(normalizeForSearch(fromUpper)).toBe(fromUpper);
+      // The replacement itself must be a fixed point: a value that folds
+      // again could reintroduce a foldable letter and break idempotency.
+      expect(normalizeForSearch(replacement)).toBe(replacement);
+    }
+  );
+
+  test('is idempotent over every table key, value and case at once', () => {
+    const corpus = [
+      Object.keys(FOLD_LETTERS).join(''),
+      Object.keys(FOLD_LETTERS).join('').toUpperCase(),
+      Object.values(FOLD_LETTERS).join(''),
+      // Keys and values interleaved, so a fold sitting next to another
+      // fold cannot compose into something new either.
+      Object.entries(FOLD_LETTERS).flat().join(''),
+    ];
+    for (const text of corpus) {
+      expect(normalizeForSearch(normalizeForSearch(text))).toBe(
+        normalizeForSearch(text)
+      );
+    }
+  });
+
+  test('the table only holds lowercase letters that never decompose', () => {
+    for (const letter of Object.keys(FOLD_LETTERS)) {
+      // An uppercase key would be dead code: toLowerCase() runs first.
+      expect(letter).toBe(letter.toLowerCase());
+      // If NFD could decompose it, the diacritic strip would already fold
+      // it and the table would be redundant for that letter.
+      expect(letter.normalize('NFD')).toBe(letter);
+      expect(letter.normalize('NFKD')).toBe(letter);
+    }
+  });
+
+  test("Turkish 'İ' already folds through NFD; only dotless 'ı' is tabled", () => {
+    // 'İ' decomposes to 'I' + combining dot, which the strip removes, so
+    // listing it in FOLD_LETTERS would ship a dead entry — checked, not
+    // assumed. Dotless 'ı' has no decomposition and does need the table.
+    expect(normalizeForSearch('İ')).toBe('i');
+    expect(normalizeForSearch('I')).toBe('i');
+    expect(Object.keys(FOLD_LETTERS)).not.toContain('İ');
+    expect(FOLD_LETTERS['ı']).toBe('i');
+  });
+
+  test('finds a container named brøtal-service when the user types o', () => {
+    const containers = [
+      { name: 'brøtal-service', image: 'nginx:1.25', state: 'exited' },
+      { name: 'redis-cache', image: 'redis:7', state: 'exited' },
+    ];
+    // Nothing but the folded ø puts an 'o' in the first haystack: the raw
+    // name has no literal 'o', and the second container has none in any
+    // field, so it must stay out of the result.
+    expect(containers[0].name).not.toContain('o');
+    expect(filterContainers(containers, 'o')).toEqual([containers[0]]);
+    // The query folds too, so typing the real letter finds it as well.
+    expect(filterContainers(containers, 'ø')).toEqual([containers[0]]);
+    // A word no fold can satisfy still excludes everything.
+    expect(filterContainers(containers, 'brøtal zzzz')).toEqual([]);
+  });
+
+  test('the pre-existing accent folds still hold', () => {
+    expect(normalizeForSearch('Caché')).toBe('cache');
+    expect(normalizeForSearch('ÁÉÍÓÚÑ')).toBe('aeioun');
+    expect(normalizeForSearch('CACHE')).toBe('cache');
   });
 });

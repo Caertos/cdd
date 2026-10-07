@@ -7,7 +7,46 @@
  */
 
 /**
- * Normalizes text for comparison: lowercase and without accents.
+ * Letters that NFD (and NFKD) leave untouched — they have no decomposition
+ * to strip — folded explicitly, so a container named 'brøtal-service' is
+ * found when the user types 'o'.
+ *
+ * Every value is plain ASCII, and every key is a non-ASCII letter, so a
+ * folded string can never contain a key again: the fold is idempotent by
+ * construction, not by luck.
+ *
+ * Lowercase keys only: `toLowerCase()` runs before this step, so an
+ * uppercase entry would be dead code — 'Ø', 'Ł', 'Ð', 'Þ', 'Æ', 'Œ', 'Đ'
+ * and 'ẞ' all reach the fold already lowercased.
+ *
+ * @type {Object<string, string>}
+ */
+export const FOLD_LETTERS = {
+  ø: 'o', // Norwegian, Danish
+  đ: 'd', // Croatian, Vietnamese
+  ł: 'l', // Polish
+  ð: 'd', // Icelandic eth
+  þ: 'th', // Icelandic thorn: the standard transliteration, like ð → d
+  æ: 'ae', // Danish, Norwegian
+  œ: 'oe', // French, Dutch
+  ı: 'i', // Turkish dotless i
+  ß: 'ss', // German sharp s: a real letter that never decomposes, not an accent
+};
+
+/**
+ * One combined pattern derived from the table itself (single source of
+ * truth), so the fold is a single pass over the text instead of one
+ * `replaceAll` per letter. Every key is a plain letter: nothing needs
+ * escaping inside a character class. Only ever passed to
+ * `String.prototype.replace`, which resets `lastIndex` for a /g regex
+ * before and after each call, so the shared pattern never leaks state.
+ */
+const FOLD_PATTERN = new RegExp(`[${Object.keys(FOLD_LETTERS).join('')}]`, 'g');
+
+/**
+ * Normalizes text for comparison: lowercase, without accents, and with the
+ * letters NFD cannot decompose folded to ASCII ('brøtal' → 'brotal').
+ * Idempotent: normalizing the result again returns the same string.
  *
  * @param {string} text
  * @returns {string}
@@ -16,10 +55,15 @@ export function normalizeForSearch(text) {
   if (!text) return '';
   // NFD splits an accented letter into base letter + combining mark, and the
   // regex drops the marks, so 'caché' and 'cache' compare equal.
-  return String(text)
-    .normalize('NFD')
-    .replace(/\p{Diacritic}/gu, '')
-    .toLowerCase();
+  return (
+    String(text)
+      .normalize('NFD')
+      .replace(/\p{Diacritic}/gu, '')
+      .toLowerCase()
+      // Last step: ø, ł, ß… have no combining form, so the strip above cannot
+      // help and they are folded by hand from FOLD_LETTERS.
+      .replace(FOLD_PATTERN, (letter) => FOLD_LETTERS[letter])
+  );
 }
 
 /**
