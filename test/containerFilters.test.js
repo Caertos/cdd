@@ -6,6 +6,7 @@ import {
   filterContainers,
   healthWeight,
   sortContainers,
+  nextSortMode,
 } from '../src/helpers/containerFilters.js';
 
 /**
@@ -443,4 +444,96 @@ describe('sortContainers', () => {
       expect(sortContainers(shuffled, mode, ctx)).toEqual(expected);
     }
   );
+});
+
+describe('nextSortMode', () => {
+  // The fixed cycle: 'state' → 'name' → 'created' → 'state'. 'state' is
+  // both the default mode and the first entry of the cycle.
+  test.each([
+    ['state', 'name'],
+    ['name', 'created'],
+    ['created', 'state'],
+  ])('mode %s advances to %s', (mode, expected) => {
+    expect(nextSortMode(mode)).toBe(expected);
+  });
+
+  test("three applications from 'state' return to 'state'; a fourth lands one step past it", () => {
+    expect(nextSortMode(nextSortMode(nextSortMode('state')))).toBe('state');
+    // Four applications are NOT back at the start: they are on 'name'.
+    // Asserting both pins the cycle length (three) instead of assuming it.
+    expect(
+      nextSortMode(nextSortMode(nextSortMode(nextSortMode('state'))))
+    ).toBe('name');
+  });
+
+  test("a full lap from 'name' visits all three modes without repeats", () => {
+    // ['name', next, next, next]: four values, only three distinct modes.
+    const lap = ['name'];
+    for (let step = 0; step < 3; step += 1) {
+      lap.push(nextSortMode(lap[lap.length - 1]));
+    }
+    expect(lap).toEqual(['name', 'created', 'state', 'name']);
+    expect(new Set(lap)).toEqual(new Set(['state', 'name', 'created']));
+  });
+
+  test.each([
+    ['undefined', undefined],
+    ['null', null],
+    ['an empty string', ''],
+    ['a bogus string', 'wobble'],
+    ['a number', 42],
+    ['NaN', Number.NaN],
+    ['an object', { mode: 'created' }],
+  ])(
+    'an unusable input (%s) advances exactly like the default mode',
+    (_label, value) => {
+      let advanced;
+      // Unusable input never throws.
+      expect(() => {
+        advanced = nextSortMode(value);
+      }).not.toThrow();
+      // Consistency with `sortContainers`: an unknown mode is treated as
+      // the default 'state' and advanced from there, so both helpers
+      // always agree on where an unusable mode starts.
+      expect(advanced).toBe(nextSortMode('state'));
+      expect(advanced).toBe('name');
+    }
+  );
+
+  test('every value nextSortMode can return is a mode sortContainers accepts', () => {
+    // A minimal list shaped for all three modes: id feeds the health
+    // Map, name and createdAt feed the comparators.
+    const sortable = [
+      { id: 'x1', name: 'bravo', createdAt: 1700000020 },
+      { id: 'x2', name: 'alpha', createdAt: 1700000010 },
+    ];
+    const health = new Map();
+    const inputs = [
+      'state',
+      'name',
+      'created',
+      undefined,
+      null,
+      '',
+      'wobble',
+      42,
+      Number.NaN,
+      { mode: 'created' },
+    ];
+
+    const returned = new Set();
+    for (const input of inputs) {
+      expect(() => returned.add(nextSortMode(input))).not.toThrow();
+    }
+    // Only the three known modes may ever come back...
+    expect([...returned].sort()).toEqual(['created', 'name', 'state']);
+    // ...and `sortContainers` must sort a real list with each of them.
+    for (const mode of returned) {
+      let sorted;
+      expect(() => {
+        sorted = sortContainers(sortable, mode, { health });
+      }).not.toThrow();
+      expect(sorted).toHaveLength(sortable.length);
+    }
+  });
 });
