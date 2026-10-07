@@ -74,8 +74,8 @@ export const KEYMAP = {
     {
       id: 'container.fix',
       // keyNameOf() turns shift+f into 'shift+F', not 'F', so both spellings
-      // are listed. Lowercase 'f' is deliberately left free for the filter
-      // TASK-9 adds.
+      // are listed. Lowercase 'f' stays unbound on purpose: it sits too close
+      // to 'F' to be safe, and TASK-9 puts the filter on '/'.
       keys: ['F', 'shift+F'],
       label: 'Fix',
       help: 'Recreate the container with the diagnosis applied',
