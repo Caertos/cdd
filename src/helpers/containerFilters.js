@@ -187,3 +187,24 @@ export function healthWeight(verdict) {
   const weight = HEALTH_WEIGHTS[level];
   return typeof weight === 'number' ? weight : HEALTH_WEIGHTS.idle;
 }
+
+/**
+ * Returns the mode that follows the given one in the fixed cycle
+ * 'state' → 'name' → 'created' → 'state'. 'state' is both the default
+ * mode and the first entry of the cycle.
+ *
+ * An unknown, empty or non-string mode is treated as the default
+ * ('state') instead of throwing, so it advances to 'name' — the same
+ * fallback `sortContainers` applies to an unusable mode.
+ *
+ * @param {SortMode|string|null|undefined} mode
+ * @returns {SortMode}
+ */
+export function nextSortMode(mode) {
+  if (mode === 'state') return 'name';
+  if (mode === 'name') return 'created';
+  if (mode === 'created') return 'state';
+  // Unusable input is treated as the default mode 'state', which also
+  // lands on 'name', so the result always stays inside the cycle.
+  return 'name';
+}
