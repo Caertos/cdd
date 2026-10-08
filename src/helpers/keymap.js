@@ -58,7 +58,7 @@ export const KEYMAP = {
       keys: ['l'],
       label: 'Logs',
       help: 'Open the logs viewer',
-      priority: 70,
+      priority: 45,
       when: (s) => s.hasSelection,
     },
     {
@@ -121,7 +121,7 @@ export const KEYMAP = {
       keys: ['/'],
       label: 'Filter',
       help: 'Filter the list by name, image or state',
-      priority: 45,
+      priority: 70,
     },
     {
       id: 'sort.cycle',
