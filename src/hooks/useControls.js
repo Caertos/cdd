@@ -153,7 +153,7 @@ export function useControls(containers = [], overrides = {}) {
   });
 
   const logsViewer = useLogsViewer();
-  const selection = useContainerSelection(containers.length);
+  const selection = useContainerSelection(containers);
   const debugLogs = useDebugLogs();
 
   const selectedContainer = containers[selection.selected] ?? null;
@@ -491,8 +491,8 @@ export function useControls(containers = [], overrides = {}) {
           'gray'
         );
       },
-      'nav.up': () => selection.handleNavigation('', { upArrow: true }),
-      'nav.down': () => selection.handleNavigation('', { downArrow: true }),
+      'nav.up': () => selection.move(-1),
+      'nav.down': () => selection.move(1),
       'debug.toggle': () => debugLogs.setShowDebugLogs((prev) => !prev),
       'app.search': () => {}, // Placeholder — search not yet implemented
       'app.quit': () => {
