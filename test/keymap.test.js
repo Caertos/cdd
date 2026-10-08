@@ -3,7 +3,13 @@
  */
 import fs from 'fs';
 import path from 'path';
-import { getActiveContext, getBindings, resolveKey, keyNameOf, KEYMAP } from '../src/helpers/keymap.js';
+import {
+  getActiveContext,
+  getBindings,
+  resolveKey,
+  keyNameOf,
+  KEYMAP,
+} from '../src/helpers/keymap.js';
 import { displayKeys } from '../src/helpers/keyLabels.js';
 
 describe('getActiveContext — pure function', () => {
@@ -12,7 +18,13 @@ describe('getActiveContext — pure function', () => {
   });
 
   test('confirm wins over everything', () => {
-    expect(getActiveContext({ confirmErase: true, showLogs: true, creatingContainer: true })).toBe('confirm');
+    expect(
+      getActiveContext({
+        confirmErase: true,
+        showLogs: true,
+        creatingContainer: true,
+      })
+    ).toBe('confirm');
   });
 
   test('help wins over logs and wizard', () => {
@@ -24,7 +36,9 @@ describe('getActiveContext — pure function', () => {
   });
 
   test('wizard-list wins over wizard', () => {
-    expect(getActiveContext({ creatingContainer: true, hasActiveList: true })).toBe('wizard-list');
+    expect(
+      getActiveContext({ creatingContainer: true, hasActiveList: true })
+    ).toBe('wizard-list');
   });
 
   test('wizard when creating without active list', () => {
@@ -36,7 +50,9 @@ describe('getActiveContext — pure function', () => {
   });
 
   test('list when only showDebugLogs is false', () => {
-    expect(getActiveContext({ creatingContainer: false, showLogs: false })).toBe('list');
+    expect(
+      getActiveContext({ creatingContainer: false, showLogs: false })
+    ).toBe('list');
   });
 
   test('disconnected when Docker is unreachable with empty list', () => {
@@ -44,11 +60,15 @@ describe('getActiveContext — pure function', () => {
   });
 
   test('wizard wins over disconnected', () => {
-    expect(getActiveContext({ creatingContainer: true, disconnected: true })).toBe('wizard');
+    expect(
+      getActiveContext({ creatingContainer: true, disconnected: true })
+    ).toBe('wizard');
   });
 
   test('disconnected wins over list', () => {
-    expect(getActiveContext({ disconnected: true, creatingContainer: false })).toBe('disconnected');
+    expect(
+      getActiveContext({ disconnected: true, creatingContainer: false })
+    ).toBe('disconnected');
   });
 });
 
@@ -178,9 +198,15 @@ describe('KEYMAP — coverage gaps', () => {
   });
 
   test('Tab exists in the wizard and only on steps 0 and 3', () => {
-    expect(getBindings('wizard', { wizardStep: 0 }).map((b) => b.id)).toContain('wizard.tab');
-    expect(getBindings('wizard', { wizardStep: 3 }).map((b) => b.id)).toContain('wizard.tab');
-    expect(getBindings('wizard', { wizardStep: 1 }).map((b) => b.id)).not.toContain('wizard.tab');
+    expect(getBindings('wizard', { wizardStep: 0 }).map((b) => b.id)).toContain(
+      'wizard.tab'
+    );
+    expect(getBindings('wizard', { wizardStep: 3 }).map((b) => b.id)).toContain(
+      'wizard.tab'
+    );
+    expect(
+      getBindings('wizard', { wizardStep: 1 }).map((b) => b.id)
+    ).not.toContain('wizard.tab');
   });
 
   test('every binding has id, keys and label', () => {
@@ -192,8 +218,12 @@ describe('KEYMAP — coverage gaps', () => {
   });
 
   test('getActiveContext resolves the discard, review and quit contexts', () => {
-    expect(getActiveContext({ creatingContainer: true, wizardStep: 4 })).toBe('wizard-review');
-    expect(getActiveContext({ creatingContainer: true, confirmDiscard: true })).toBe('wizard-discard');
+    expect(getActiveContext({ creatingContainer: true, wizardStep: 4 })).toBe(
+      'wizard-review'
+    );
+    expect(
+      getActiveContext({ creatingContainer: true, confirmDiscard: true })
+    ).toBe('wizard-discard');
     expect(getActiveContext({ confirmQuit: true })).toBe('confirm-quit');
   });
 });
@@ -210,7 +240,13 @@ describe('keymap ↔ useControls handlers', () => {
 
   // §5.4 (D21) — fixed by TASK-10 (log viewer scroll).
   test.failing('every keymap binding has a handler in useControls', () => {
-    const ids = [...new Set(Object.values(KEYMAP).flat().map((b) => b.id))];
+    const ids = [
+      ...new Set(
+        Object.values(KEYMAP)
+          .flat()
+          .map((b) => b.id)
+      ),
+    ];
     expect(ids.filter((id) => !hasHandler(id))).toEqual([]); // today: logs.up/down/pageup/pagedown/follow
   });
 });
@@ -221,8 +257,9 @@ describe('the fix key (TASK-8)', () => {
   test('F opens the fix only when a fix is available', () => {
     const ids = getBindings('list', state).map((b) => b.id);
     expect(ids).toContain('container.fix');
-    expect(getBindings('list', { ...state, canFix: false }).map((b) => b.id))
-      .not.toContain('container.fix');
+    expect(
+      getBindings('list', { ...state, canFix: false }).map((b) => b.id)
+    ).not.toContain('container.fix');
   });
 
   test('F needs a selection', () => {
@@ -246,10 +283,14 @@ describe('the fix key (TASK-8)', () => {
   });
 
   test('the cleanup question only appears once asked', () => {
-    const asked = getBindings('list', { confirmCleanup: true }).map((b) => b.id);
+    const asked = getBindings('list', { confirmCleanup: true }).map(
+      (b) => b.id
+    );
     expect(asked).toContain('cleanup.delete');
     expect(asked).toContain('cleanup.keep');
-    const idle = getBindings('list', { confirmCleanup: false }).map((b) => b.id);
+    const idle = getBindings('list', { confirmCleanup: false }).map(
+      (b) => b.id
+    );
     expect(idle).not.toContain('cleanup.delete');
     expect(idle).not.toContain('cleanup.keep');
   });
@@ -293,5 +334,74 @@ describe('the fix key (TASK-8)', () => {
     for (const id of ['container.fix', 'cleanup.delete', 'cleanup.keep']) {
       expect(source).toContain(`'${id}'`);
     }
+  });
+});
+
+describe('the stop key (D24)', () => {
+  // Mirrors the derivation useControls performs on the selected container, so
+  // each state below reaches the keymap as the uiState the hook would hand it.
+  // The derivation itself lives in useControls; what is pinned here is which
+  // states the keymap reacts to.
+  const NOT_STOPPABLE = ['exited', 'stopped', 'created'];
+  const running = { hasSelection: true, canStop: true };
+  const idsOf = (state) => getBindings('list', state).map((b) => b.id);
+  const uiStateFor = (containerState) => ({
+    hasSelection: true,
+    canStop: !NOT_STOPPABLE.includes(containerState),
+  });
+
+  test('p stops a running container', () => {
+    expect(idsOf(running)).toContain('container.stop');
+    expect(resolveKey('list', 'p', {}, running).id).toBe('container.stop');
+  });
+
+  test.each(['exited', 'stopped', 'created'])(
+    'p is not offered for a container that is %s',
+    (containerState) => {
+      expect(idsOf(uiStateFor(containerState))).not.toContain('container.stop');
+      expect(
+        resolveKey('list', 'p', {}, uiStateFor(containerState))
+      ).toBeNull();
+    }
+  );
+
+  test.each([true, false])(
+    'p needs a selection whatever canStop says (%s)',
+    (canStop) => {
+      expect(idsOf({ hasSelection: false, canStop })).not.toContain(
+        'container.stop'
+      );
+    }
+  );
+
+  test('the binding is unchanged apart from its guard', () => {
+    const binding = KEYMAP.list.find((b) => b.id === 'container.stop');
+    expect(binding.keys).toEqual(['p']);
+    expect(binding.label).toBe('Stop');
+    expect(binding.help).toBe('Stop the selected container');
+    expect(binding.priority).toBe(85);
+  });
+
+  test('no canStop data keeps p available', () => {
+    // Absent data means "not known to be unstoppable", never "stopped": a key
+    // that vanishes wrongly would take stopping away, which no test flag can undo.
+    expect(idsOf({ hasSelection: true })).toContain('container.stop');
+    expect(idsOf({ hasSelection: true, canStop: undefined })).toContain(
+      'container.stop'
+    );
+    expect(idsOf({ hasSelection: true, canStop: null })).toContain(
+      'container.stop'
+    );
+  });
+
+  test('the help panel for a stopped container does not list Stop', () => {
+    // getBindings() is exactly what the help panel renders.
+    const stopped = uiStateFor('exited');
+    const helpContext = getActiveContext({ ...stopped, showHelp: false });
+    const helpIds = getBindings(helpContext, stopped).map((b) => b.id);
+    expect(helpIds).not.toContain('container.stop');
+    // Only Stop goes: the rest of the container keys stay on offer.
+    expect(helpIds).toContain('container.start');
+    expect(helpIds).toContain('container.restart');
   });
 });

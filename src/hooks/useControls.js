@@ -43,6 +43,14 @@ const NOOP_LAUNCHER = {
   reset: () => {},
 };
 
+/**
+ * Docker states on which `stop` has nothing left to do: the container is not
+ * running, so the call can only come back with a message. Docker reports these
+ * in `state` (lower-case, copied verbatim by containerList.js); `status` is its
+ * display string and is only consulted for shapes that carry it alone.
+ */
+const NOT_STOPPABLE_STATES = ['exited', 'stopped', 'created'];
+
 // Principal hook to manage user inputs and control the app state
 /** The fix creates the replacement stopped; say how to start it. */
 function startHint(replacement) {
@@ -172,6 +180,12 @@ export function useControls(containers = [], overrides = {}) {
     selectedContainer ? (details.get(selectedContainer.id) ?? null) : null
   );
   const canFix = Boolean(diagnostics.diagnosis?.fix);
+  // D24: computed once, here, so the keymap predicate only has to read a name.
+  // A missing container yields true: `hasSelection` already hides the key, and
+  // guessing 'not stoppable' from absent data would take the key away.
+  const canStop =
+    !NOT_STOPPABLE_STATES.includes(selectedContainer?.state) &&
+    !NOT_STOPPABLE_STATES.includes(selectedContainer?.status);
 
   // Allow overrides for testability (e.g. injecting a mock triggerHubSearch)
   const triggerHubSearch =
@@ -325,6 +339,7 @@ export function useControls(containers = [], overrides = {}) {
       canLaunch: launcher.canLaunch,
       launchStatus: launcher.status,
       canFix,
+      canStop,
       confirmCleanup: pendingCleanup !== null,
     }),
     [
@@ -345,6 +360,7 @@ export function useControls(containers = [], overrides = {}) {
       launcher.canLaunch,
       launcher.status,
       canFix,
+      canStop,
       pendingCleanup,
     ]
   );
