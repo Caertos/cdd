@@ -781,3 +781,155 @@ describe('healthWeight trusts only own properties', () => {
     }
   });
 });
+
+/**
+ * A container with no `name`. `containerList.js` promises a name today,
+ * but nothing in `containerFilters.js` depends on that promise: the sort
+ * and the filter both read `name` off an object that may simply not have
+ * one, and both must stay total and non-throwing.
+ *
+ * What actually happens: `compareText` normalizes the absent name to '',
+ * and '' sorts BEFORE every real name, so the nameless container opens
+ * every group it shares instead of sinking to the end.
+ */
+describe('containers with a missing name', () => {
+  /**
+   * State-sort fixture: q2 has no name at all; q1, q2 and q4 share the
+   * 'ok' weight, q3 is the broken one and q4 has no usable `createdAt`.
+   * Expected 'state' order: q3 (fail), then the ok group q2, q4, q1.
+   * Expected 'name' order: q2, q3, q4, q1.
+   * Expected 'created' order: q2, q1 (same timestamp, broken by name),
+   * q3 (older), q4 (no timestamp, so it sinks to the end).
+   */
+  const MIXED = [
+    { id: 'q1', name: 'zulu', createdAt: 1700000030 }, // ok
+    { id: 'q3', name: 'alpha', createdAt: 1700000010 }, // fail
+    { id: 'q4', name: 'mike' }, // ok, no createdAt
+    // No name at all, and it shares q1's timestamp: in 'created' mode the
+    // empty name is the only thing that can break that tie.
+    {
+      id: 'q2',
+      image: 'redis:7-alpine',
+      state: 'exited',
+      createdAt: 1700000030,
+    },
+  ];
+  const MIXED_HEALTH = new Map([
+    ['q1', makeVerdict('running', 'ok')],
+    ['q2', makeVerdict('running', 'ok')],
+    ['q3', makeVerdict('crashed', 'fail')],
+    ['q4', makeVerdict('running', 'ok')],
+  ]);
+
+  /**
+   * Tie-break fixture: u1 and u2 both miss the name, so compareText ties
+   * ('' against '') and only the id orders them. Expected 'name' order:
+   * u1, u2, u3 — and the named u3 lands last, since '' beats 'alpha'.
+   */
+  const TWO_NAMELESS = [
+    { id: 'u3', name: 'alpha', createdAt: 1700000020 },
+    { id: 'u2', image: 'redis:7-alpine', state: 'exited' }, // no name
+    { id: 'u1', image: 'postgres:15', state: 'running' }, // no name
+  ];
+
+  /** Each mode paired with the order it must produce for MIXED. */
+  const SORT_MODES = [
+    ['state', ['q3', 'q2', 'q4', 'q1']],
+    ['name', ['q2', 'q3', 'q4', 'q1']],
+    ['created', ['q2', 'q1', 'q3', 'q4']],
+  ];
+
+  test.each(SORT_MODES)(
+    'mode %s: a nameless container never throws and nobody is dropped or duplicated',
+    (mode, expected) => {
+      let sorted;
+      expect(() => {
+        sorted = sortContainers(MIXED, mode, { health: MIXED_HEALTH });
+      }).not.toThrow();
+
+      const ids = sorted.map((container) => container.id);
+      expect(ids).toEqual(expected);
+      // A permutation of the input: no container lost, none counted twice.
+      expect([...ids].sort()).toEqual(['q1', 'q2', 'q3', 'q4']);
+      expect(new Set(ids).size).toBe(MIXED.length);
+    }
+  );
+
+  test('the nameless container lands first inside its group, not last', () => {
+    const idsIn = (mode) =>
+      sortContainers(MIXED, mode, { health: MIXED_HEALTH }).map(
+        (container) => container.id
+      );
+
+    // 'name': there is no group, and the absent name normalizes to '' —
+    // the empty string sorts before 'alpha', so q2 leads the whole list.
+    expect(idsIn('name')).toEqual(['q2', 'q3', 'q4', 'q1']);
+    // 'state': q3 is the only fail and keeps the lead; q2 opens the ok
+    // group, because '' beats 'mike' and 'zulu' alike, and the rest of
+    // the group stays alphabetical.
+    expect(idsIn('state')).toEqual(['q3', 'q2', 'q4', 'q1']);
+    // 'created': q2 ties q1 on timestamp and wins that tie on the empty
+    // name, while q4's missing timestamp sinks it to the very end. The
+    // sort calls an unusable value "least informative" here and "first"
+    // for a name.
+    expect(idsIn('created')).toEqual(['q2', 'q1', 'q3', 'q4']);
+  });
+
+  test('two nameless containers fall through to the id tie-break', () => {
+    const idsOf = (list) =>
+      sortContainers(list, 'name', { health: MIXED_HEALTH }).map(
+        (container) => container.id
+      );
+
+    // compareText ties ('' against '') for u1 and u2, so only the id
+    // orders them; the named u3 closes the list.
+    expect(idsOf(TWO_NAMELESS)).toEqual(['u1', 'u2', 'u3']);
+    // Ids compare as text, not as numbers: 'u10' precedes 'u2' and lands
+    // right after 'u1'. Still a total order, just not a numeric one.
+    expect(idsOf([...TWO_NAMELESS, { id: 'u10', image: 'node:20' }])).toEqual([
+      'u1',
+      'u10',
+      'u2',
+      'u3',
+    ]);
+  });
+
+  test('filterContainers reaches a nameless container through its other fields', () => {
+    const list = [
+      { id: 'f1', image: 'redis:7-alpine', state: 'running' }, // no name
+      { id: 'f2', name: 'frontend', image: 'node:20', state: 'running' },
+    ];
+
+    // The haystack joins `${name ?? ''} ${image} ${state}`: the absent
+    // name contributes a space, never the word 'undefined'.
+    expect(filterContainers(list, 'redis')).toEqual([list[0]]);
+    expect(filterContainers(list, 'running')).toEqual(list);
+    // A query that matches nothing on that container returns [] instead of
+    // throwing, and a missing field cannot be searched for by accident.
+    expect(filterContainers(list, 'zzz')).toEqual([]);
+    expect(filterContainers(list, 'undefined')).toEqual([]);
+  });
+
+  test.each(SORT_MODES)(
+    'mode %s: a seeded shuffle moves the nameless container nowhere',
+    (mode) => {
+      const ctx = { health: MIXED_HEALTH };
+      const expected = sortContainers(MIXED, mode, ctx);
+
+      const shuffled = shuffle(MIXED);
+      // The shuffle must really permute, otherwise this proves nothing.
+      expect(shuffled).not.toEqual(MIXED);
+      expect(sortContainers(shuffled, mode, ctx)).toEqual(expected);
+    }
+  );
+
+  test('the nameless pair survives a seeded shuffle too', () => {
+    const shuffled = shuffle(TWO_NAMELESS);
+    expect(shuffled).not.toEqual(TWO_NAMELESS);
+    expect(
+      sortContainers(shuffled, 'name', { health: MIXED_HEALTH }).map(
+        (container) => container.id
+      )
+    ).toEqual(['u1', 'u2', 'u3']);
+  });
+});
