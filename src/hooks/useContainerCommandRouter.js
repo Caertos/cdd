@@ -16,8 +16,8 @@ import { useCallback } from 'react';
  *
  * @param {Object} params
  * @param {Object} params.actions       - API from useContainerActions
- * @param {Array<Object>} params.containers - Current list of Docker containers
- * @param {number} params.selected      - Index of the currently selected container
+ * @param {Object} params.container     - The currently selected container, or
+ *   nullish when nothing is selected
  * @param {Object} params.creation      - API from useContainerCreation (must expose resetCreation)
  * @param {Object} params.logsViewer    - API from useLogsViewer
  * @param {Function} params.startLogsStream - Starts the log stream for a container id
@@ -29,8 +29,7 @@ import { useCallback } from 'react';
  */
 export function useContainerCommandRouter({
   actions,
-  containers,
-  selected,
+  container,
   creation,
   logsViewer,
   startLogsStream,
@@ -41,13 +40,11 @@ export function useContainerCommandRouter({
 }) {
   const handleDockerCommands = useCallback(
     (input) => {
-      const container = containers[selected];
-
       if (input === 'i') {
         actions.handleAction({
           actionFn: async (id) => await actions.startContainer(id),
           actionLabel: 'Starting',
-          selected,
+          container,
           stateCheck: (c) =>
             (c.state === 'running' || c.status === 'running') &&
             'Container is already running.',
@@ -59,7 +56,7 @@ export function useContainerCommandRouter({
         actions.handleAction({
           actionFn: async (id) => await actions.stopContainer(id),
           actionLabel: 'Stopping',
-          selected,
+          container,
           stateCheck: (c) =>
             (c.state === 'exited' ||
               c.status === 'exited' ||
@@ -74,7 +71,7 @@ export function useContainerCommandRouter({
         actions.handleAction({
           actionFn: async (id) => await actions.restartContainer(id),
           actionLabel: 'Restarting',
-          selected,
+          container,
         });
         return true;
       }
@@ -119,14 +116,13 @@ export function useContainerCommandRouter({
     },
     [
       actions,
-      containers,
+      container,
       creation,
       logsViewer,
       onStartCreate,
       onStartErase,
       onToggleDebug,
       onOpenShell,
-      selected,
       startLogsStream,
     ]
   );

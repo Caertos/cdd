@@ -183,7 +183,7 @@ export function useControls(containers = [], overrides = {}) {
         actionFn: async (id) => await actions.removeContainer(id),
         actionLabel: 'Erasing',
         actionVerb: 'erase',
-        selected: selection.selected,
+        container: selection.selectedContainer,
       });
       actions.setMessageColor('yellow');
     },
@@ -335,7 +335,7 @@ export function useControls(containers = [], overrides = {}) {
           actionFn: async (id) => await actions.startContainer(id),
           actionLabel: 'Starting',
           actionVerb: 'start',
-          selected: selection.selected,
+          container: selection.selectedContainer,
           stateCheck: (c) =>
             (c.state === 'running' || c.status === 'running') &&
             'Container is already running.',
@@ -348,7 +348,7 @@ export function useControls(containers = [], overrides = {}) {
           actionFn: async (id) => await actions.stopContainer(id),
           actionLabel: 'Stopping',
           actionVerb: 'stop',
-          selected: selection.selected,
+          container: selection.selectedContainer,
           stateCheck: (c) =>
             (c.state === 'exited' ||
               c.status === 'exited' ||
@@ -364,7 +364,7 @@ export function useControls(containers = [], overrides = {}) {
           actionFn: async (id) => await actions.restartContainer(id),
           actionLabel: 'Restarting',
           actionVerb: 'restart',
-          selected: selection.selected,
+          container: selection.selectedContainer,
         });
       },
       'container.logs': () => {

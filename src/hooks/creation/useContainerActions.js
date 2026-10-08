@@ -13,11 +13,10 @@ import {
  * Handles feedback messages and exposes helpers for each action.
  *
  * @param {Object} params
- * @param {Array} params.containers - List of containers
  * @param {Function} params.onAction - Callback after action is performed
  * @returns {Object} Action helpers and feedback state
  */
-export function useContainerActions({ containers, onAction }) {
+export function useContainerActions({ onAction }) {
   const [message, setMessage] = useState('');
   const [messageColor, setMessageColor] = useState('yellow');
 
@@ -56,17 +55,18 @@ export function useContainerActions({ containers, onAction }) {
    * @param {Function} actionFn - The async action function (start, stop, etc)
    * @param {string} actionLabel - Gerund shown while it runs ('Stopping')
    * @param {string} actionVerb - Infinitive used in the failure message ('stop')
-   * @param {number} selected - Index of selected container
+   * @param {Object} container - The container to act on, or nullish when nothing
+   *   is selected. The early exit below is what keeps a keystroke from reaching
+   *   Docker with nothing to act on.
    * @param {Function} [stateCheck] - Optional function to check state before action
    */
   async function handleAction({
     actionFn,
     actionLabel,
     actionVerb,
-    selected,
+    container,
     stateCheck,
   }) {
-    const container = containers[selected];
     if (!container) return;
     if (stateCheck) {
       const checkMsg = stateCheck(container);
