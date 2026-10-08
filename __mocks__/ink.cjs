@@ -27,6 +27,12 @@ exports.__resetInput = () => { _inputHandler = null; };
 
 exports.useApp = () => ({ exit: () => {} });
 
+// Non-TTY stdout under Jest: no measurable rows, but the shape real components
+// expect (useTerminalHeight reads `.rows` and subscribes to `resize`).
+exports.useStdout = () => ({
+  stdout: { rows: undefined, on: () => {}, off: () => {} },
+});
+
 // Under ESM, named exports are validated at link time: this mock must export
 // everything the app imports from 'ink', even if a test does not use it.
 exports.Spacer = () => React.createElement('div', { 'data-spacer': true });
