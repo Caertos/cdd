@@ -32,6 +32,20 @@ export const STRINGS = {
     lostTarget: 'The selected container no longer exists',
   },
 
+  // ── Filter (TASK-9) ──
+  // The filter field, its header summary and the "nothing matches" state. The
+  // query is echoed back so the user sees what is being filtered on.
+  filter: {
+    label: 'Search (name, image or state):',
+    // Header summary while a query is active: shown, total and the query.
+    summary: (visible, total, query) =>
+      `${visible} of ${total} containers · search: "${query}"`,
+    // ContainerSection when the query hides everything. This is not the
+    // EmptyState: the containers are there, the query just matched none.
+    noMatch: (total, query) => `0 of ${total} containers match "${query}"`,
+    noMatchHint: 'Press Esc to clear the search',
+  },
+
   // ── ContainerRow ──
   stateRunning: '🟢 RUNNING',
   stateExited: '🔴 EXITED',
@@ -188,6 +202,7 @@ export const STRINGS = {
   helpClose: 'Press ? or Esc to close',
   contextLabels: {
     list: 'Container List',
+    filter: 'Search',
     wizard: 'Creation Wizard',
     'wizard-list': 'Suggestion List',
     'wizard-discard': 'Discard Confirmation',

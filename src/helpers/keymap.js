@@ -7,7 +7,7 @@
 
 /**
  * Context identifiers. In each instant CDD is in exactly one context.
- * @typedef {'list'|'wizard'|'wizard-list'|'wizard-discard'|'wizard-review'|'logs'|'confirm'|'help'|'debug'} ContextId
+ * @typedef {'list'|'filter'|'wizard'|'wizard-list'|'wizard-discard'|'wizard-review'|'logs'|'confirm'|'help'|'debug'} ContextId
  */
 
 /**
@@ -58,7 +58,7 @@ export const KEYMAP = {
       keys: ['l'],
       label: 'Logs',
       help: 'Open the logs viewer',
-      priority: 70,
+      priority: 45,
       when: (s) => s.hasSelection,
     },
     {
@@ -120,8 +120,8 @@ export const KEYMAP = {
       id: 'app.search',
       keys: ['/'],
       label: 'Search',
-      help: 'Search containers',
-      priority: 25,
+      help: 'Search containers by name, image or state',
+      priority: 70,
     },
     {
       id: 'sort.cycle',
@@ -167,6 +167,32 @@ export const KEYMAP = {
       help: 'Keep the container that failed',
       priority: 94,
       when: (s) => s.confirmCleanup,
+    },
+  ],
+  // The filter field. Almost every character is text and is resolved before
+  // the keymap (see useControls' handleFilterKey), so only the two control keys
+  // — and Help — live here. Enter keeps the query, Esc clears it (§3.1, §5.6).
+  filter: [
+    {
+      id: 'filter.apply',
+      keys: ['enter'],
+      label: 'Apply',
+      help: 'Close the filter and keep it',
+      priority: 90,
+    },
+    {
+      id: 'filter.clear',
+      keys: ['escape'],
+      label: 'Clear',
+      help: 'Close the filter and clear it',
+      priority: 80,
+    },
+    {
+      id: 'app.help',
+      keys: ['?'],
+      label: 'Help',
+      help: 'Show this help',
+      priority: 5,
     },
   ],
   wizard: [
@@ -527,6 +553,7 @@ export const KEYMAP = {
  * @param {boolean} [state.confirmDiscard]
  * @param {boolean} [state.showHelp]
  * @param {boolean} [state.showLogs]
+ * @param {boolean} [state.isFiltering] - The list filter field is open
  * @param {boolean} [state.creatingContainer]
  * @param {boolean} [state.hasActiveList]
  * @param {boolean} [state.showDebugLogs]
@@ -539,6 +566,7 @@ export function getActiveContext(state) {
   if (state.confirmErase) return 'confirm';
   if (state.showHelp) return 'help';
   if (state.showLogs) return 'logs';
+  if (state.isFiltering) return 'filter';
   if (state.creatingContainer && state.confirmDiscard) return 'wizard-discard';
   if (state.creatingContainer && state.wizardStep === 4) return 'wizard-review';
   if (state.creatingContainer && state.hasActiveList) return 'wizard-list';

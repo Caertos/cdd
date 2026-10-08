@@ -433,3 +433,51 @@ describe('the sort key (TASK-9 PR C)', () => {
     }
   });
 });
+
+describe('the filter context (TASK-9 PR D)', () => {
+  test('getActiveContext returns filter while the field is open', () => {
+    expect(getActiveContext({ isFiltering: true })).toBe('filter');
+  });
+
+  test('filter sits above list but below confirm, help and logs', () => {
+    expect(getActiveContext({ isFiltering: true, showLogs: true })).toBe(
+      'logs'
+    );
+    expect(getActiveContext({ isFiltering: true, showHelp: true })).toBe(
+      'help'
+    );
+    expect(getActiveContext({ isFiltering: true, confirmErase: true })).toBe(
+      'confirm'
+    );
+    // Without the field, the list is still the fallback.
+    expect(getActiveContext({ isFiltering: false })).toBe('list');
+  });
+
+  test('Enter and Esc resolve to filter.apply and filter.clear', () => {
+    const state = { isFiltering: true };
+    expect(resolveKey('filter', '', { return: true }, state).id).toBe(
+      'filter.apply'
+    );
+    expect(resolveKey('filter', '', { escape: true }, state).id).toBe(
+      'filter.clear'
+    );
+    // And nothing else: a character is text, not a binding.
+    expect(resolveKey('filter', 'p', {}, state)).toBeNull();
+  });
+
+  test('the filter keys have handlers in useControls', () => {
+    const source = fs.readFileSync(
+      path.resolve('src/hooks/useControls.js'),
+      'utf8'
+    );
+    for (const id of ['app.search', 'filter.apply', 'filter.clear']) {
+      expect(source).toContain(`'${id}':`);
+    }
+  });
+
+  test('the filter opens on /', () => {
+    expect(resolveKey('list', '/', {}, { hasSelection: true }).id).toBe(
+      'app.search'
+    );
+  });
+});
