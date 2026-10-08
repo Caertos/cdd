@@ -16,6 +16,15 @@ export const STRINGS = {
   // ── ContainerSection ──
   noContainers: 'No containers found',
 
+  // ── Selection (TASK-9) ──
+  // Copy for the message line when the selection is anchored to a container
+  // that no longer exists and has fallen back to the neighbour that took its
+  // slot. It sits next to the list's own strings because it is about the list
+  // losing a row, not about any single component.
+  selection: {
+    lostTarget: 'The selected container no longer exists',
+  },
+
   // ── ContainerRow ──
   stateRunning: '🟢 RUNNING',
   stateExited: '🔴 EXITED',

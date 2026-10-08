@@ -23,6 +23,7 @@ import {
 import { hostPortsOf } from '../helpers/portUtils.js';
 import { withContext } from '../helpers/errorMessage.js';
 import { DB_IMAGES } from '../helpers/constants.js';
+import { STRINGS } from '../helpers/strings.js';
 import { useDiagnostics } from './useDiagnostics.js';
 import {
   getActiveContext,
@@ -41,6 +42,14 @@ const NOOP_LAUNCHER = {
   keepWaiting: () => {},
   reset: () => {},
 };
+
+/**
+ * Docker states on which `stop` has nothing left to do: the container is not
+ * running, so the call can only come back with a message. Docker reports these
+ * in `state` (lower-case, copied verbatim by containerList.js); `status` is its
+ * display string and is only consulted for shapes that carry it alone.
+ */
+const NOT_STOPPABLE_STATES = ['exited', 'stopped', 'created'];
 
 // Principal hook to manage user inputs and control the app state
 /** The fix creates the replacement stopped; say how to start it. */
@@ -85,7 +94,10 @@ export function useControls(containers = [], overrides = {}) {
   const lastCreationRef = React.useRef(null);
 
   // — Modular hooks —
-  const actions = useContainerActions({ containers });
+  // No props to pass: the hook stopped reading `containers` when the callers
+  // below it moved to the container object, and this call site has no
+  // `onAction` either — the list refreshes on its own polling loop.
+  const actions = useContainerActions();
   const shellMode = useShellMode();
 
   const creation = useContainerCreation({
@@ -153,10 +165,10 @@ export function useControls(containers = [], overrides = {}) {
   });
 
   const logsViewer = useLogsViewer();
-  const selection = useContainerSelection(containers.length);
+  const selection = useContainerSelection(containers);
   const debugLogs = useDebugLogs();
 
-  const selectedContainer = containers[selection.selected] ?? null;
+  const selectedContainer = selection.selectedContainer;
   const selectedVerdict = selectedContainer
     ? (health.get(selectedContainer.id) ?? null)
     : null;
@@ -167,6 +179,12 @@ export function useControls(containers = [], overrides = {}) {
     selectedContainer ? (details.get(selectedContainer.id) ?? null) : null
   );
   const canFix = Boolean(diagnostics.diagnosis?.fix);
+  // D24: computed once, here, so the keymap predicate only has to read a name.
+  // A missing container yields true: `hasSelection` already hides the key, and
+  // guessing 'not stoppable' from absent data would take the key away.
+  const canStop =
+    !NOT_STOPPABLE_STATES.includes(selectedContainer?.state) &&
+    !NOT_STOPPABLE_STATES.includes(selectedContainer?.status);
 
   // Allow overrides for testability (e.g. injecting a mock triggerHubSearch)
   const triggerHubSearch =
@@ -183,7 +201,7 @@ export function useControls(containers = [], overrides = {}) {
         actionFn: async (id) => await actions.removeContainer(id),
         actionLabel: 'Erasing',
         actionVerb: 'erase',
-        selected: selection.selected,
+        container: selection.selectedContainer,
       });
       actions.setMessageColor('yellow');
     },
@@ -213,6 +231,50 @@ export function useControls(containers = [], overrides = {}) {
       actions.setMessageColor('');
     },
   });
+
+  // Is the message line currently owned by something that must survive?
+  // The wizard writes its own message while it is open, and each of the three
+  // yes/no questions owns the line until it is answered.
+  const questionOnScreen =
+    creatingContainer ||
+    eraseConfirmation.confirmErase ||
+    quitConfirmation.active ||
+    discardConfirmation.active ||
+    pendingCleanup !== null;
+
+  // The selection pulse is true for exactly one commit (see
+  // useContainerSelection), so the only place that can observe it is an effect
+  // running during that commit. This one is declared after the selection hook,
+  // so React runs it in that same commit.
+  const pendingLostSelectionRef = React.useRef(false);
+
+  /**
+   * Turn the lost-selection pulse into something the user can read.
+   *
+   * What it does when the message line is busy: it waits. An erase question, a
+   * cleanup question, a quit question and the wizard all own that line, and
+   * principle 1 says a question is never overwritten — a warning that erases
+   * "Are you sure you want to erase this container? (y/n)" would leave the
+   * user pressing `y` at a question they can no longer read. Ordinary feedback
+   * ("Stopping container...", a success line) is not guarded: it expires on its
+   * own, and a transient note is a cheap thing to replace. The pulse is a
+   * pulse, so it cannot simply be dropped when a question is up: the flag is
+   * latched in a ref and released the moment the line is free again.
+   *
+   * Yellow, not red: red in this app means an operation failed, and nothing
+   * failed here. The notice is that the thing under the highlight is not the
+   * thing that was picked.
+   */
+  React.useEffect(() => {
+    if (selection.lostSelection) {
+      pendingLostSelectionRef.current = true;
+    }
+    if (!pendingLostSelectionRef.current || questionOnScreen) {
+      return;
+    }
+    pendingLostSelectionRef.current = false;
+    actions.setTimedMessage(STRINGS.selection.lostTarget, 'yellow', 4000);
+  }, [selection.lostSelection, questionOnScreen, actions]);
 
   /** Show the "Esc now goes back" hint once per wizard session. */
   function showBackHintOnce() {
@@ -268,7 +330,7 @@ export function useControls(containers = [], overrides = {}) {
         creation.suggestions.length > 0 ||
         (creation.hubResults ?? []).length > 0,
       showDebugLogs: debugLogs.showDebugLogs,
-      hasSelection: selection.selected >= 0 && containers.length > 0,
+      hasSelection: Boolean(selection.selectedContainer),
       wizardStep: creation.step,
       isSecretField: creation.isCurrentFieldSecret(),
       hasSecrets: creation.hasSecretsInEnv(),
@@ -276,6 +338,7 @@ export function useControls(containers = [], overrides = {}) {
       canLaunch: launcher.canLaunch,
       launchStatus: launcher.status,
       canFix,
+      canStop,
       confirmCleanup: pendingCleanup !== null,
     }),
     [
@@ -290,12 +353,13 @@ export function useControls(containers = [], overrides = {}) {
       creation.step,
       creation.envInput,
       debugLogs.showDebugLogs,
-      selection.selected,
+      selection.selectedContainer,
       containers.length,
       connection?.status,
       launcher.canLaunch,
       launcher.status,
       canFix,
+      canStop,
       pendingCleanup,
     ]
   );
@@ -329,57 +393,65 @@ export function useControls(containers = [], overrides = {}) {
     () => ({
       // List context
       'container.start': () => {
-        const container = containers[selection.selected];
+        const container = selection.selectedContainer;
         if (!container) return;
         actions.handleAction({
           actionFn: async (id) => await actions.startContainer(id),
           actionLabel: 'Starting',
           actionVerb: 'start',
-          selected: selection.selected,
+          container: selection.selectedContainer,
           stateCheck: (c) =>
             (c.state === 'running' || c.status === 'running') &&
             'Container is already running.',
         });
       },
       'container.stop': () => {
-        const container = containers[selection.selected];
+        const container = selection.selectedContainer;
         if (!container) return;
         actions.handleAction({
           actionFn: async (id) => await actions.stopContainer(id),
           actionLabel: 'Stopping',
           actionVerb: 'stop',
-          selected: selection.selected,
+          container: selection.selectedContainer,
+          // D24: a container that was created and never ran is already
+          // stopped, and Docker answers `stop` on it with a raw engine error.
+          // Only `state` carries that: the list mapper copies Docker's
+          // `State: 'created'` (lower-case) into `state` while `status` gets
+          // the display string `Created`, so the `status` alternatives below
+          // are tolerance for shapes that only carry `status` and cannot
+          // match this one.
           stateCheck: (c) =>
             (c.state === 'exited' ||
               c.status === 'exited' ||
               c.state === 'stopped' ||
-              c.status === 'stopped') &&
+              c.status === 'stopped' ||
+              c.state === 'created') &&
             'Container is already stopped.',
         });
       },
       'container.restart': () => {
-        const container = containers[selection.selected];
+        const container = selection.selectedContainer;
         if (!container) return;
         actions.handleAction({
           actionFn: async (id) => await actions.restartContainer(id),
           actionLabel: 'Restarting',
           actionVerb: 'restart',
-          selected: selection.selected,
+          container: selection.selectedContainer,
         });
       },
       'container.logs': () => {
-        const container = containers[selection.selected];
+        const container = selection.selectedContainer;
         if (!container) return;
         logsViewer.openLogs();
         startLogsStream(container.id);
       },
       'container.shell': () => {
-        const container = containers[selection.selected];
+        const container = selection.selectedContainer;
         if (!container) return;
         shellMode.openShell(container);
       },
       'container.erase': () => {
-        const container = containers[selection.selected];
+        const container = selection.selectedContainer;
         if (!container) return;
         eraseConfirmation.startErase();
         actions.setMessage(
@@ -394,7 +466,7 @@ export function useControls(containers = [], overrides = {}) {
         // Two F presses in quick succession would interleave two reads of the
         // same container and open the wizard twice.
         if (fixInFlightRef.current) return;
-        const container = containers[selection.selected];
+        const container = selection.selectedContainer;
         const fix = diagnostics.diagnosis?.fix;
         if (!container || !fix) return;
         fixInFlightRef.current = true;
@@ -491,8 +563,8 @@ export function useControls(containers = [], overrides = {}) {
           'gray'
         );
       },
-      'nav.up': () => selection.handleNavigation('', { upArrow: true }),
-      'nav.down': () => selection.handleNavigation('', { downArrow: true }),
+      'nav.up': () => selection.move(-1),
+      'nav.down': () => selection.move(1),
       'debug.toggle': () => debugLogs.setShowDebugLogs((prev) => !prev),
       'app.search': () => {}, // Placeholder — search not yet implemented
       'app.quit': () => {
@@ -608,7 +680,7 @@ export function useControls(containers = [], overrides = {}) {
     }),
     [
       containers,
-      selection.selected,
+      selection.selectedContainer,
       actions,
       logsViewer,
       startLogsStream,

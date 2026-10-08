@@ -23,13 +23,14 @@ await jest.unstable_mockModule('ink', () => ({
 
 // Mock containerActions — expose all named exports so dependents don't break
 const mockSvcCreateContainer = jest.fn();
+const mockSvcStopContainer = jest.fn().mockResolvedValue(undefined);
 await jest.unstable_mockModule(
   '../src/helpers/dockerService/serviceComponents/containerActions.js',
   () => ({
     createContainer: mockSvcCreateContainer,
     removeContainer: jest.fn().mockResolvedValue(undefined),
     startContainer: jest.fn().mockResolvedValue(undefined),
-    stopContainer: jest.fn().mockResolvedValue(undefined),
+    stopContainer: mockSvcStopContainer,
     restartContainer: jest.fn().mockResolvedValue(undefined),
   })
 );
@@ -79,6 +80,7 @@ await jest.unstable_mockModule(
 );
 
 const { useControls } = await import('../src/hooks/useControls.js');
+const { STRINGS } = await import('../src/helpers/strings.js');
 
 function HookTester({ containers, expose, overrides }) {
   const hook = useControls(containers, overrides);
@@ -1008,6 +1010,121 @@ describe('useControls — the fix key (TASK-8)', () => {
   });
 });
 
+describe('useControls — the stop key (D24: a created container is already stopped)', () => {
+  // The shapes Docker really sends: `State` is lower-case and is what the list
+  // mapper copies into `state`, while `status` gets the display string.
+  const created = {
+    id: 'c-created',
+    name: 'nunca-arrancado',
+    image: 'nginx:1.27-alpine',
+    state: 'created',
+    status: 'Created',
+    ports: [],
+  };
+  const running = {
+    id: 'c-running',
+    name: 'en-marcha',
+    image: 'nginx:1.27-alpine',
+    state: 'running',
+    status: 'Up 3 seconds',
+    ports: [],
+  };
+  const exited = {
+    id: 'c-exited',
+    name: 'terminado',
+    image: 'nginx:1.27-alpine',
+    state: 'exited',
+    status: 'Exited (0) 2 seconds ago',
+    ports: [],
+  };
+  const stopped = {
+    id: 'c-stopped',
+    name: 'detenido',
+    image: 'nginx:1.27-alpine',
+    state: 'stopped',
+    status: 'Stopped',
+    ports: [],
+  };
+
+  const WARNING = 'Container is already stopped.';
+  const ENGINE_ERROR = 'Error response from daemon: container already stopped';
+
+  async function pressStopOn(container) {
+    const expose = { current: null };
+    render(<HookTester containers={[container]} expose={expose} />);
+    await act(async () => {});
+    await act(async () => {
+      expose.current.dispatch('container.stop');
+    });
+    await act(async () => {});
+    return expose;
+  }
+
+  beforeEach(() => {
+    mockSvcStopContainer.mockClear();
+  });
+
+  afterEach(() => {
+    mockSvcStopContainer.mockReset();
+    mockSvcStopContainer.mockResolvedValue(undefined);
+  });
+
+  test('p on a created container explains itself instead of calling Docker', async () => {
+    const expose = await pressStopOn(created);
+
+    expect(mockSvcStopContainer).not.toHaveBeenCalled();
+    expect(expose.current.actions.message).toBe(WARNING);
+    expect(expose.current.actions.messageColor).toBe('yellow');
+  });
+
+  test('the raw engine error never reaches the user for a created container', async () => {
+    // The engine refuses `stop` on a container that never ran. If the check
+    // lets it through, this is exactly what the user is shown.
+    mockSvcStopContainer.mockRejectedValue(new Error(ENGINE_ERROR));
+
+    const expose = await pressStopOn(created);
+
+    expect(expose.current.actions.message).toBe(WARNING);
+    expect(expose.current.actions.message).not.toContain(ENGINE_ERROR);
+    expect(expose.current.actions.message).not.toContain('Failed to stop');
+    expect(mockSvcStopContainer).not.toHaveBeenCalled();
+  });
+
+  test('p on a running container still stops it', async () => {
+    const expose = await pressStopOn(running);
+
+    expect(mockSvcStopContainer).toHaveBeenCalledWith('c-running');
+    expect(expose.current.actions.message).toBe(
+      'Stopping container successful.'
+    );
+  });
+
+  test('a rejected stop on a running container does surface the engine error', async () => {
+    // Control for the test above: the rejection is reachable and visible, so
+    // its absence for a created container is the fix and not a dead mock.
+    mockSvcStopContainer.mockRejectedValue(new Error(ENGINE_ERROR));
+
+    const expose = await pressStopOn(running);
+
+    expect(mockSvcStopContainer).toHaveBeenCalledWith('c-running');
+    expect(expose.current.actions.message).toContain(ENGINE_ERROR);
+  });
+
+  test('p on an exited container still short-circuits', async () => {
+    const expose = await pressStopOn(exited);
+
+    expect(mockSvcStopContainer).not.toHaveBeenCalled();
+    expect(expose.current.actions.message).toBe(WARNING);
+  });
+
+  test('p on a stopped container still short-circuits', async () => {
+    const expose = await pressStopOn(stopped);
+
+    expect(mockSvcStopContainer).not.toHaveBeenCalled();
+    expect(expose.current.actions.message).toBe(WARNING);
+  });
+});
+
 describe('useControls — the failed container is never deleted silently', () => {
   const broken = {
     id: 'c1',
@@ -1809,5 +1926,177 @@ describe('useControls — a failed fix never latches the key', () => {
       await expose.current.dispatch('container.fix');
     });
     expect(expose.current.creationStep).toBe(4);
+  });
+});
+
+describe('useControls — the lost selection is announced (TASK-9 §3.3)', () => {
+  const web = { id: 'a', name: 'web', state: 'running', status: 'Up 1 m' };
+  const db = { id: 'b', name: 'db', state: 'running', status: 'Up 1 m' };
+  const cache = { id: 'c', name: 'cache', state: 'running', status: 'Up 1 m' };
+
+  /**
+   * Renders the hook and hands back a way to swap the container list.
+   *
+   * `lostSelection` is a one-commit pulse: `act` flushes the commit that has it
+   * true before it returns, so it cannot be read from `result.current` after
+   * the fact. The effect that reads it runs in the same commit, which is why
+   * asserting on `actions.message` after the act works at all.
+   */
+  async function setup(list) {
+    const expose = { current: null };
+    const rendered = render(
+      <HookTester containers={list} expose={expose} overrides={{}} />
+    );
+    await act(async () => {});
+    return {
+      expose,
+      async withContainers(next) {
+        await act(async () => {
+          rendered.rerender(
+            <HookTester containers={next} expose={expose} overrides={{}} />
+          );
+        });
+        await act(async () => {});
+      },
+    };
+  }
+
+  test('the selected container vanishing is reported', async () => {
+    const { expose, withContainers } = await setup([web, db, cache]);
+    // The selection is anchored by id; nav.down puts it on `db`, the row that
+    // the tests below delete.
+    await act(async () => {
+      expose.current.dispatch('nav.down');
+    });
+    expect(expose.current.selected).toBe(1);
+
+    // `db` is gone; `cache` slid into the vacated slot and is now highlighted.
+    await withContainers([web, cache]);
+
+    expect(expose.current.actions.message).toBe(STRINGS.selection.lostTarget);
+    expect(expose.current.actions.messageColor).toBe('yellow');
+  });
+
+  test('a different container vanishing is not reported', async () => {
+    const { expose, withContainers } = await setup([web, db, cache]);
+    // The selection is anchored by id; nav.down puts it on `db`, the row that
+    // the tests below delete.
+    await act(async () => {
+      expose.current.dispatch('nav.down');
+    });
+    expect(expose.current.selected).toBe(1);
+
+    // The common case, and the whole reason the selection is anchored by id.
+    await withContainers([db, cache]);
+
+    expect(expose.current.actions.message).not.toBe(
+      STRINGS.selection.lostTarget
+    );
+    // Still `db`, now at the top because `web` went away above it.
+    expect(expose.current.selected).toBe(0);
+  });
+
+  test('a reorder is not reported', async () => {
+    const { expose, withContainers } = await setup([web, db, cache]);
+    // The selection is anchored by id; nav.down puts it on `db`, the row that
+    // the tests below delete.
+    await act(async () => {
+      expose.current.dispatch('nav.down');
+    });
+    expect(expose.current.selected).toBe(1);
+
+    // The slot changed, the container did not. Warning here would teach the
+    // user to ignore the warning.
+    await withContainers([cache, web, db]);
+
+    expect(expose.current.actions.message).not.toBe(
+      STRINGS.selection.lostTarget
+    );
+    expect(expose.current.selected).toBe(2);
+  });
+
+  test('a refresh with identical contents is not reported', async () => {
+    const { expose, withContainers } = await setup([web, db, cache]);
+    // The selection is anchored by id; nav.down puts it on `db`, the row that
+    // the tests below delete.
+    await act(async () => {
+      expose.current.dispatch('nav.down');
+    });
+    expect(expose.current.selected).toBe(1);
+
+    // Docker polls every few seconds. A new array with the same rows is the
+    // most frequent event in the app; if it warned, the warning meant nothing.
+    await withContainers([web, db, cache]);
+
+    expect(expose.current.actions.message).not.toBe(
+      STRINGS.selection.lostTarget
+    );
+  });
+
+  test('the first paint of a non-empty list is not reported', async () => {
+    const expose = { current: null };
+    const rendered = render(
+      <HookTester containers={[]} expose={expose} overrides={{}} />
+    );
+    await act(async () => {});
+
+    await act(async () => {
+      rendered.rerender(
+        <HookTester containers={[web, db]} expose={expose} overrides={{}} />
+      );
+    });
+    await act(async () => {});
+
+    // Nothing was ever chosen, so nothing was lost.
+    expect(expose.current.actions.message).not.toBe(
+      STRINGS.selection.lostTarget
+    );
+    expect(expose.current.selected).toBe(0);
+  });
+
+  test('the warning clears itself instead of staying over the list', async () => {
+    jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate'] });
+    try {
+      const { expose, withContainers } = await setup([web, db, cache]);
+      await act(async () => {
+        expose.current.dispatch('nav.down');
+      });
+      await withContainers([web, cache]);
+      expect(expose.current.actions.message).toBe(STRINGS.selection.lostTarget);
+
+      await act(async () => {
+        jest.advanceTimersByTime(4000);
+      });
+      expect(expose.current.actions.message).toBe('');
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  test('an erase question on screen is not overwritten', async () => {
+    const { expose, withContainers } = await setup([web, db, cache]);
+    // The selection is anchored by id; nav.down puts it on `db`, the row that
+    // the tests below delete.
+    await act(async () => {
+      expose.current.dispatch('nav.down');
+    });
+    expect(expose.current.selected).toBe(1);
+    await act(async () => {
+      expose.current.dispatch('container.erase');
+    });
+    const question = expose.current.actions.message;
+    expect(question).toContain('Are you sure');
+
+    // The pulse lands while the user is still answering. The question owns
+    // the line, so the warning is held back rather than clobbering it.
+    await withContainers([web, cache]);
+    expect(expose.current.actions.message).toBe(question);
+
+    // Answering frees the line, and the held warning is released.
+    await act(async () => {
+      expose.current.dispatch('confirm.no');
+    });
+    await act(async () => {});
+    expect(expose.current.actions.message).toBe(STRINGS.selection.lostTarget);
   });
 });

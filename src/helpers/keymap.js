@@ -37,7 +37,13 @@ export const KEYMAP = {
       label: 'Stop',
       help: 'Stop the selected container',
       priority: 85,
-      when: (s) => s.hasSelection,
+      // D24: there is nothing to stop on a container that is not running, so
+      // the key stays off the HUD and the help panel instead of waiting to be
+      // pressed. `canStop` is computed by useControls; an unknown value keeps
+      // the key, because a key that vanishes wrongly is worse than one that is
+      // briefly a no-op — the handler's stateCheck still refuses the call and
+      // says why.
+      when: (s) => s.hasSelection && s.canStop !== false,
     },
     {
       id: 'container.restart',
