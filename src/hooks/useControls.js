@@ -23,6 +23,7 @@ import {
 import { hostPortsOf } from '../helpers/portUtils.js';
 import { withContext } from '../helpers/errorMessage.js';
 import { DB_IMAGES } from '../helpers/constants.js';
+import { STRINGS } from '../helpers/strings.js';
 import { useDiagnostics } from './useDiagnostics.js';
 import {
   getActiveContext,
@@ -217,6 +218,50 @@ export function useControls(containers = [], overrides = {}) {
       actions.setMessageColor('');
     },
   });
+
+  // Is the message line currently owned by something that must survive?
+  // The wizard writes its own message while it is open, and each of the three
+  // yes/no questions owns the line until it is answered.
+  const questionOnScreen =
+    creatingContainer ||
+    eraseConfirmation.confirmErase ||
+    quitConfirmation.active ||
+    discardConfirmation.active ||
+    pendingCleanup !== null;
+
+  // The selection pulse is true for exactly one commit (see
+  // useContainerSelection), so the only place that can observe it is an effect
+  // running during that commit. This one is declared after the selection hook,
+  // so React runs it in that same commit.
+  const pendingLostSelectionRef = React.useRef(false);
+
+  /**
+   * Turn the lost-selection pulse into something the user can read.
+   *
+   * What it does when the message line is busy: it waits. An erase question, a
+   * cleanup question, a quit question and the wizard all own that line, and
+   * principle 1 says a question is never overwritten — a warning that erases
+   * "Are you sure you want to erase this container? (y/n)" would leave the
+   * user pressing `y` at a question they can no longer read. Ordinary feedback
+   * ("Stopping container...", a success line) is not guarded: it expires on its
+   * own, and a transient note is a cheap thing to replace. The pulse is a
+   * pulse, so it cannot simply be dropped when a question is up: the flag is
+   * latched in a ref and released the moment the line is free again.
+   *
+   * Yellow, not red: red in this app means an operation failed, and nothing
+   * failed here. The notice is that the thing under the highlight is not the
+   * thing that was picked.
+   */
+  React.useEffect(() => {
+    if (selection.lostSelection) {
+      pendingLostSelectionRef.current = true;
+    }
+    if (!pendingLostSelectionRef.current || questionOnScreen) {
+      return;
+    }
+    pendingLostSelectionRef.current = false;
+    actions.setTimedMessage(STRINGS.selection.lostTarget, 'yellow', 4000);
+  }, [selection.lostSelection, questionOnScreen, actions]);
 
   /** Show the "Esc now goes back" hint once per wizard session. */
   function showBackHintOnce() {

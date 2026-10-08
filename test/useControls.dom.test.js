@@ -80,6 +80,7 @@ await jest.unstable_mockModule(
 );
 
 const { useControls } = await import('../src/hooks/useControls.js');
+const { STRINGS } = await import('../src/helpers/strings.js');
 
 function HookTester({ containers, expose, overrides }) {
   const hook = useControls(containers, overrides);
@@ -1925,5 +1926,177 @@ describe('useControls — a failed fix never latches the key', () => {
       await expose.current.dispatch('container.fix');
     });
     expect(expose.current.creationStep).toBe(4);
+  });
+});
+
+describe('useControls — the lost selection is announced (TASK-9 §3.3)', () => {
+  const web = { id: 'a', name: 'web', state: 'running', status: 'Up 1 m' };
+  const db = { id: 'b', name: 'db', state: 'running', status: 'Up 1 m' };
+  const cache = { id: 'c', name: 'cache', state: 'running', status: 'Up 1 m' };
+
+  /**
+   * Renders the hook and hands back a way to swap the container list.
+   *
+   * `lostSelection` is a one-commit pulse: `act` flushes the commit that has it
+   * true before it returns, so it cannot be read from `result.current` after
+   * the fact. The effect that reads it runs in the same commit, which is why
+   * asserting on `actions.message` after the act works at all.
+   */
+  async function setup(list) {
+    const expose = { current: null };
+    const rendered = render(
+      <HookTester containers={list} expose={expose} overrides={{}} />
+    );
+    await act(async () => {});
+    return {
+      expose,
+      async withContainers(next) {
+        await act(async () => {
+          rendered.rerender(
+            <HookTester containers={next} expose={expose} overrides={{}} />
+          );
+        });
+        await act(async () => {});
+      },
+    };
+  }
+
+  test('the selected container vanishing is reported', async () => {
+    const { expose, withContainers } = await setup([web, db, cache]);
+    // The selection is anchored by id; nav.down puts it on `db`, the row that
+    // the tests below delete.
+    await act(async () => {
+      expose.current.dispatch('nav.down');
+    });
+    expect(expose.current.selected).toBe(1);
+
+    // `db` is gone; `cache` slid into the vacated slot and is now highlighted.
+    await withContainers([web, cache]);
+
+    expect(expose.current.actions.message).toBe(STRINGS.selection.lostTarget);
+    expect(expose.current.actions.messageColor).toBe('yellow');
+  });
+
+  test('a different container vanishing is not reported', async () => {
+    const { expose, withContainers } = await setup([web, db, cache]);
+    // The selection is anchored by id; nav.down puts it on `db`, the row that
+    // the tests below delete.
+    await act(async () => {
+      expose.current.dispatch('nav.down');
+    });
+    expect(expose.current.selected).toBe(1);
+
+    // The common case, and the whole reason the selection is anchored by id.
+    await withContainers([db, cache]);
+
+    expect(expose.current.actions.message).not.toBe(
+      STRINGS.selection.lostTarget
+    );
+    // Still `db`, now at the top because `web` went away above it.
+    expect(expose.current.selected).toBe(0);
+  });
+
+  test('a reorder is not reported', async () => {
+    const { expose, withContainers } = await setup([web, db, cache]);
+    // The selection is anchored by id; nav.down puts it on `db`, the row that
+    // the tests below delete.
+    await act(async () => {
+      expose.current.dispatch('nav.down');
+    });
+    expect(expose.current.selected).toBe(1);
+
+    // The slot changed, the container did not. Warning here would teach the
+    // user to ignore the warning.
+    await withContainers([cache, web, db]);
+
+    expect(expose.current.actions.message).not.toBe(
+      STRINGS.selection.lostTarget
+    );
+    expect(expose.current.selected).toBe(2);
+  });
+
+  test('a refresh with identical contents is not reported', async () => {
+    const { expose, withContainers } = await setup([web, db, cache]);
+    // The selection is anchored by id; nav.down puts it on `db`, the row that
+    // the tests below delete.
+    await act(async () => {
+      expose.current.dispatch('nav.down');
+    });
+    expect(expose.current.selected).toBe(1);
+
+    // Docker polls every few seconds. A new array with the same rows is the
+    // most frequent event in the app; if it warned, the warning meant nothing.
+    await withContainers([web, db, cache]);
+
+    expect(expose.current.actions.message).not.toBe(
+      STRINGS.selection.lostTarget
+    );
+  });
+
+  test('the first paint of a non-empty list is not reported', async () => {
+    const expose = { current: null };
+    const rendered = render(
+      <HookTester containers={[]} expose={expose} overrides={{}} />
+    );
+    await act(async () => {});
+
+    await act(async () => {
+      rendered.rerender(
+        <HookTester containers={[web, db]} expose={expose} overrides={{}} />
+      );
+    });
+    await act(async () => {});
+
+    // Nothing was ever chosen, so nothing was lost.
+    expect(expose.current.actions.message).not.toBe(
+      STRINGS.selection.lostTarget
+    );
+    expect(expose.current.selected).toBe(0);
+  });
+
+  test('the warning clears itself instead of staying over the list', async () => {
+    jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate'] });
+    try {
+      const { expose, withContainers } = await setup([web, db, cache]);
+      await act(async () => {
+        expose.current.dispatch('nav.down');
+      });
+      await withContainers([web, cache]);
+      expect(expose.current.actions.message).toBe(STRINGS.selection.lostTarget);
+
+      await act(async () => {
+        jest.advanceTimersByTime(4000);
+      });
+      expect(expose.current.actions.message).toBe('');
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  test('an erase question on screen is not overwritten', async () => {
+    const { expose, withContainers } = await setup([web, db, cache]);
+    // The selection is anchored by id; nav.down puts it on `db`, the row that
+    // the tests below delete.
+    await act(async () => {
+      expose.current.dispatch('nav.down');
+    });
+    expect(expose.current.selected).toBe(1);
+    await act(async () => {
+      expose.current.dispatch('container.erase');
+    });
+    const question = expose.current.actions.message;
+    expect(question).toContain('Are you sure');
+
+    // The pulse lands while the user is still answering. The question owns
+    // the line, so the warning is held back rather than clobbering it.
+    await withContainers([web, cache]);
+    expect(expose.current.actions.message).toBe(question);
+
+    // Answering frees the line, and the held warning is released.
+    await act(async () => {
+      expose.current.dispatch('confirm.no');
+    });
+    await act(async () => {});
+    expect(expose.current.actions.message).toBe(STRINGS.selection.lostTarget);
   });
 });
