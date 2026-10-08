@@ -634,3 +634,150 @@ describe('normalizeForSearch folds letters that do not decompose', () => {
     expect(normalizeForSearch('CACHE')).toBe('cache');
   });
 });
+
+describe('healthWeight trusts only own properties', () => {
+  // Jest runs every file of the suite in ONE process (`--runInBand`), so a
+  // leaked Object.prototype key would break unrelated suites with a failure
+  // that looks random. Every key this block writes is listed once here, so
+  // the cleanup cannot drift away from the setup.
+  const POLLUTED_KEYS = ['level', 'bogus'];
+
+  /**
+   * Removes every pollution key this block adds, whatever its value.
+   * Deleting an absent key is a no-op, so it is safe to call twice.
+   */
+  function clearPollution() {
+    for (const key of POLLUTED_KEYS) {
+      delete Object.prototype[key];
+    }
+  }
+
+  /**
+   * Runs `body` with `entries` grafted onto Object.prototype and restores
+   * the prototype in a `finally`: an assertion that throws mid-body cannot
+   * leak the pollution into the next test, let alone the next file.
+   *
+   * @param {Object<string, unknown>} entries
+   * @param {() => void} body
+   */
+  function withPollution(entries, body) {
+    try {
+      Object.assign(Object.prototype, entries);
+      body();
+    } finally {
+      clearPollution();
+    }
+  }
+
+  // The independent net: `finally` covers a thrown assertion inside a body,
+  // this covers a body that never runs at all.
+  afterEach(clearPollution);
+
+  test('a verdict with no own level weighs as idle, even under pollution', () => {
+    // The trap this closes: reading `verdict.level` walks the prototype
+    // chain, so an empty verdict read Object.prototype.level and weighed 0.
+    // That verdict is exactly the "not inspected yet" case the module
+    // documents as idle, so broken containers would rise above it.
+    expect(healthWeight({})).toBe(3);
+    withPollution({ level: 'fail' }, () => {
+      expect(healthWeight({})).toBe(3);
+      expect(healthWeight(undefined)).toBe(3);
+      expect(healthWeight(null)).toBe(3);
+      expect(healthWeight({ code: 'running' })).toBe(3);
+    });
+  });
+
+  test('a level inherited from a prototype is not the verdict own level', () => {
+    // Two real ways an object carries a `level` it does not own: an explicit
+    // prototype, and a class instance reading it off its prototype.
+    const inherited = Object.create({ level: 'fail' });
+    expect(Object.hasOwn(inherited, 'level')).toBe(false);
+    expect(healthWeight(inherited)).toBe(3);
+
+    class FakeVerdict {}
+    FakeVerdict.prototype.level = 'fail';
+    const instance = new FakeVerdict();
+    expect(Object.hasOwn(instance, 'level')).toBe(false);
+    expect(healthWeight(instance)).toBe(3);
+
+    // Own property still wins over the inherited one it shadows.
+    const shadowing = Object.create({ level: 'fail' });
+    shadowing.level = 'warn';
+    expect(healthWeight(shadowing)).toBe(1);
+  });
+
+  test('an own level still decides the weight while the prototype is polluted', () => {
+    // The control: the own-property check must not over-block. Real verdicts
+    // come from `verdict()` in src/helpers/health.js, an object literal whose
+    // `level` is always own — so this fix must be invisible for them.
+    withPollution({ level: 'fail' }, () => {
+      expect(healthWeight(makeVerdict('crashed', 'fail'))).toBe(0);
+      expect(healthWeight(makeVerdict('restarting', 'warn'))).toBe(1);
+      expect(healthWeight(makeVerdict('running', 'ok'))).toBe(2);
+      expect(healthWeight(makeVerdict('stopped', 'idle'))).toBe(3);
+    });
+  });
+
+  test('the weight table ignores a numeric weight inherited from the prototype', () => {
+    // The other trust point: the table answered from Object.prototype too,
+    // and `typeof weight === 'number'` only catches an inherited FUNCTION
+    // (toString, constructor). An inherited NUMBER passed the guard and made
+    // an unknown level weigh 0 (fail) instead of falling back to idle.
+    withPollution({ bogus: 0 }, () => {
+      expect(healthWeight({ level: 'bogus' })).toBe(3);
+      // Object.prototype's own members keep falling back to idle.
+      expect(healthWeight({ level: 'toString' })).toBe(3);
+      expect(healthWeight({ level: 'constructor' })).toBe(3);
+      expect(healthWeight({ level: '__proto__' })).toBe(3);
+    });
+    // Any inherited number must be ignored, not just 0: a pollution value of
+    // 1 would drop the unknown level among the healthy containers instead.
+    for (const inherited of [1, 2, 3, -1, 0.5]) {
+      withPollution({ bogus: inherited }, () => {
+        expect(healthWeight({ level: 'bogus' })).toBe(3);
+      });
+    }
+  });
+
+  test("'state': an incomplete verdict keeps its place while the prototype is polluted", () => {
+    // alpha HAS a health entry, but the entry carries no `level` of its own —
+    // an incomplete health map (the shape TASK-9 §3.2 allows) reaches the
+    // sort as a real object, not as undefined. That is the case the empty
+    // verdict above describes at the user level: it must weigh as idle and
+    // close the list, even though its name would sort it to the front.
+    const containers = [
+      { id: 'p1', name: 'alpha', createdAt: 1700000030 }, // verdict with no level
+      { id: 'p2', name: 'bravo', createdAt: 1700000020 }, // warn
+      { id: 'p3', name: 'zulu', createdAt: 1700000010 }, // fail
+    ];
+    const health = new Map([
+      ['p1', { code: 'running', headline: '', facts: {} }],
+      ['p2', makeVerdict('restarting', 'warn')],
+      ['p3', makeVerdict('crashed', 'fail')],
+    ]);
+    const names = () =>
+      sortContainers(containers, 'state', { health }).map(
+        (container) => container.name
+      );
+
+    const expected = ['zulu', 'bravo', 'alpha'];
+    expect(names()).toEqual(expected);
+    // Under pollution alpha inherited 'fail' and outranked zulu, the only
+    // container that is actually broken.
+    withPollution({ level: 'fail' }, () => {
+      expect(names()).toEqual(expected);
+    });
+    // A verdict that does not own `level` is idle polluted or not.
+    withPollution({ level: 'warn' }, () => {
+      expect(names()).toEqual(expected);
+    });
+  });
+
+  test('leaves Object.prototype clean for every suite that runs next', () => {
+    // Runs last in this block on purpose: if a cleanup were ever removed,
+    // this is the test that says so instead of a stranger failing elsewhere.
+    for (const key of POLLUTED_KEYS) {
+      expect(Object.hasOwn(Object.prototype, key)).toBe(false);
+    }
+  });
+});

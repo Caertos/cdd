@@ -96,8 +96,22 @@ export function filterContainers(containers, query) {
 /**
  * Weight of each verdict level for the 'state' sort: lower sorts first,
  * so what is broken rises to the top of the list.
+ *
+ * Null prototype on purpose. A plain object literal answers a lookup from
+ * `Object.prototype`, so one polluted key (`Object.prototype.bogus = 0`)
+ * would hand a weight to a level that has none — and the `typeof` guard
+ * below only rejects inherited *functions*, not an inherited *number*.
+ * With no prototype every lookup is own-key only, and reading it stays the
+ * plain `HEALTH_WEIGHTS[level]` a reader expects.
+ *
+ * @type {Object<string, number>}
  */
-const HEALTH_WEIGHTS = { fail: 0, warn: 1, ok: 2, idle: 3 };
+const HEALTH_WEIGHTS = Object.assign(Object.create(null), {
+  fail: 0,
+  warn: 1,
+  ok: 2,
+  idle: 3,
+});
 
 /**
  * Compares two texts alphabetically, case- and accent-insensitively.
@@ -223,11 +237,23 @@ export function sortContainers(containers, mode, ctx) {
  * level falls back to `idle` too, so a bad verdict can never produce a NaN
  * that silently corrupts the sort.
  *
+ * Only an *own* `level` counts: a plain `verdict.level` walks the prototype
+ * chain, so an inherited `level` would turn a verdict that names no level
+ * into whatever the chain claims — a polluted `Object.prototype.level =
+ * 'fail'` would weigh the "not inspected yet" verdict as `fail` and send
+ * it to the top of the list.
+ *
  * @param {HealthVerdict|undefined} verdict
  * @returns {number}
  */
 export function healthWeight(verdict) {
-  const level = verdict == null ? undefined : verdict.level;
+  const level =
+    verdict == null || !Object.hasOwn(verdict, 'level')
+      ? undefined
+      : verdict.level;
+  // The table has no prototype and the guard rejects anything that is not a
+  // literal weight, so `toString`, `constructor` or a polluting number all
+  // fall back to idle.
   const weight = HEALTH_WEIGHTS[level];
   return typeof weight === 'number' ? weight : HEALTH_WEIGHTS.idle;
 }
