@@ -23,6 +23,7 @@ import {
 import { hostPortsOf } from '../helpers/portUtils.js';
 import { withContext } from '../helpers/errorMessage.js';
 import { DB_IMAGES } from '../helpers/constants.js';
+import { sortContainers, nextSortMode } from '../helpers/containerFilters.js';
 import { STRINGS } from '../helpers/strings.js';
 import { useDiagnostics } from './useDiagnostics.js';
 import {
@@ -84,6 +85,9 @@ export function useControls(containers = [], overrides = {}) {
   const details = overrides.details ?? new Map();
   const [creatingContainer, setCreatingContainer] = React.useState(false);
   const [showHelp, setShowHelp] = React.useState(false);
+  // Presentation order of the list. 'state' puts what is broken first (§3.2);
+  // it is the default on purpose, and the cycle is pinned by nextSortMode.
+  const [sortMode, setSortMode] = React.useState('state');
   // The failed container a recreation supersedes, pending a yes/no.
   const [pendingCleanup, setPendingCleanup] = React.useState(null);
   // Set by the F key, consumed by onCreate: the fix may rename the new
@@ -165,7 +169,19 @@ export function useControls(containers = [], overrides = {}) {
   });
 
   const logsViewer = useLogsViewer();
-  const selection = useContainerSelection(containers);
+  // The list the whole UI receives, already ordered by the active mode. The
+  // selection hook below reads this same array, so a highlighted index can
+  // never point at a row the user is not looking at. Reordering is safe for
+  // the selection because it is anchored to the container id, not the slot.
+  const view = React.useMemo(
+    () => ({
+      visible: sortContainers(containers, sortMode, { health }),
+      totalCount: containers.length,
+      sortMode,
+    }),
+    [containers, sortMode, health]
+  );
+  const selection = useContainerSelection(view.visible);
   const debugLogs = useDebugLogs();
 
   const selectedContainer = selection.selectedContainer;
@@ -567,6 +583,7 @@ export function useControls(containers = [], overrides = {}) {
       'nav.down': () => selection.move(1),
       'debug.toggle': () => debugLogs.setShowDebugLogs((prev) => !prev),
       'app.search': () => {}, // Placeholder — search not yet implemented
+      'sort.cycle': () => setSortMode((mode) => nextSortMode(mode)),
       'app.quit': () => {
         quitConfirmation.start();
         actions.setMessage('Are you sure you want to quit? [y] Yes  [n] No');
@@ -770,6 +787,9 @@ export function useControls(containers = [], overrides = {}) {
   return {
     selected: selection.selected,
     setSelected: selection.setSelected,
+    // Ordered list, its unfiltered size and the active mode — one object the
+    // App reads instead of re-deriving the order on its own.
+    view,
     message: creatingContainer ? creation.message : actions.message,
     messageColor: creatingContainer
       ? creation.messageColor
