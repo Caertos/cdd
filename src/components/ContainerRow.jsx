@@ -63,17 +63,17 @@ export default function ContainerRow({
           {isSelected ? '➤' : ' '}
         </Text>
       </Box>
-      <Box width={19} paddingRight={1}>
+      <Box width={19} flexShrink={0} paddingRight={1}>
         <Text color="cyan" dimColor={dimColor} wrap="truncate-end">
           {truncate(name, 18)}
         </Text>
       </Box>
-      <Box width={19} paddingRight={1}>
+      <Box width={18} flexShrink={1} paddingRight={1}>
         <Text color="gray" dimColor={dimColor} wrap="truncate-end">
           {truncate(image, 18)}
         </Text>
       </Box>
-      <Box width={14} minWidth={12} paddingRight={1}>
+      <Box width={12} minWidth={12} paddingRight={1}>
         <Text color={stateInfo.color} dimColor={dimColor} wrap="truncate-end">
           {stateInfo.text}
           {statsError ? <Text color="red"> {statsError}</Text> : null}

@@ -61,6 +61,30 @@ describe('layout (real Ink)', () => {
     expect(frameLines[0]).toContain('…');
   });
 
+  test('at the app width, the name prefix and the ports share the row line', () => {
+    // The window budget only works if a row still fits at the width App gives
+    // it: 100 columns minus the enclosing border and padding. A cell that
+    // shrinks too far re-truncates the name, and the ports get cut off.
+    ui = render(
+      <Box borderStyle="round" padding={1}>
+        <ContainerRow
+          container={{
+            ...row('id-1', 'cdd-e2e-render-ports'),
+            image: 'nginx:1.27-alpine',
+            state: 'running',
+            ports: ['18080:80'],
+          }}
+          isSelected
+        />
+      </Box>
+    );
+
+    const rowLine = lines(ui.lastFrame()).find((l) => l.includes('18080:80'));
+    expect(rowLine).toBeDefined();
+    // The 17-char prefix the other e2e suites wait for, on the same line.
+    expect(rowLine).toContain('cdd-e2e-render-po');
+  });
+
   test('two stacked rows render exactly two lines, with no blank line', () => {
     ui = render(
       <Box flexDirection="column">
