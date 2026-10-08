@@ -94,11 +94,10 @@ export function useControls(containers = [], overrides = {}) {
   const lastCreationRef = React.useRef(null);
 
   // — Modular hooks —
-  // No props left to pass: the hook stopped reading `containers` when the
-  // callers below it moved to the container object. The empty object stays —
-  // useContainerActions destructures its argument without a default, so calling
-  // it bare throws.
-  const actions = useContainerActions({});
+  // No props to pass: the hook stopped reading `containers` when the callers
+  // below it moved to the container object, and this call site has no
+  // `onAction` either — the list refreshes on its own polling loop.
+  const actions = useContainerActions();
   const shellMode = useShellMode();
 
   const creation = useContainerCreation({

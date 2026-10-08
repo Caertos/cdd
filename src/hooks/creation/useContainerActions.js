@@ -12,11 +12,11 @@ import {
  * Custom hook to manage container actions (start, stop, restart, remove).
  * Handles feedback messages and exposes helpers for each action.
  *
- * @param {Object} params
- * @param {Function} params.onAction - Callback after action is performed
+ * @param {Object} [params]
+ * @param {Function} [params.onAction] - Callback after action is performed
  * @returns {Object} Action helpers and feedback state
  */
-export function useContainerActions({ onAction }) {
+export function useContainerActions({ onAction } = {}) {
   const [message, setMessage] = useState('');
   const [messageColor, setMessageColor] = useState('yellow');
 
