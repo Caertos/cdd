@@ -409,13 +409,15 @@ describe('the stop key (D24)', () => {
 describe('the sort key (TASK-9 PR C)', () => {
   const state = { hasSelection: true };
 
-  test('O resolves with and without Shift', () => {
+  test('O resolves with and without Shift, and plain o too', () => {
     // keyNameOf() turns shift+o into 'shift+O', not 'O', so both spellings
-    // must be listed for one physical key.
+    // must be listed for one physical key. Plain lowercase 'o' is accepted as
+    // well, so the key never depends on the user guessing they need Shift.
     expect(resolveKey('list', 'O', {}, state).id).toBe('sort.cycle');
     expect(resolveKey('list', 'O', { shift: true }, state).id).toBe(
       'sort.cycle'
     );
+    expect(resolveKey('list', 'o', {}, state).id).toBe('sort.cycle');
   });
 
   test('the keys this change added have a handler in useControls', () => {
