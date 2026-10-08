@@ -63,12 +63,12 @@ export default function ContainerRow({
           {isSelected ? '➤' : ' '}
         </Text>
       </Box>
-      <Box width={18} paddingRight={1}>
+      <Box width={19} paddingRight={1}>
         <Text color="cyan" dimColor={dimColor} wrap="truncate-end">
           {truncate(name, 18)}
         </Text>
       </Box>
-      <Box width={18} paddingRight={1}>
+      <Box width={19} paddingRight={1}>
         <Text color="gray" dimColor={dimColor} wrap="truncate-end">
           {truncate(image, 18)}
         </Text>
