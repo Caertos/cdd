@@ -42,7 +42,10 @@ export default function App() {
     details,
   });
 
-  const selectedContainer = containers[controls.selected] ?? null;
+  // The highlight and this object come from the same id-anchored selection, so
+  // the panel can never describe a different container than the one marked.
+  // Already null when nothing is selected, hence no fallback here.
+  const selectedContainer = controls.selectedContainer;
 
   // Expose suspendTerminal to plain helpers (terminalHandover) via appState.
   useEffect(() => {
@@ -122,6 +125,10 @@ export default function App() {
         )}
         <ContainerSection
           containers={containers}
+          // Still a position: ContainerList highlights with `i === selected`,
+          // so this prop cannot become the id until those components change.
+          // Derived from the same selection as the rest of the panel, not a
+          // second source of truth.
           selected={controls.selected}
           health={health}
           connectionStatus={connection.status}
@@ -176,7 +183,7 @@ export default function App() {
         <LogViewer
           logs={controls.logs}
           onExit={controls.exitLogs}
-          container={containers[controls.selected]}
+          container={controls.selectedContainer}
         />
       )}
     </>
