@@ -16,6 +16,8 @@ import { useContainers } from './hooks/useContainers.js';
 import { useContainerHealth } from './hooks/useContainerHealth.js';
 import { useControls } from './hooks/useControls.js';
 import { useDockerLauncher } from './hooks/useDockerLauncher.js';
+import { useTerminalHeight } from './hooks/useTerminalHeight.js';
+import { reservedRows } from './helpers/reservedRows.js';
 import ContainerSection from './components/ContainerSection.jsx';
 import MessageFeedback from './components/MessageFeedback.jsx';
 import Header from './components/Header.jsx';
@@ -34,6 +36,8 @@ export default function App() {
   const { containers, connection } = useContainers();
   const { health, details } = useContainerHealth(containers);
   const launcher = useDockerLauncher();
+  // Terminal height feeds the container list's visible-window budget below.
+  const terminalRows = useTerminalHeight();
   // health goes in so useControls owns the one diagnosis the panel renders and
   // the F key acts on. Two hooks would mean reading the log twice.
   const controls = useControls(containers, {
@@ -47,6 +51,20 @@ export default function App() {
   // the panel can never describe a different container than the one marked.
   // Already null when nothing is selected, hence no fallback here.
   const selectedContainer = controls.selectedContainer;
+
+  // Rows left for the container list once the fixed and variable chrome has
+  // been subtracted. Never below 1 so the list always has a row to show.
+  const availableRows = Math.max(
+    1,
+    terminalRows -
+      reservedRows({
+        hasDiagnosis: Boolean(controls.diagnosis || controls.isDiagnosing),
+        showDebug: controls.showDebugLogs,
+        isFiltering: controls.view.isFiltering,
+        isStale: connection.isStale,
+        hasMessage: Boolean(controls.message),
+      })
+  );
 
   // Expose suspendTerminal to plain helpers (terminalHandover) via appState.
   useEffect(() => {
@@ -150,6 +168,7 @@ export default function App() {
           isStale={connection.isStale}
           query={controls.view.query}
           totalCount={controls.view.totalCount}
+          availableRows={availableRows}
           onCreate={() => controls.startCreation()}
         />
         {/* The panel takes room only when a container is failing and we have
