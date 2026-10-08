@@ -124,6 +124,15 @@ export const KEYMAP = {
       priority: 25,
     },
     {
+      id: 'sort.cycle',
+      // keyNameOf() turns shift+o into 'shift+O', not 'O', so both spellings
+      // are listed — the same reason F is declared twice.
+      keys: ['O', 'shift+O'],
+      label: 'Sort',
+      help: 'Cycle the sort order',
+      priority: 24,
+    },
+    {
       id: 'app.quit',
       keys: ['q'],
       label: 'Exit',
