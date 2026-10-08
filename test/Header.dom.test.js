@@ -21,15 +21,15 @@ async function loadHeader(versionImpl) {
 }
 
 describe('Header', () => {
-  test('count=1 → singular "1 container found"', async () => {
+  test('totalCount=1 → singular "1 container found"', async () => {
     const Header = await loadHeader(() => '4.7.1');
-    const { getByText } = render(<Header count={1} />);
+    const { getByText } = render(<Header totalCount={1} />);
     expect(getByText('1 container found')).toBeTruthy();
   });
 
-  test('count=2 → plural "2 containers found"', async () => {
+  test('totalCount=2 → plural "2 containers found"', async () => {
     const Header = await loadHeader(() => '4.7.1');
-    const { getByText } = render(<Header count={2} />);
+    const { getByText } = render(<Header totalCount={2} />);
     expect(getByText('2 containers found')).toBeTruthy();
   });
 
@@ -38,26 +38,34 @@ describe('Header', () => {
       fs.readFileSync(path.resolve('package.json'), 'utf8')
     );
     const Header = await loadHeader(() => pkg.version);
-    const { getByText } = render(<Header count={0} />);
+    const { getByText } = render(<Header totalCount={0} />);
     expect(getByText(`v${pkg.version}`)).toBeTruthy();
   });
 
   test('unknown when getAppVersion fails (no v prefix)', async () => {
     const Header = await loadHeader(() => 'unknown');
-    const { getByText, queryByText } = render(<Header count={0} />);
+    const { getByText, queryByText } = render(<Header totalCount={0} />);
     expect(getByText('unknown')).toBeTruthy();
     expect(queryByText('vunknown')).toBeNull();
   });
 
   test('shows the active sort mode when given one', async () => {
     const Header = await loadHeader(() => '4.7.1');
-    const { getByText } = render(<Header count={2} sortMode="state" />);
+    const { getByText } = render(<Header totalCount={2} sortMode="state" />);
     expect(getByText(STRINGS.sortMode.state)).toBeTruthy();
   });
 
   test('shows no sort line when no mode is given', async () => {
     const Header = await loadHeader(() => '4.7.1');
-    const { queryByText } = render(<Header count={2} />);
+    const { queryByText } = render(<Header totalCount={2} />);
     expect(queryByText(STRINGS.sortMode.state)).toBeNull();
+  });
+
+  test('with a query it shows how many of the total are shown', async () => {
+    const Header = await loadHeader(() => '4.7.1');
+    const { getByText } = render(
+      <Header visibleCount={12} totalCount={25} query="pg" />
+    );
+    expect(getByText(STRINGS.filter.summary(12, 25, 'pg'))).toBeTruthy();
   });
 });

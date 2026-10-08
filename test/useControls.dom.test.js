@@ -2136,3 +2136,71 @@ describe('useControls — the list follows the sort mode (TASK-9 PR C)', () => {
     expect(expose.current.view.totalCount).toBe(2);
   });
 });
+
+describe('useControls — the filter (TASK-9 PR D)', () => {
+  const web = { id: 'a', name: 'web', image: 'nginx', state: 'running' };
+  const pg = {
+    id: 'b',
+    name: 'postgres',
+    image: 'postgres:17',
+    state: 'exited',
+  };
+
+  async function setup(list) {
+    const expose = { current: null };
+    render(<HookTester containers={list} expose={expose} overrides={{}} />);
+    await act(async () => {});
+    return expose;
+  }
+
+  test('app.search opens the filter and switches the context', async () => {
+    const expose = await setup([web, pg]);
+    expect(expose.current.context).toBe('list');
+    await act(async () => {
+      expose.current.dispatch('app.search');
+    });
+    expect(expose.current.view.isFiltering).toBe(true);
+    expect(expose.current.context).toBe('filter');
+  });
+
+  test('typed text filters the list and never reaches the list keymap', async () => {
+    const expose = await setup([web, pg]);
+    await act(async () => {
+      expose.current.dispatch('app.search');
+    });
+    // 'p' is Stop in the list context and 'e' is Erase; while filtering both
+    // are text, or the user could not type a query.
+    for (const ch of 'post') act(() => triggerInput(ch, {}));
+    expect(expose.current.view.query).toBe('post');
+    expect(expose.current.view.visible.map((c) => c.id)).toEqual(['b']);
+    act(() => triggerInput('e', {}));
+    expect(expose.current.view.query).toBe('poste');
+    expect(expose.current.confirmErase).toBe(false);
+  });
+
+  test('Enter keeps the query and closes; Esc clears and closes', async () => {
+    const expose = await setup([web, pg]);
+    await act(async () => {
+      expose.current.dispatch('app.search');
+    });
+    for (const ch of 'post') act(() => triggerInput(ch, {}));
+
+    await act(async () => {
+      expose.current.dispatch('filter.apply');
+    });
+    expect(expose.current.view.isFiltering).toBe(false);
+    expect(expose.current.view.query).toBe('post');
+    expect(expose.current.view.visible.map((c) => c.id)).toEqual(['b']);
+    expect(expose.current.context).toBe('list');
+
+    // Reopen: the query is still there to keep editing, and Esc drops it.
+    await act(async () => {
+      expose.current.dispatch('app.search');
+    });
+    await act(async () => {
+      expose.current.dispatch('filter.clear');
+    });
+    expect(expose.current.view.query).toBe('');
+    expect(expose.current.view.visible).toHaveLength(2);
+  });
+});

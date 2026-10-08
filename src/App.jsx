@@ -19,6 +19,7 @@ import { useDockerLauncher } from './hooks/useDockerLauncher.js';
 import ContainerSection from './components/ContainerSection.jsx';
 import MessageFeedback from './components/MessageFeedback.jsx';
 import Header from './components/Header.jsx';
+import { PromptField } from './components/PromptField.jsx';
 import LogViewer from './components/LogViewer.jsx';
 import ContainerCreationPrompt from './components/ContainerCreationPrompt.jsx';
 import { DiagnosticPanel } from './components/DiagnosticPanel.jsx';
@@ -116,7 +117,9 @@ export default function App() {
         padding={1}
       >
         <Header
-          count={controls.view.visible.length}
+          visibleCount={controls.view.visible.length}
+          totalCount={controls.view.totalCount}
+          query={controls.view.query}
           sortMode={controls.view.sortMode}
         />
         <Text> </Text>
@@ -125,6 +128,15 @@ export default function App() {
             {'⚠ '}
             {STRINGS.connection.staleWarning}
           </Text>
+        )}
+        {controls.view.isFiltering && (
+          <Box paddingLeft={1}>
+            <PromptField
+              label={STRINGS.filter.label}
+              value={controls.view.query}
+              cursor={controls.view.cursor}
+            />
+          </Box>
         )}
         <ContainerSection
           containers={controls.view.visible}
@@ -136,6 +148,8 @@ export default function App() {
           health={health}
           connectionStatus={connection.status}
           isStale={connection.isStale}
+          query={controls.view.query}
+          totalCount={controls.view.totalCount}
           onCreate={() => controls.startCreation()}
         />
         {/* The panel takes room only when a container is failing and we have

@@ -23,8 +23,8 @@ import {
 import { hostPortsOf } from '../helpers/portUtils.js';
 import { withContext } from '../helpers/errorMessage.js';
 import { DB_IMAGES } from '../helpers/constants.js';
-import { sortContainers, nextSortMode } from '../helpers/containerFilters.js';
 import { STRINGS } from '../helpers/strings.js';
+import { useContainerListView } from './useContainerListView.js';
 import { useDiagnostics } from './useDiagnostics.js';
 import {
   getActiveContext,
@@ -85,9 +85,6 @@ export function useControls(containers = [], overrides = {}) {
   const details = overrides.details ?? new Map();
   const [creatingContainer, setCreatingContainer] = React.useState(false);
   const [showHelp, setShowHelp] = React.useState(false);
-  // Presentation order of the list. 'state' puts what is broken first (§3.2);
-  // it is the default on purpose, and the cycle is pinned by nextSortMode.
-  const [sortMode, setSortMode] = React.useState('state');
   // The failed container a recreation supersedes, pending a yes/no.
   const [pendingCleanup, setPendingCleanup] = React.useState(null);
   // Set by the F key, consumed by onCreate: the fix may rename the new
@@ -169,18 +166,12 @@ export function useControls(containers = [], overrides = {}) {
   });
 
   const logsViewer = useLogsViewer();
-  // The list the whole UI receives, already ordered by the active mode. The
-  // selection hook below reads this same array, so a highlighted index can
-  // never point at a row the user is not looking at. Reordering is safe for
-  // the selection because it is anchored to the container id, not the slot.
-  const view = React.useMemo(
-    () => ({
-      visible: sortContainers(containers, sortMode, { health }),
-      totalCount: containers.length,
-      sortMode,
-    }),
-    [containers, sortMode, health]
-  );
+  // Filter and order live here, not in App: the filter opens with a key and
+  // keys are dispatched in this hook (§4 bis). The selection below reads the
+  // same `view.visible`, so a highlighted index can never point at a row the
+  // user is not looking at. Reordering is safe because the selection is
+  // anchored to the container id, not the slot.
+  const view = useContainerListView(containers, { health });
   const selection = useContainerSelection(view.visible);
   const debugLogs = useDebugLogs();
 
@@ -341,6 +332,7 @@ export function useControls(containers = [], overrides = {}) {
       confirmQuit: quitConfirmation.active,
       showHelp,
       showLogs: logsViewer.showLogs,
+      isFiltering: view.isFiltering,
       creatingContainer,
       hasActiveList:
         creation.suggestions.length > 0 ||
@@ -363,6 +355,7 @@ export function useControls(containers = [], overrides = {}) {
       quitConfirmation.active,
       showHelp,
       logsViewer.showLogs,
+      view.isFiltering,
       creatingContainer,
       creation.suggestions,
       creation.hubResults,
@@ -582,8 +575,11 @@ export function useControls(containers = [], overrides = {}) {
       'nav.up': () => selection.move(-1),
       'nav.down': () => selection.move(1),
       'debug.toggle': () => debugLogs.setShowDebugLogs((prev) => !prev),
-      'app.search': () => {}, // Placeholder — search not yet implemented
-      'sort.cycle': () => setSortMode((mode) => nextSortMode(mode)),
+      'app.search': () => view.openFilter(),
+      'sort.cycle': () => view.cycleSort(),
+      // Filter context: Enter closes keeping the query, Esc clears and closes.
+      'filter.apply': () => view.closeFilter(),
+      'filter.clear': () => view.clearFilter(),
       'app.quit': () => {
         quitConfirmation.start();
         actions.setMessage('Are you sure you want to quit? [y] Yes  [n] No');
@@ -697,6 +693,7 @@ export function useControls(containers = [], overrides = {}) {
     }),
     [
       containers,
+      view,
       selection.selectedContainer,
       actions,
       logsViewer,
@@ -762,6 +759,13 @@ export function useControls(containers = [], overrides = {}) {
       WIZARD_CONTEXTS.includes(ctx) &&
       creation.handleFieldKey(input, normalizedKey)
     ) {
+      return;
+    }
+
+    // The filter field has the same priority: almost every character is text
+    // and is resolved before the keymap. Enter and Esc come back false and
+    // fall through to resolveKey, which maps them to filter.apply/filter.clear.
+    if (ctx === 'filter' && view.handleFilterKey(input, normalizedKey)) {
       return;
     }
 
