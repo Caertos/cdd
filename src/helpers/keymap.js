@@ -119,8 +119,8 @@ export const KEYMAP = {
     {
       id: 'app.search',
       keys: ['/'],
-      label: 'Filter',
-      help: 'Filter the list by name, image or state',
+      label: 'Search',
+      help: 'Search containers by name, image or state',
       priority: 70,
     },
     {

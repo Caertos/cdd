@@ -36,14 +36,14 @@ export const STRINGS = {
   // The filter field, its header summary and the "nothing matches" state. The
   // query is echoed back so the user sees what is being filtered on.
   filter: {
-    label: 'Filter (name, image or state):',
+    label: 'Search (name, image or state):',
     // Header summary while a query is active: shown, total and the query.
     summary: (visible, total, query) =>
-      `${visible} of ${total} containers · filter: "${query}"`,
-    // ContainerSection when the filter hides everything. This is not the
+      `${visible} of ${total} containers · search: "${query}"`,
+    // ContainerSection when the query hides everything. This is not the
     // EmptyState: the containers are there, the query just matched none.
     noMatch: (total, query) => `0 of ${total} containers match "${query}"`,
-    noMatchHint: 'Press Esc to clear the filter',
+    noMatchHint: 'Press Esc to clear the search',
   },
 
   // ── ContainerRow ──
@@ -202,7 +202,7 @@ export const STRINGS = {
   helpClose: 'Press ? or Esc to close',
   contextLabels: {
     list: 'Container List',
-    filter: 'Filter',
+    filter: 'Search',
     wizard: 'Creation Wizard',
     'wizard-list': 'Suggestion List',
     'wizard-discard': 'Discard Confirmation',
