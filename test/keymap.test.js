@@ -405,3 +405,31 @@ describe('the stop key (D24)', () => {
     expect(helpIds).toContain('container.restart');
   });
 });
+
+describe('the sort key (TASK-9 PR C)', () => {
+  const state = { hasSelection: true };
+
+  test('O resolves with and without Shift, and plain o too', () => {
+    // keyNameOf() turns shift+o into 'shift+O', not 'O', so both spellings
+    // must be listed for one physical key. Plain lowercase 'o' is accepted as
+    // well, so the key never depends on the user guessing they need Shift.
+    expect(resolveKey('list', 'O', {}, state).id).toBe('sort.cycle');
+    expect(resolveKey('list', 'O', { shift: true }, state).id).toBe(
+      'sort.cycle'
+    );
+    expect(resolveKey('list', 'o', {}, state).id).toBe('sort.cycle');
+  });
+
+  test('the keys this change added have a handler in useControls', () => {
+    // Scoped on purpose. Converting the whole-keymap `test.failing` above is
+    // D21 (TASK-10): `app.search` and `sort.cycle` are what this change wires,
+    // and `logs.up/down/pageup/pagedown/follow` are still D21's to add.
+    const source = fs.readFileSync(
+      path.resolve('src/hooks/useControls.js'),
+      'utf8'
+    );
+    for (const id of ['app.search', 'sort.cycle']) {
+      expect(source).toContain(`'${id}':`);
+    }
+  });
+});

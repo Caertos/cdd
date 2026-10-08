@@ -1992,8 +1992,9 @@ describe('useControls — the lost selection is announced (TASK-9 §3.3)', () =>
     expect(expose.current.actions.message).not.toBe(
       STRINGS.selection.lostTarget
     );
-    // Still `db`, now at the top because `web` went away above it.
-    expect(expose.current.selected).toBe(0);
+    // Still `db`. The visible list is sorted by name, so without `web` it sits
+    // after `cache` — the anchor follows the container, not the slot.
+    expect(expose.current.selected).toBe(1);
   });
 
   test('a reorder is not reported', async () => {
@@ -2005,14 +2006,15 @@ describe('useControls — the lost selection is announced (TASK-9 §3.3)', () =>
     });
     expect(expose.current.selected).toBe(1);
 
-    // The slot changed, the container did not. Warning here would teach the
-    // user to ignore the warning.
+    // Docker may hand the rows back in any order, but the visible list is
+    // sorted, so `db` keeps its slot. Warning here would teach the user to
+    // ignore the warning.
     await withContainers([cache, web, db]);
 
     expect(expose.current.actions.message).not.toBe(
       STRINGS.selection.lostTarget
     );
-    expect(expose.current.selected).toBe(2);
+    expect(expose.current.selected).toBe(1);
   });
 
   test('a refresh with identical contents is not reported', async () => {
@@ -2098,5 +2100,39 @@ describe('useControls — the lost selection is announced (TASK-9 §3.3)', () =>
     });
     await act(async () => {});
     expect(expose.current.actions.message).toBe(STRINGS.selection.lostTarget);
+  });
+});
+
+describe('useControls — the list follows the sort mode (TASK-9 PR C)', () => {
+  const beta = { id: 'b', name: 'beta', image: 'i', state: 'exited' };
+  const alpha = { id: 'a', name: 'alpha', image: 'i', state: 'exited' };
+
+  test('sort.cycle advances the mode and reorders the visible list', async () => {
+    const expose = { current: null };
+    render(
+      <HookTester containers={[beta, alpha]} expose={expose} overrides={{}} />
+    );
+    await act(async () => {});
+
+    expect(expose.current.view.sortMode).toBe('state');
+    // No verdicts yet: every container weighs the same, so the name decides.
+    expect(expose.current.view.visible.map((c) => c.id)).toEqual(['a', 'b']);
+
+    await act(async () => {
+      expose.current.dispatch('sort.cycle');
+    });
+    expect(expose.current.view.sortMode).toBe('name');
+
+    await act(async () => {
+      expose.current.dispatch('sort.cycle');
+    });
+    expect(expose.current.view.sortMode).toBe('created');
+
+    await act(async () => {
+      expose.current.dispatch('sort.cycle');
+    });
+    expect(expose.current.view.sortMode).toBe('state');
+
+    expect(expose.current.view.totalCount).toBe(2);
   });
 });

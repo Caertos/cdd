@@ -115,7 +115,10 @@ export default function App() {
         borderColor="cyan"
         padding={1}
       >
-        <Header count={containers.length} />
+        <Header
+          count={controls.view.visible.length}
+          sortMode={controls.view.sortMode}
+        />
         <Text> </Text>
         {connection.isStale && (
           <Text color="yellow">
@@ -124,7 +127,7 @@ export default function App() {
           </Text>
         )}
         <ContainerSection
-          containers={containers}
+          containers={controls.view.visible}
           // Still a position: ContainerList highlights with `i === selected`,
           // so this prop cannot become the id until those components change.
           // Derived from the same selection as the rest of the panel, not a

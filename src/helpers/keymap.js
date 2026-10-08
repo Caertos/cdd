@@ -124,6 +124,18 @@ export const KEYMAP = {
       priority: 25,
     },
     {
+      id: 'sort.cycle',
+      // keyNameOf() turns shift+o into 'shift+O', not 'O', so both spellings
+      // are listed — the same reason F is declared twice. The plain lowercase
+      // 'o' is listed too: sort is harmless and nobody should have to guess
+      // that they need Shift, which is exactly the confusion F's guard avoids
+      // for the (destructive) fix.
+      keys: ['o', 'O', 'shift+O'],
+      label: 'Sort',
+      help: 'Cycle the sort order',
+      priority: 24,
+    },
+    {
       id: 'app.quit',
       keys: ['q'],
       label: 'Exit',

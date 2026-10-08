@@ -103,6 +103,17 @@ describeE2E('E2E — diagnosis panel', () => {
       ui = renderApp(<App />);
       await renderWithSelection(ui, { name });
       await ui.waitForText('Diagnosis:', { label: 'the diagnosis panel' });
+      // The log read is async, exactly as in the first case above: the panel
+      // can still be loading when the title appears, so wait for it to land
+      // before reading the evidence off the frame.
+      await ui
+        .waitForTextGone('Reading the log...', {
+          timeout: 10000,
+          label: 'the log read to finish',
+        })
+        .catch(() => {
+          throw new Error('Panel never finished loading its log');
+        });
 
       // STRINGS.diagnostics.lastLines — the thing the user would have gone
       // and opened the viewer to see.

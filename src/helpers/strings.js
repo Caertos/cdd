@@ -12,6 +12,13 @@ export const STRINGS = {
 
   // ── Header ──
   containerFound: (n) => `${n} container${n === 1 ? '' : 's'} found`,
+  // Wording for the active sort mode shown in the header. Keys are the
+  // SortMode values from containerFilters.js.
+  sortMode: {
+    state: 'sorted: problems first',
+    name: 'sorted: by name',
+    created: 'sorted: newest first',
+  },
 
   // ── ContainerSection ──
   noContainers: 'No containers found',
