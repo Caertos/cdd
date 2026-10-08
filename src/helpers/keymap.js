@@ -121,7 +121,7 @@ export const KEYMAP = {
       keys: ['/'],
       label: 'Filter',
       help: 'Filter the list by name, image or state',
-      priority: 25,
+      priority: 45,
     },
     {
       id: 'sort.cycle',

@@ -474,4 +474,10 @@ describe('the filter context (TASK-9 PR D)', () => {
       expect(source).toContain(`'${id}':`);
     }
   });
+
+  test('the filter opens on /', () => {
+    expect(resolveKey('list', '/', {}, { hasSelection: true }).id).toBe(
+      'app.search'
+    );
+  });
 });
