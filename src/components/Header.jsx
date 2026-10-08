@@ -3,6 +3,7 @@ import { Box, Text } from 'ink';
 import chalk from 'chalk';
 import PropTypes from 'prop-types';
 import { getAppVersion } from '../helpers/appInfo.js';
+import { STRINGS } from '../helpers/strings.js';
 
 /**
  * Header component displayed at the top of the CLI UI.
@@ -10,14 +11,15 @@ import { getAppVersion } from '../helpers/appInfo.js';
  * @component
  * @param {Object} props
  * @param {number} props.count - Number of containers currently detected
+ * @param {string} [props.sortMode] - Active sort mode shown under the counter
  * @returns {JSX.Element}
  * @example
- * <Header count={3} />
+ * <Header count={3} sortMode="state" />
  */
 
 const VERSION = getAppVersion();
 
-export default function Header({ count }) {
+export default function Header({ count, sortMode }) {
   const formattedVersion = VERSION === 'unknown' ? 'unknown' : `v${VERSION}`;
 
   return (
@@ -31,6 +33,9 @@ export default function Header({ count }) {
         <Text color="gray">
           {count} container{count === 1 ? '' : 's'} found
         </Text>
+        {sortMode && (
+          <Text color="gray">{STRINGS.sortMode[sortMode] ?? sortMode}</Text>
+        )}
       </Box>
     </Box>
   );
@@ -38,4 +43,5 @@ export default function Header({ count }) {
 
 Header.propTypes = {
   count: PropTypes.number.isRequired,
+  sortMode: PropTypes.string,
 };
