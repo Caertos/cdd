@@ -14,9 +14,8 @@ const row = (id, name) => ({
 });
 
 async function renderSection(props) {
-  const { default: ContainerSection } = await import(
-    '../src/components/ContainerSection.jsx'
-  );
+  const { default: ContainerSection } =
+    await import('../src/components/ContainerSection.jsx');
   return render(<ContainerSection {...props} />);
 }
 
@@ -59,5 +58,30 @@ describe('ContainerSection', () => {
     expect(getByText('web-2')).toBeTruthy();
     expect(queryByText(STRINGS.emptyTitle)).toBeNull();
     expect(queryByText(STRINGS.noContainers)).toBeNull();
+  });
+
+  test('a filter with no matches gets its own state, not EmptyState', async () => {
+    const { getByText, queryByText } = await renderSection({
+      containers: [],
+      connectionStatus: 'ok',
+      query: 'pg',
+      totalCount: 25,
+      onCreate: () => {},
+    });
+    expect(getByText(STRINGS.filter.noMatch(25, 'pg'))).toBeTruthy();
+    expect(getByText(STRINGS.filter.noMatchHint)).toBeTruthy();
+    // The containers are there; only the create button must not be offered.
+    expect(queryByText(STRINGS.emptyTitle)).toBeNull();
+  });
+
+  test('no containers and no query still shows EmptyState', async () => {
+    const { getByText } = await renderSection({
+      containers: [],
+      connectionStatus: 'ok',
+      query: '',
+      totalCount: 0,
+      onCreate: () => {},
+    });
+    expect(getByText(STRINGS.emptyTitle)).toBeTruthy();
   });
 });
