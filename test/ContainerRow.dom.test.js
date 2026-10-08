@@ -10,18 +10,20 @@ afterEach(() => jest.resetModules());
 
 // ContainerRow polls docker through useContainerStats when state is running;
 // stub the hook so no unit test ever touches a real socket (§10).
-async function loadRow(stats = { cpuPercent: '1.5', memPercent: '2.5' }) {
+async function loadRow(
+  stats = { cpuPercent: '1.5', memPercent: '2.5' },
+  statsError = ''
+) {
   await jest.unstable_mockModule('../src/hooks/useContainerStats.js', () => ({
-    useContainerStats: () => ({ stats, statsError: '' }),
+    useContainerStats: () => ({ stats, statsError }),
   }));
-  const { default: ContainerRow } = await import(
-    '../src/components/ContainerRow.jsx'
-  );
+  const { default: ContainerRow } =
+    await import('../src/components/ContainerRow.jsx');
   return ContainerRow;
 }
 
-async function renderRow(props, stats) {
-  const Row = await loadRow(stats);
+async function renderRow(props, stats, statsError) {
+  const Row = await loadRow(stats, statsError);
   return render(<Row {...props} />);
 }
 
@@ -49,17 +51,23 @@ describe('ContainerRow', () => {
   });
 
   test('running → RUNNING state text', async () => {
-    const { getByText } = await renderRow({ container: { ...base, state: 'running' } });
+    const { getByText } = await renderRow({
+      container: { ...base, state: 'running' },
+    });
     expect(getByText(STRINGS.stateRunning)).toBeTruthy();
   });
 
   test('exited → EXITED state text', async () => {
-    const { getByText } = await renderRow({ container: { ...base, state: 'exited' } });
+    const { getByText } = await renderRow({
+      container: { ...base, state: 'exited' },
+    });
     expect(getByText(STRINGS.stateExited)).toBeTruthy();
   });
 
   test('paused → PAUSED state text', async () => {
-    const { getByText } = await renderRow({ container: { ...base, state: 'paused' } });
+    const { getByText } = await renderRow({
+      container: { ...base, state: 'paused' },
+    });
     expect(getByText(STRINGS.statePaused)).toBeTruthy();
   });
 
@@ -78,8 +86,31 @@ describe('ContainerRow', () => {
     expect(container.textContent).toContain('🔗 9090:80');
   });
 
+  test('stats error renders on the same line as the state text, in red', async () => {
+    const { container } = await renderRow(
+      { container: { ...base, state: 'running' } },
+      { cpuPercent: '1.5', memPercent: '2.5' },
+      'Error fetching stats'
+    );
+
+    // The error keeps its own red colour inside the state node, so it never
+    // spills to a second line.
+    const errorNode = Array.from(container.querySelectorAll('span')).find(
+      (el) => el.textContent === ' Error fetching stats'
+    );
+    expect(errorNode).toBeTruthy();
+    expect(errorNode.getAttribute('data-color')).toBe('red');
+
+    const stateNode = errorNode.parentElement;
+    expect(stateNode.textContent).toContain(STRINGS.stateRunning);
+    expect(stateNode.textContent).toContain('Error fetching stats');
+  });
+
   test('selected row shows the marker in green', async () => {
-    const { getByText } = await renderRow({ container: base, isSelected: true });
+    const { getByText } = await renderRow({
+      container: base,
+      isSelected: true,
+    });
     const marker = getByText('➤');
     expect(marker.getAttribute('data-color')).toBe('green');
   });
@@ -90,13 +121,17 @@ describe('ContainerRow', () => {
       isSelected: false,
     });
     expect(queryByText('➤')).toBeNull();
-    expect(container.textContent).toContain('  ');
+    // A single blank in the marker cell: two spaces overflow its one-column
+    // content area and real Ink wraps them onto a second line.
+    expect(container.textContent.startsWith(' ')).toBe(true);
   });
 
   test('isStale dims every text', async () => {
     const { getByText } = await renderRow({ container: base, isStale: true });
     expect(getByText('web').getAttribute('data-dim')).toBe('gray');
-    expect(getByText(STRINGS.stateExited).getAttribute('data-dim')).toBe('gray');
+    expect(getByText(STRINGS.stateExited).getAttribute('data-dim')).toBe(
+      'gray'
+    );
   });
 
   test('without isStale nothing is dimmed', async () => {

@@ -16,6 +16,7 @@ import { STRINGS } from '../helpers/strings.js';
  * @param {boolean} [props.isStale=false] - Whether the data is potentially outdated
  * @param {string} [props.query] - Active filter text, '' when none
  * @param {number} [props.totalCount] - Containers before filtering, for the no-match line
+ * @param {number} [props.availableRows] - Rows the terminal can show; omit to render every row
  * @param {Function} [props.onCreate] - Open the creation wizard
  * @returns {JSX.Element}
  */
@@ -27,6 +28,7 @@ export default function ContainerSection({
   isStale = false,
   query = '',
   totalCount = 0,
+  availableRows,
   onCreate,
 }) {
   if (!containers || containers.length === 0) {
@@ -55,6 +57,7 @@ export default function ContainerSection({
       selected={selected}
       health={health}
       isStale={isStale}
+      availableRows={availableRows}
     />
   );
 }
@@ -67,5 +70,6 @@ ContainerSection.propTypes = {
   isStale: PropTypes.bool,
   query: PropTypes.string,
   totalCount: PropTypes.number,
+  availableRows: PropTypes.number,
   onCreate: PropTypes.func,
 };

@@ -7,31 +7,57 @@
  * @param {number} [props.selected] - Index of the currently selected container
  * @param {Map} [props.health] - Health verdicts keyed by container id
  * @param {boolean} [props.isStale=false] - Whether the data is potentially outdated
+ * @param {number} [props.availableRows] - Rows the terminal can show; omit to render every row
  * @returns {JSX.Element} Rendered list
  */
 import React from 'react';
 import PropTypes from 'prop-types';
-import { Box } from 'ink';
+import { Box, Text } from 'ink';
 import ContainerRow from './ContainerRow.jsx';
+import { useVisibleWindow } from '../hooks/useVisibleWindow.js';
+import { STRINGS } from '../helpers/strings.js';
 
 export default function ContainerList({
   containers,
   selected,
   health,
   isStale = false,
+  availableRows,
 }) {
+  const total = containers.length;
+  // Without a height budget the whole list is visible (current behaviour).
+  const budget = Number.isFinite(availableRows) ? availableRows : total;
+  const { offset, visibleCount, hiddenAbove, hiddenBelow } = useVisibleWindow({
+    total,
+    selectedIndex: selected ?? -1,
+    availableRows: budget,
+  });
+
   return (
     <>
-      {containers.map((container, i) => (
-        <Box key={container.id} flexDirection="row" paddingLeft={1}>
-          <ContainerRow
-            container={container}
-            verdict={health?.get(container.id)}
-            isSelected={i === selected}
-            isStale={isStale}
-          />
+      {hiddenAbove > 0 ? (
+        <Box flexDirection="row" paddingLeft={1}>
+          <Text dimColor>{STRINGS.listWindow.moreAbove(hiddenAbove)}</Text>
         </Box>
-      ))}
+      ) : null}
+      {containers.slice(offset, offset + visibleCount).map((container, i) => {
+        const iGlobal = offset + i;
+        return (
+          <Box key={container.id} flexDirection="row" paddingLeft={1}>
+            <ContainerRow
+              container={container}
+              verdict={health?.get(container.id)}
+              isSelected={iGlobal === selected}
+              isStale={isStale}
+            />
+          </Box>
+        );
+      })}
+      {hiddenBelow > 0 ? (
+        <Box flexDirection="row" paddingLeft={1}>
+          <Text dimColor>{STRINGS.listWindow.moreBelow(hiddenBelow)}</Text>
+        </Box>
+      ) : null}
     </>
   );
 }
@@ -41,4 +67,5 @@ ContainerList.propTypes = {
   selected: PropTypes.number,
   health: PropTypes.object,
   isStale: PropTypes.bool,
+  availableRows: PropTypes.number,
 };
