@@ -933,3 +933,73 @@ describe('containers with a missing name', () => {
     ).toEqual(['u1', 'u2', 'u3']);
   });
 });
+
+/**
+ * `filterContainers` opens with `if (!Array.isArray(containers)) return []`,
+ * the same defensive guard `sortContainers` carries. `containerList.js`
+ * always hands over an array, so nothing in the app feeds this branch — but
+ * a helper that must stay total and non-throwing should not depend on that
+ * promise holding forever.
+ *
+ * The query used here is 'redis', which matches a container in CONTAINERS.
+ * So [] below cannot be an empty match set: for an empty set the query would
+ * have to find nothing at all, and for the guard it never gets read. The
+ * paired array case is what tells the two apart — same result, different
+ * path.
+ */
+describe('filterContainers with a non-array list', () => {
+  /**
+   * Values that are not arrays. A Map is iterable and a string is indexable,
+   * so neither is something `Array.isArray` should wave through, and both
+   * would otherwise reach `.filter` or the spread on a non-array.
+   */
+  const NON_ARRAYS = [
+    ['null', null],
+    ['undefined', undefined],
+    ["a string 'abc'", 'abc'],
+    ['a string built from containers', CONTAINERS.map((c) => c.name).join()],
+    ['the number 42', 42],
+    ['zero', 0],
+    ['a plain object', { id: 'x' }],
+    ['an empty object', {}],
+    ['a Map', new Map([['name', 'redis']])],
+    ['a Set', new Set(['redis'])],
+    ['a boolean', true],
+    ['an array-like object', { length: 2, 0: { name: 'redis' } }],
+  ];
+
+  test.each(NON_ARRAYS)('%s → [] without throwing', (_label, input) => {
+    let result;
+    expect(() => {
+      result = filterContainers(input, 'redis');
+    }).not.toThrow();
+    // The query would have matched, so [] comes from the guard.
+    expect(result).toEqual([]);
+  });
+
+  test('a genuine empty array returns [] too, without the guard', () => {
+    // Both paths agree on the result while only one of them runs the guard:
+    // [] passes Array.isArray and returns [...containers], an empty copy.
+    expect(filterContainers([], 'redis')).toEqual([]);
+    expect(filterContainers([], 'redis')).not.toBe(
+      filterContainers([], 'redis')
+    );
+    // Same for a query that matches nothing: the empty array is the source
+    // of the [], not the guard.
+    expect(filterContainers([], 'zzz')).toEqual([]);
+  });
+
+  test('a non-empty array is unaffected: it never reaches the guard', () => {
+    expect(filterContainers(CONTAINERS, 'redis')).toEqual([CONTAINERS[1]]);
+    expect(filterContainers(CONTAINERS, '')).toEqual(CONTAINERS);
+    expect(filterContainers(CONTAINERS, 'redis')).not.toEqual([]);
+  });
+
+  test('the guard returns a fresh array, so the caller cannot mutate state', () => {
+    const first = filterContainers(null, 'redis');
+    const second = filterContainers(null, 'redis');
+    expect(first).not.toBe(second);
+    first.push({ name: 'injected' });
+    expect(second).toEqual([]);
+  });
+});
