@@ -34,7 +34,7 @@ export default function Header({ count, sortMode }) {
           {count} container{count === 1 ? '' : 's'} found
         </Text>
         {sortMode && (
-          <Text color="gray">{STRINGS.sortMode[sortMode] ?? sortMode}</Text>
+          <Text color="yellow">{STRINGS.sortMode[sortMode] ?? sortMode}</Text>
         )}
       </Box>
     </Box>

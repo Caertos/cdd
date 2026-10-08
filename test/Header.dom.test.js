@@ -6,6 +6,7 @@ import fs from 'fs';
 import path from 'path';
 import { render } from '@testing-library/react';
 import { jest } from '@jest/globals';
+import { STRINGS } from '../src/helpers/strings.js';
 
 afterEach(() => jest.resetModules());
 
@@ -46,5 +47,17 @@ describe('Header', () => {
     const { getByText, queryByText } = render(<Header count={0} />);
     expect(getByText('unknown')).toBeTruthy();
     expect(queryByText('vunknown')).toBeNull();
+  });
+
+  test('shows the active sort mode when given one', async () => {
+    const Header = await loadHeader(() => '4.7.1');
+    const { getByText } = render(<Header count={2} sortMode="state" />);
+    expect(getByText(STRINGS.sortMode.state)).toBeTruthy();
+  });
+
+  test('shows no sort line when no mode is given', async () => {
+    const Header = await loadHeader(() => '4.7.1');
+    const { queryByText } = render(<Header count={2} />);
+    expect(queryByText(STRINGS.sortMode.state)).toBeNull();
   });
 });
