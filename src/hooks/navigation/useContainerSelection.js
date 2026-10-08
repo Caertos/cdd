@@ -80,8 +80,21 @@ export function useContainerSelection(items) {
           prev,
           list
         );
-        const next = (from + delta + list.length) % list.length;
-        return { id: list[next].id ?? null, index: next };
+        // Walk to the next slot that can actually hold the selection. An item
+        // with no id cannot be anchored, and a highlight resting on something
+        // we cannot identify is the same failure as one pointing at the wrong
+        // container: the next keypress would act on a row nobody chose. So the
+        // walk steps over it instead of stopping there.
+        let next = from;
+        for (let step = 0; step < list.length; step += 1) {
+          next = (next + delta + list.length) % list.length;
+          if (list[next]?.id != null) {
+            return { id: list[next].id, index: next };
+          }
+        }
+        // Nothing in the list is selectable: leave the anchor as it was rather
+        // than writing a null id, which would read as "nothing ever chosen".
+        return prev;
       });
     },
     [list]

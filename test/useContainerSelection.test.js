@@ -411,30 +411,50 @@ describe('useContainerSelection anchored to the container id', () => {
     expect(result.current.selectedId).toBe('b');
   });
 
-  test('moving onto an id-less item snaps back to the top', () => {
-    // KNOWN GAP, asserted so it is not forgotten: `move` writes the target
-    // container's id into the anchor, and an item without one leaves the anchor
-    // null, which the derivation reads as "nothing chosen". The highlight
-    // therefore never rests on the id-less container and `move` appears to do
-    // nothing. Not a selection loss, and not the D8 jump either, but it does
-    // mean a list with a malformed entry cannot be walked past that entry.
+  test('move steps over an item that cannot be identified', () => {
+    // An item with no id cannot hold the anchor. Stopping on it would write a
+    // null id, which the derivation reads as "nothing ever chosen" and sends
+    // the highlight back to the top — leaving a malformed row that the user
+    // can never walk past. Stepping over it keeps the list navigable.
     const items = () => [
       { id: 'a', name: 'alpha' },
       { name: 'ghost' },
       { id: 'b', name: 'bravo' },
     ];
     const { result } = renderHook(() => useContainerSelection(items()));
+    expect(result.current.selectedId).toBe('a');
+
+    // Down from 'a' lands on 'b': the id-less slot in between is skipped.
     act(() => {
       result.current.move(1);
     });
-    expect(result.current.selectedIndex).toBe(0);
-    expect(result.current.selectedContainer.id).toBe('a');
+    expect(result.current.selectedId).toBe('b');
+    expect(result.current.selectedIndex).toBe(2);
 
-    // Wrapping to the end still works, so only the id-less slot is affected.
+    // And back up the same way.
     act(() => {
       result.current.move(-1);
     });
-    expect(result.current.selectedIndex).toBe(2);
-    expect(result.current.selectedId).toBe('b');
+    expect(result.current.selectedId).toBe('a');
+    expect(result.current.selectedIndex).toBe(0);
+  });
+
+  test('a list with nothing selectable keeps the selection where it was', () => {
+    // No item carries an id, so there is nowhere to anchor. The anchor is left
+    // untouched rather than nulled, because a null id reads as "nothing was
+    // ever chosen" and would collapse the derivation to the top of the list.
+    const items = [{ name: 'one' }, { name: 'two' }];
+    const { result } = renderHook(() => useContainerSelection(items));
+    expect(result.current.selectedIndex).toBe(0);
+    act(() => {
+      result.current.move(1);
+    });
+    act(() => {
+      result.current.move(-1);
+    });
+    // Still derived, still inert, and no exception escaped the walk.
+    expect(result.current.selectedIndex).toBe(0);
+    expect(result.current.selectedContainer).not.toBeUndefined();
+    expect(result.current.lostSelection).toBe(false);
   });
 });
