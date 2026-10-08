@@ -85,7 +85,11 @@ export function useControls(containers = [], overrides = {}) {
   const lastCreationRef = React.useRef(null);
 
   // — Modular hooks —
-  const actions = useContainerActions({ containers });
+  // No props left to pass: the hook stopped reading `containers` when the
+  // callers below it moved to the container object. The empty object stays —
+  // useContainerActions destructures its argument without a default, so calling
+  // it bare throws.
+  const actions = useContainerActions({});
   const shellMode = useShellMode();
 
   const creation = useContainerCreation({
@@ -156,7 +160,7 @@ export function useControls(containers = [], overrides = {}) {
   const selection = useContainerSelection(containers);
   const debugLogs = useDebugLogs();
 
-  const selectedContainer = containers[selection.selected] ?? null;
+  const selectedContainer = selection.selectedContainer;
   const selectedVerdict = selectedContainer
     ? (health.get(selectedContainer.id) ?? null)
     : null;
@@ -268,7 +272,7 @@ export function useControls(containers = [], overrides = {}) {
         creation.suggestions.length > 0 ||
         (creation.hubResults ?? []).length > 0,
       showDebugLogs: debugLogs.showDebugLogs,
-      hasSelection: selection.selected >= 0 && containers.length > 0,
+      hasSelection: Boolean(selection.selectedContainer),
       wizardStep: creation.step,
       isSecretField: creation.isCurrentFieldSecret(),
       hasSecrets: creation.hasSecretsInEnv(),
@@ -290,7 +294,7 @@ export function useControls(containers = [], overrides = {}) {
       creation.step,
       creation.envInput,
       debugLogs.showDebugLogs,
-      selection.selected,
+      selection.selectedContainer,
       containers.length,
       connection?.status,
       launcher.canLaunch,
@@ -329,7 +333,7 @@ export function useControls(containers = [], overrides = {}) {
     () => ({
       // List context
       'container.start': () => {
-        const container = containers[selection.selected];
+        const container = selection.selectedContainer;
         if (!container) return;
         actions.handleAction({
           actionFn: async (id) => await actions.startContainer(id),
@@ -342,7 +346,7 @@ export function useControls(containers = [], overrides = {}) {
         });
       },
       'container.stop': () => {
-        const container = containers[selection.selected];
+        const container = selection.selectedContainer;
         if (!container) return;
         actions.handleAction({
           actionFn: async (id) => await actions.stopContainer(id),
@@ -358,7 +362,7 @@ export function useControls(containers = [], overrides = {}) {
         });
       },
       'container.restart': () => {
-        const container = containers[selection.selected];
+        const container = selection.selectedContainer;
         if (!container) return;
         actions.handleAction({
           actionFn: async (id) => await actions.restartContainer(id),
@@ -368,18 +372,18 @@ export function useControls(containers = [], overrides = {}) {
         });
       },
       'container.logs': () => {
-        const container = containers[selection.selected];
+        const container = selection.selectedContainer;
         if (!container) return;
         logsViewer.openLogs();
         startLogsStream(container.id);
       },
       'container.shell': () => {
-        const container = containers[selection.selected];
+        const container = selection.selectedContainer;
         if (!container) return;
         shellMode.openShell(container);
       },
       'container.erase': () => {
-        const container = containers[selection.selected];
+        const container = selection.selectedContainer;
         if (!container) return;
         eraseConfirmation.startErase();
         actions.setMessage(
@@ -394,7 +398,7 @@ export function useControls(containers = [], overrides = {}) {
         // Two F presses in quick succession would interleave two reads of the
         // same container and open the wizard twice.
         if (fixInFlightRef.current) return;
-        const container = containers[selection.selected];
+        const container = selection.selectedContainer;
         const fix = diagnostics.diagnosis?.fix;
         if (!container || !fix) return;
         fixInFlightRef.current = true;
@@ -608,7 +612,7 @@ export function useControls(containers = [], overrides = {}) {
     }),
     [
       containers,
-      selection.selected,
+      selection.selectedContainer,
       actions,
       logsViewer,
       startLogsStream,
