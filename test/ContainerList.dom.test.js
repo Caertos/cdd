@@ -3,8 +3,17 @@
  */
 import React from 'react';
 import { render } from '@testing-library/react';
-import ContainerList from '../src/components/ContainerList.jsx';
+import { jest } from '@jest/globals';
 import { STRINGS } from '../src/helpers/strings.js';
+
+const mockUseSharedContainerStats = jest.fn();
+await jest.unstable_mockModule(
+  '../src/hooks/useSharedContainerStats.js',
+  () => ({ useSharedContainerStats: mockUseSharedContainerStats })
+);
+
+const { default: ContainerList } =
+  await import('../src/components/ContainerList.jsx');
 
 const row = (id, name, state = 'exited') => ({
   id,
@@ -18,6 +27,15 @@ const manyRows = (count) =>
   Array.from({ length: count }, (_, i) => row(`id-${i + 1}`, `web-${i + 1}`));
 
 describe('ContainerList', () => {
+  beforeEach(() => {
+    // No Docker and no interval: the shared poller is mocked out.
+    mockUseSharedContainerStats.mockReset();
+    mockUseSharedContainerStats.mockReturnValue({
+      stats: new Map(),
+      errors: new Map(),
+    });
+  });
+
   test('marks the row at the selected index with the marker', () => {
     const { container } = render(
       <ContainerList
@@ -98,5 +116,34 @@ describe('ContainerList', () => {
     expect(markers).toHaveLength(1);
     const selectedRow = markers[0].closest('div').parentElement;
     expect(selectedRow.textContent).toContain('web-5');
+  });
+
+  test('polls only the visible slice, never the hidden rows', () => {
+    render(
+      <ContainerList containers={manyRows(4)} selected={0} availableRows={2} />
+    );
+
+    const [windowed] = mockUseSharedContainerStats.mock.calls.at(-1);
+    const ids = windowed.map((c) => c.id);
+    expect(ids).toEqual(['id-1', 'id-2']);
+    expect(ids).not.toContain('id-3');
+    expect(ids).not.toContain('id-4');
+  });
+
+  test('a running row reads its stats from the shared Map', () => {
+    mockUseSharedContainerStats.mockReturnValue({
+      stats: new Map([['id-1', { cpuPercent: '5.0', memPercent: '6.0' }]]),
+      errors: new Map(),
+    });
+
+    const { container } = render(
+      <ContainerList
+        containers={[{ ...row('id-1', 'web-1'), state: 'running' }]}
+        selected={0}
+      />
+    );
+
+    expect(container.textContent).toContain('CPU:');
+    expect(container.textContent).toContain('5');
   });
 });
