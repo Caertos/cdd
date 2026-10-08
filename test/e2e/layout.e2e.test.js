@@ -3,8 +3,9 @@
  * cannot observe line breaks, only structure. These render with
  * `ink-testing-library` (100 columns) and assert on the frame's line count.
  *
- * No Docker: `useContainerStats` is mocked with a mutable error string so the
- * same real components can be rendered in every state.
+ * No Docker: `useSharedContainerStats` is mocked so the same real components
+ * can be rendered without touching a socket or starting an interval. Rows
+ * receive their stats through props.
  */
 import { jest } from '@jest/globals';
 import React from 'react';
@@ -13,14 +14,12 @@ import { render } from 'ink-testing-library';
 import { stripAnsi, renderApp } from './support/ink.js';
 import { STRINGS } from '../../src/helpers/strings.js';
 
-let statsError = '';
-
-await jest.unstable_mockModule('../../src/hooks/useContainerStats.js', () => ({
-  useContainerStats: () => ({
-    stats: { cpuPercent: '0', memPercent: '0' },
-    statsError,
-  }),
-}));
+await jest.unstable_mockModule(
+  '../../src/hooks/useSharedContainerStats.js',
+  () => ({
+    useSharedContainerStats: () => ({ stats: new Map(), errors: new Map() }),
+  })
+);
 
 const { default: ContainerRow } =
   await import('../../src/components/ContainerRow.jsx');
@@ -46,7 +45,6 @@ describe('layout (real Ink)', () => {
   afterEach(() => {
     if (ui) ui.unmount();
     ui = undefined;
-    statsError = '';
   });
 
   test('a row with long name and image stays on a single line', () => {
@@ -74,6 +72,7 @@ describe('layout (real Ink)', () => {
             state: 'running',
             ports: ['18080:80'],
           }}
+          stats={{ cpuPercent: '0', memPercent: '0' }}
           isSelected
         />
       </Box>
@@ -100,8 +99,9 @@ describe('layout (real Ink)', () => {
   });
 
   test('a stats error keeps the row on one line', () => {
-    statsError = 'Error fetching stats';
-    ui = render(<ContainerRow container={row('id-1', 'web-1')} />);
+    ui = render(
+      <ContainerRow container={row('id-1', 'web-1')} statsError="Error fetching stats" />
+    );
 
     const frameLines = lines(ui.lastFrame());
     expect(frameLines).toHaveLength(1);

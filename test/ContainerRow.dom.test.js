@@ -4,28 +4,10 @@
 import React from 'react';
 import { render } from '@testing-library/react';
 import { jest } from '@jest/globals';
+import ContainerRow from '../src/components/ContainerRow.jsx';
 import { STRINGS } from '../src/helpers/strings.js';
 
-afterEach(() => jest.resetModules());
-
-// ContainerRow polls docker through useContainerStats when state is running;
-// stub the hook so no unit test ever touches a real socket (§10).
-async function loadRow(
-  stats = { cpuPercent: '1.5', memPercent: '2.5' },
-  statsError = ''
-) {
-  await jest.unstable_mockModule('../src/hooks/useContainerStats.js', () => ({
-    useContainerStats: () => ({ stats, statsError }),
-  }));
-  const { default: ContainerRow } =
-    await import('../src/components/ContainerRow.jsx');
-  return ContainerRow;
-}
-
-async function renderRow(props, stats, statsError) {
-  const Row = await loadRow(stats, statsError);
-  return render(<Row {...props} />);
-}
+const renderRow = (props) => render(<ContainerRow {...props} />);
 
 const base = {
   id: 'abc123',
@@ -36,62 +18,62 @@ const base = {
 };
 
 describe('ContainerRow', () => {
-  test('truncates a long name to 18 chars (17 + ellipsis)', async () => {
-    const { getByText } = await renderRow({
+  test('truncates a long name to 18 chars (17 + ellipsis)', () => {
+    const { getByText } = renderRow({
       container: { ...base, name: 'a'.repeat(30) },
     });
     expect(getByText('aaaaaaaaaaaaaaaaa…')).toBeTruthy();
   });
 
-  test('truncates a long image to 18 chars', async () => {
-    const { getByText } = await renderRow({
+  test('truncates a long image to 18 chars', () => {
+    const { getByText } = renderRow({
       container: { ...base, image: 'b'.repeat(30) },
     });
     expect(getByText('bbbbbbbbbbbbbbbbb…')).toBeTruthy();
   });
 
-  test('running → RUNNING state text', async () => {
-    const { getByText } = await renderRow({
+  test('running → RUNNING state text', () => {
+    const { getByText } = renderRow({
       container: { ...base, state: 'running' },
     });
     expect(getByText(STRINGS.stateRunning)).toBeTruthy();
   });
 
-  test('exited → EXITED state text', async () => {
-    const { getByText } = await renderRow({
+  test('exited → EXITED state text', () => {
+    const { getByText } = renderRow({
       container: { ...base, state: 'exited' },
     });
     expect(getByText(STRINGS.stateExited)).toBeTruthy();
   });
 
-  test('paused → PAUSED state text', async () => {
-    const { getByText } = await renderRow({
+  test('paused → PAUSED state text', () => {
+    const { getByText } = renderRow({
       container: { ...base, state: 'paused' },
     });
     expect(getByText(STRINGS.statePaused)).toBeTruthy();
   });
 
-  test('unknown state renders uppercased', async () => {
-    const { getByText } = await renderRow({
+  test('unknown state renders uppercased', () => {
+    const { getByText } = renderRow({
       container: { ...base, state: 'restarting' },
     });
     expect(getByText('RESTARTING')).toBeTruthy();
   });
 
-  test('ports get the link prefix', async () => {
-    const { container } = await renderRow({
+  test('ports get the link prefix', () => {
+    const { container } = renderRow({
       container: { ...base, ports: ['8080:80', '9090:80'] },
     });
     expect(container.textContent).toContain('🔗 8080:80');
     expect(container.textContent).toContain('🔗 9090:80');
   });
 
-  test('stats error renders on the same line as the state text, in red', async () => {
-    const { container } = await renderRow(
-      { container: { ...base, state: 'running' } },
-      { cpuPercent: '1.5', memPercent: '2.5' },
-      'Error fetching stats'
-    );
+  test('stats error renders on the same line as the state text, in red', () => {
+    const { container } = renderRow({
+      container: { ...base, state: 'running' },
+      stats: { cpuPercent: '1.5', memPercent: '2.5' },
+      statsError: 'Error fetching stats',
+    });
 
     // The error keeps its own red colour inside the state node, so it never
     // spills to a second line.
@@ -106,8 +88,8 @@ describe('ContainerRow', () => {
     expect(stateNode.textContent).toContain('Error fetching stats');
   });
 
-  test('selected row shows the marker in green', async () => {
-    const { getByText } = await renderRow({
+  test('selected row shows the marker in green', () => {
+    const { getByText } = renderRow({
       container: base,
       isSelected: true,
     });
@@ -115,8 +97,8 @@ describe('ContainerRow', () => {
     expect(marker.getAttribute('data-color')).toBe('green');
   });
 
-  test('unselected row shows blank space instead of the marker', async () => {
-    const { container, queryByText } = await renderRow({
+  test('unselected row shows blank space instead of the marker', () => {
+    const { container, queryByText } = renderRow({
       container: base,
       isSelected: false,
     });
@@ -126,34 +108,38 @@ describe('ContainerRow', () => {
     expect(container.textContent.startsWith(' ')).toBe(true);
   });
 
-  test('isStale dims every text', async () => {
-    const { getByText } = await renderRow({ container: base, isStale: true });
+  test('isStale dims every text', () => {
+    const { getByText } = renderRow({ container: base, isStale: true });
     expect(getByText('web').getAttribute('data-dim')).toBe('gray');
     expect(getByText(STRINGS.stateExited).getAttribute('data-dim')).toBe(
       'gray'
     );
   });
 
-  test('without isStale nothing is dimmed', async () => {
-    const { getByText } = await renderRow({ container: base, isStale: false });
+  test('without isStale nothing is dimmed', () => {
+    const { getByText } = renderRow({ container: base, isStale: false });
     expect(getByText('web').getAttribute('data-dim')).toBeNull();
   });
 
-  test('StatsBar only renders when the container is running', async () => {
-    const Row = await loadRow();
-    const running = render(<Row container={{ ...base, state: 'running' }} />);
+  test('StatsBar only renders when the container is running', () => {
+    const running = render(
+      <ContainerRow
+        container={{ ...base, state: 'running' }}
+        stats={{ cpuPercent: '1.5', memPercent: '2.5' }}
+      />
+    );
     expect(running.container.textContent).toContain('CPU:');
     running.unmount();
 
-    const stopped = render(<Row container={{ ...base, state: 'exited' }} />);
+    const stopped = render(<ContainerRow container={{ ...base, state: 'exited' }} />);
     expect(stopped.container.textContent).not.toContain('CPU:');
   });
 
   // §5.8 (D12) — fixed by TASK-7 (null-safe stateText).
-  test('missing state renders without throwing', async () => {
+  test('missing state renders without throwing', () => {
     const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
     try {
-      const { container } = await renderRow({
+      const { container } = renderRow({
         container: { ...base, state: undefined },
       });
       expect(container.textContent).toContain('web');
@@ -162,8 +148,8 @@ describe('ContainerRow', () => {
     }
   });
 
-  test('renders a health verdict headline with its level colour', async () => {
-    const { getByText } = await renderRow({
+  test('renders a health verdict headline with its level colour', () => {
+    const { getByText } = renderRow({
       container: { ...base, state: 'exited' },
       verdict: {
         code: 'stopped',
@@ -176,8 +162,8 @@ describe('ContainerRow', () => {
     expect(el.getAttribute('data-color')).toBe('gray');
   });
 
-  test('crash-loop verdict is shown in red', async () => {
-    const { getByText } = await renderRow({
+  test('crash-loop verdict is shown in red', () => {
+    const { getByText } = renderRow({
       container: { ...base, state: 'exited' },
       verdict: {
         code: 'crash-loop',
