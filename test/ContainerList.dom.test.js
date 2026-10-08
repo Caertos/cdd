@@ -4,6 +4,7 @@
 import React from 'react';
 import { render } from '@testing-library/react';
 import ContainerList from '../src/components/ContainerList.jsx';
+import { STRINGS } from '../src/helpers/strings.js';
 
 const row = (id, name, state = 'exited') => ({
   id,
@@ -12,6 +13,9 @@ const row = (id, name, state = 'exited') => ({
   state,
   ports: [],
 });
+
+const manyRows = (count) =>
+  Array.from({ length: count }, (_, i) => row(`id-${i + 1}`, `web-${i + 1}`));
 
 describe('ContainerList', () => {
   test('marks the row at the selected index with the marker', () => {
@@ -53,12 +57,46 @@ describe('ContainerList', () => {
 
   test('isStale is propagated to every row', () => {
     const { getByText } = render(
-      <ContainerList
-        containers={[row('id-1', 'web-1')]}
-        selected={0}
-        isStale
-      />
+      <ContainerList containers={[row('id-1', 'web-1')]} selected={0} isStale />
     );
     expect(getByText('web-1').getAttribute('data-dim')).toBe('gray');
+  });
+
+  test('windows the list and reports the rows hidden below', () => {
+    const { getByText, queryByText } = render(
+      <ContainerList containers={manyRows(5)} selected={0} availableRows={3} />
+    );
+
+    expect(getByText('web-1')).toBeTruthy();
+    expect(getByText('web-3')).toBeTruthy();
+    expect(queryByText('web-4')).toBeNull();
+    expect(queryByText('web-5')).toBeNull();
+    expect(getByText(STRINGS.listWindow.moreBelow(2))).toBeTruthy();
+    expect(queryByText(STRINGS.listWindow.moreAbove(1))).toBeNull();
+  });
+
+  test('scrolls the window and reports the rows hidden above', () => {
+    const { getByText, queryByText } = render(
+      <ContainerList containers={manyRows(5)} selected={4} availableRows={3} />
+    );
+
+    // Selection recentres: window covers web-3..web-5, two rows hidden above.
+    expect(getByText(STRINGS.listWindow.moreAbove(2))).toBeTruthy();
+    expect(queryByText(STRINGS.listWindow.moreBelow(1))).toBeNull();
+    expect(queryByText('web-1')).toBeNull();
+    expect(getByText('web-5')).toBeTruthy();
+  });
+
+  test('keeps the selected row marked when it falls inside the window', () => {
+    const { container } = render(
+      <ContainerList containers={manyRows(5)} selected={4} availableRows={3} />
+    );
+
+    const markers = [...container.querySelectorAll('span')].filter(
+      (s) => s.textContent === '➤'
+    );
+    expect(markers).toHaveLength(1);
+    const selectedRow = markers[0].closest('div').parentElement;
+    expect(selectedRow.textContent).toContain('web-5');
   });
 });

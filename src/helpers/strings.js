@@ -46,6 +46,14 @@ export const STRINGS = {
     noMatchHint: 'Press Esc to clear the search',
   },
 
+  // ── ContainerList window (TASK-9 PR E) ──
+  // Indicators for rows scrolled out of the visible window. Each count is the
+  // number of rows hidden above/below the slice the terminal can show.
+  listWindow: {
+    moreAbove: (n) => `↑ ${n} more`,
+    moreBelow: (n) => `↓ ${n} more`,
+  },
+
   // ── ContainerRow ──
   stateRunning: '🟢 RUNNING',
   stateExited: '🔴 EXITED',
