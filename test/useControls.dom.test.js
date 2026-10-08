@@ -23,13 +23,14 @@ await jest.unstable_mockModule('ink', () => ({
 
 // Mock containerActions — expose all named exports so dependents don't break
 const mockSvcCreateContainer = jest.fn();
+const mockSvcStopContainer = jest.fn().mockResolvedValue(undefined);
 await jest.unstable_mockModule(
   '../src/helpers/dockerService/serviceComponents/containerActions.js',
   () => ({
     createContainer: mockSvcCreateContainer,
     removeContainer: jest.fn().mockResolvedValue(undefined),
     startContainer: jest.fn().mockResolvedValue(undefined),
-    stopContainer: jest.fn().mockResolvedValue(undefined),
+    stopContainer: mockSvcStopContainer,
     restartContainer: jest.fn().mockResolvedValue(undefined),
   })
 );
@@ -1005,6 +1006,121 @@ describe('useControls — the fix key (TASK-8)', () => {
     expect(expose.current.keymapBindings.map((b) => b.id)).not.toContain(
       'container.fix'
     );
+  });
+});
+
+describe('useControls — the stop key (D24: a created container is already stopped)', () => {
+  // The shapes Docker really sends: `State` is lower-case and is what the list
+  // mapper copies into `state`, while `status` gets the display string.
+  const created = {
+    id: 'c-created',
+    name: 'nunca-arrancado',
+    image: 'nginx:1.27-alpine',
+    state: 'created',
+    status: 'Created',
+    ports: [],
+  };
+  const running = {
+    id: 'c-running',
+    name: 'en-marcha',
+    image: 'nginx:1.27-alpine',
+    state: 'running',
+    status: 'Up 3 seconds',
+    ports: [],
+  };
+  const exited = {
+    id: 'c-exited',
+    name: 'terminado',
+    image: 'nginx:1.27-alpine',
+    state: 'exited',
+    status: 'Exited (0) 2 seconds ago',
+    ports: [],
+  };
+  const stopped = {
+    id: 'c-stopped',
+    name: 'detenido',
+    image: 'nginx:1.27-alpine',
+    state: 'stopped',
+    status: 'Stopped',
+    ports: [],
+  };
+
+  const WARNING = 'Container is already stopped.';
+  const ENGINE_ERROR = 'Error response from daemon: container already stopped';
+
+  async function pressStopOn(container) {
+    const expose = { current: null };
+    render(<HookTester containers={[container]} expose={expose} />);
+    await act(async () => {});
+    await act(async () => {
+      expose.current.dispatch('container.stop');
+    });
+    await act(async () => {});
+    return expose;
+  }
+
+  beforeEach(() => {
+    mockSvcStopContainer.mockClear();
+  });
+
+  afterEach(() => {
+    mockSvcStopContainer.mockReset();
+    mockSvcStopContainer.mockResolvedValue(undefined);
+  });
+
+  test('p on a created container explains itself instead of calling Docker', async () => {
+    const expose = await pressStopOn(created);
+
+    expect(mockSvcStopContainer).not.toHaveBeenCalled();
+    expect(expose.current.actions.message).toBe(WARNING);
+    expect(expose.current.actions.messageColor).toBe('yellow');
+  });
+
+  test('the raw engine error never reaches the user for a created container', async () => {
+    // The engine refuses `stop` on a container that never ran. If the check
+    // lets it through, this is exactly what the user is shown.
+    mockSvcStopContainer.mockRejectedValue(new Error(ENGINE_ERROR));
+
+    const expose = await pressStopOn(created);
+
+    expect(expose.current.actions.message).toBe(WARNING);
+    expect(expose.current.actions.message).not.toContain(ENGINE_ERROR);
+    expect(expose.current.actions.message).not.toContain('Failed to stop');
+    expect(mockSvcStopContainer).not.toHaveBeenCalled();
+  });
+
+  test('p on a running container still stops it', async () => {
+    const expose = await pressStopOn(running);
+
+    expect(mockSvcStopContainer).toHaveBeenCalledWith('c-running');
+    expect(expose.current.actions.message).toBe(
+      'Stopping container successful.'
+    );
+  });
+
+  test('a rejected stop on a running container does surface the engine error', async () => {
+    // Control for the test above: the rejection is reachable and visible, so
+    // its absence for a created container is the fix and not a dead mock.
+    mockSvcStopContainer.mockRejectedValue(new Error(ENGINE_ERROR));
+
+    const expose = await pressStopOn(running);
+
+    expect(mockSvcStopContainer).toHaveBeenCalledWith('c-running');
+    expect(expose.current.actions.message).toContain(ENGINE_ERROR);
+  });
+
+  test('p on an exited container still short-circuits', async () => {
+    const expose = await pressStopOn(exited);
+
+    expect(mockSvcStopContainer).not.toHaveBeenCalled();
+    expect(expose.current.actions.message).toBe(WARNING);
+  });
+
+  test('p on a stopped container still short-circuits', async () => {
+    const expose = await pressStopOn(stopped);
+
+    expect(mockSvcStopContainer).not.toHaveBeenCalled();
+    expect(expose.current.actions.message).toBe(WARNING);
   });
 });
 

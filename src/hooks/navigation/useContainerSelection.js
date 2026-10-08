@@ -35,9 +35,10 @@ const EMPTY = [];
  *
  * `selected` is the derived index under its old name, kept as a compatibility
  * value for the downstream layers that still receive a position
- * (`useControls`, `useContainerCommandRouter`, `useContainerActions`);
- * `selectedIndex` is the same number. Later work migrates those to
- * `selectedId` and drops this alias.
+ * (`useControls`, `useContainerActions`); `useContainerCommandRouter` is NOT
+ * one of them — nothing in `src/` imports it, so it is dead code and must not
+ * be read as the live routing. `selectedIndex` is the same number. Later work
+ * migrates those to `selectedId` and drops this alias.
  *
  * @param {Array<{id: string}>} items - List already filtered and sorted
  * @returns {{

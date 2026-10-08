@@ -353,11 +353,19 @@ export function useControls(containers = [], overrides = {}) {
           actionLabel: 'Stopping',
           actionVerb: 'stop',
           container: selection.selectedContainer,
+          // D24: a container that was created and never ran is already
+          // stopped, and Docker answers `stop` on it with a raw engine error.
+          // Only `state` carries that: the list mapper copies Docker's
+          // `State: 'created'` (lower-case) into `state` while `status` gets
+          // the display string `Created`, so the `status` alternatives below
+          // are tolerance for shapes that only carry `status` and cannot
+          // match this one.
           stateCheck: (c) =>
             (c.state === 'exited' ||
               c.status === 'exited' ||
               c.state === 'stopped' ||
-              c.status === 'stopped') &&
+              c.status === 'stopped' ||
+              c.state === 'created') &&
             'Container is already stopped.',
         });
       },
