@@ -1,5 +1,7 @@
 # CDD — CLI Docker Dashboard
 
+🇪🇸 [Ver en Español](README.es.md)
+
 <p align="center">
   <img src="https://img.shields.io/npm/v/cdd-cli?color=blue&label=npm%20package" alt="npm version"/>
   <img src="https://img.shields.io/npm/dt/cdd-cli?color=green&label=downloads" alt="npm downloads"/>
@@ -11,116 +13,25 @@
 
 ---
 
-## 🎉 What's new in v4.10
+## 🎉 What's new in v4.11
 
-**CDD explains why a container died — and offers to fix it.**
+**Find a container fast, put the broken ones on top, and let the list fit the screen.**
 
-Every other tool here — lazydocker, ctop, Docker Desktop — shows you `EXITED (1)` and hands you the log. None of them tell you why. The person who installed a TUI to avoid typing `docker ps` is exactly the person who does not want to read 200 lines of Postgres startup to find out a variable was missing.
+The list used to be a plain dump of everything Docker returned. With six containers that was fine; with twenty-five it was a wall. v4.11 makes it scale:
 
-Select a failing container and a panel appears on its own:
+- **`/` searches the list live** — by name, image or state, accent- and case-insensitive, with every word required (`node exit` finds stopped node containers). `Enter` keeps the search applied, `Esc` clears it, and the header says how much is shown and what for: `12 of 25 containers · search: "pg"`.
+- **`O` cycles the order** — *problems first* (the new default), by name, or newest first. Whatever CDD already knows is wrong rises to the top.
+- **The list fits the terminal** — it renders only the rows that fit and counts the rest (`↑ 3 more` / `↓ 9 more`), instead of pushing the whole dashboard off screen.
 
-```
-╭─ Diagnosis: mi-basedatos ─────────────────────────────────────╮
-│                                                                │
-│  It keeps dying after 2s and Docker restarts it.              │
-│                                                                │
-│  Likely cause:                                                 │
-│    Postgres refuses to start without a password. The image     │
-│    needs POSTGRES_PASSWORD defined.                           │
-│                                                                │
-│  Last lines:                                                   │
-│    Error: Database is uninitialized and superuser password…   │
-│                                                                │
-│  [F] Recreate and set POSTGRES_PASSWORD  [L] Full log          │
-╰────────────────────────────────────────────────────────────────╯
-```
+**And the selection is safe.** The highlight is anchored to the container, not to its slot: if a container disappears during the background refresh, the selection no longer jumps to whatever slid into its place — which used to be a route to pressing `E` (erase) on the wrong container.
 
-- **No key to press.** If something is wrong, it explains itself. A container you stopped on purpose gets no panel at all.
-- **`F` recreates it with the fix applied** — the wizard opens already filled in and already on the review step, with every changed value marked `↑ changed by CDD`. Nothing is applied behind your back, and the failed container keeps its name: the new one becomes `mi-basedatos-2`.
-- **Then it asks.** *"Created mi-basedatos-2. Delete mi-basedatos, the container that failed?"* Answer "no" and it stays exactly where it was.
-- **When it doesn't know, it says so** — and shows the last lines. That is the rule, not a fallback: a plausible-sounding wrong cause costs more trust than ten correct ones earn.
+Under the hood, one stats poller now feeds the visible rows instead of one timer per row: twenty-five running containers mean one request cycle, not twenty-five.
 
-**Eleven rules ship now:** missing Postgres / MySQL / SQL Server credentials, busy host port, image with no command, out of memory, volume permission denied, executable not found, a job that finished instead of serving, and a refused connection to another host. The catalog is data — adding one is adding an element to a list, not touching the logic.
+Four long-standing defects are fixed: **D8** (the selection acting on the wrong container), **D24** (`p` on a never-started container showing Docker's raw error), **D25** (`/` advertised in the help but doing nothing) and **D10** (a stats timer per row).
 
-### v4.8 — Start Docker without leaving the terminal
+> **The default order changed to "problems first"**, no longer Docker's order. It is the most visible difference when you open the new version, and it is deliberate: once CDD can tell a broken container from a stopped one, burying it in an alphabetical list would waste that.
 
-When Docker is unreachable, CDD checks whether it knows how to start it. If it does, the `S` key appears on the connection screen and walks you through launching Docker.
-
-- **Windows** — finds Docker Desktop in its standard install locations and starts it directly, no password (primary platform)
-- **macOS** — opens Docker Desktop with `open -a Docker`
-- **Linux (rootless)** — starts the user service without a password
-- **Linux (system service)** — hands the terminal over to `sudo` so you can type your password
-- **Live wait** — shows elapsed time and the typical wait, then reloads your containers automatically when Docker is ready
-
-### v4.7 — Connection-screen keys
-
-**Live retry countdown and connection-screen keys.**
-
-When Docker is unreachable, CDD no longer leaves you guessing. The connection screen counts down to the next automatic reconnect and gives you direct keys to act.
-
-- **Live countdown** — seconds until the next automatic reconnect attempt
-- **`R` retries immediately** — force a container fetch without waiting for the timer
-- **`Q` quits directly** — no confirmation prompt; the app is already in a degraded state
-- **Leaner notice** — `ConnectionNotice` only receives `{ error, nextRetryIn }`
-
-### v4.6 — Secret management
-
-**Secret management — passwords stay hidden.**
-
-CDD now protects sensitive environment variables by default. Passwords, tokens, and API keys are masked in the wizard and review screen, and never appear in debug logs.
-
-- **Automatic masking** — variables like `POSTGRES_PASSWORD`, `JWT_SECRET`, or `API_KEY` show as `••••••` while typing
-- **`Ctrl+R` to reveal** — toggle visibility of secret values when you need to check them
-- **`Ctrl+G` to generate** — create strong, unambiguous passwords directly in the wizard
-- **No example passwords** — image profiles no longer suggest `secret` or `change-me` as defaults
-- **Weak password warnings** — the review screen flags common or short passwords and suggests generating a stronger one
-- **Debug-safe** — secrets are redacted from all log output, even in debug mode
-
-### Why this matters
-
-Before v4.6, selecting a Postgres profile would pre-fill `POSTGRES_PASSWORD=secret`. Most users accept this without thinking — and end up with a database protected by a literal `secret` password. Worse, if you share your screen or check your terminal history two days later, every password is visible in plain text.
-
-Now CDD encourages secure practices without slowing you down: empty defaults for secrets, one-key generation, and masking that you can toggle when needed.
-
-### v4.6.1 — Docker connection handling
-
-**Clear error messages when Docker is unreachable.**
-
-Before v4.6.1, if Docker was stopped or unreachable, CDD showed "No containers found" — a misleading message that made users think something was wrong with their containers. Now CDD detects connection failures and shows an actionable error screen.
-
-- **Clear error screen** — "Can't reach Docker" with specific technical details
-- **Actionable suggestions** — tells you exactly how to fix it (`sudo systemctl start docker`, open Docker Desktop)
-- **Auto-retry** — CDD keeps trying to connect every 5 seconds in the background
-- **Manual retry** — press `R` to retry immediately without waiting
-- **Stale data indicator** — when reconnection happens, old container data is visually dimmed until fresh data arrives
-- **Centralized strings** — all UI text moved to `src/helpers/strings.js` for future internationalization
-
----
-
-## Previous releases
-
-### v4.1 — Interactive shell
-
-**Open a shell inside any container with a single keystroke.**
-
-Press `S` and CDD drops you into a full interactive shell (`bash` or `sh`) inside the selected container — no `docker exec` typing needed.
-
-- **Auto-detected shell** — CDD probes the container and picks `bash` or `sh` automatically
-- **Full terminal support** — run `psql`, `python3`, `node`, `redis-cli`, or any command inside the container
-- **Clean exit** — type `exit` or press `Ctrl+D` to return to the dashboard
-
-### v4.5 — Interactive creation wizard
-
-Forget `docker run` flags, forgotten env vars, and broken `:latest` tags. Press `C` and CDD guides you through creating a container in seconds:
-
-- **20 curated image profiles** available offline — postgres, redis, nginx, node, mysql, mongo, and more
-- **Smart default tags** that actually work: `postgres:17-alpine`, `redis:7-alpine`, `nginx:1.27-alpine` — no more silent `:latest` failures
-- **Live Docker Hub search** with a single `Tab` keystroke — with a `[searching Docker Hub...]` indicator so you always know what's happening
-- **Contextual env var hints** — creating a Postgres container? CDD suggests `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` automatically
-- **Review before you create** — see exactly what will be created (resolved image tag, auto-assigned ports, warnings) before the container exists
-- **Context-sensitive HUD** — only the keys that make sense right now are shown, nothing more
-
-This is what developer experience should feel like.
+Older release notes are kept in [`CHANGELOG.md`](CHANGELOG.md).
 
 ---
 
@@ -432,5 +343,3 @@ See [CONTRIBUTING.md](CONTRIBUTING.md).
 MIT/ISC — see [`LICENSE`](LICENSE).
 
 ---
-
-🇪🇸 [Ver en Español](README.es.md)
