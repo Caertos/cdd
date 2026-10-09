@@ -1,5 +1,6 @@
 // Reusable validations for ports, environment variables, and Docker identifiers
 import { normalizeImageName } from './imageNameUtils.js';
+import { parseEnvPairs } from './envInput.js';
 
 /**
  * Validates that a value looks like a Docker container/image ID (hex, 64 chars)
@@ -145,23 +146,16 @@ export function validateEnvVars(envInput, imageName, imageProfiles) {
   const syntaxErrors = [];
 
   if (envInput && envInput.trim()) {
-    const vars = envInput
-      .split(',')
-      .map((v) => v.trim())
-      .filter(Boolean);
-    for (const v of vars) {
-      const eqIdx = v.indexOf('=');
-      if (eqIdx === -1) {
-        syntaxErrors.push(`"${v}" is missing an '=' sign`);
+    for (const { key, value } of parseEnvPairs(envInput)) {
+      if (value === null) {
+        syntaxErrors.push(`"${key}" is missing an '=' sign`);
         continue;
       }
-      const varName = v.slice(0, eqIdx).trim();
-      const varValue = v.slice(eqIdx + 1);
-      if (!/^[A-Z_][A-Z0-9_]*$/i.test(varName)) {
-        syntaxErrors.push(`"${varName}" is not a valid variable name`);
+      if (!/^[A-Z_][A-Z0-9_]*$/i.test(key)) {
+        syntaxErrors.push(`"${key}" is not a valid variable name`);
         continue;
       }
-      parsedEnv[varName] = varValue;
+      parsedEnv[key] = value;
     }
   }
 

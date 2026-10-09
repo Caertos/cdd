@@ -73,7 +73,7 @@ export async function createContainer(
 
   logger.info('Creating container from image %s', imageName);
   if (options.Env?.length) {
-    logger.debug('Env vars: %s', redactForLog(options.Env.join(',')));
+    logger.debug('Env vars: %s', redactForLog(options.Env));
   }
   let exists;
   try {

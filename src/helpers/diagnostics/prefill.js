@@ -7,6 +7,7 @@
  * a daemon.
  */
 import { findAvailablePort } from '../portUtils.js';
+import { splitEnvEntries, formatEnvEntries } from '../envInput.js';
 
 /**
  * @typedef {Object} ContainerConfig
@@ -23,14 +24,12 @@ import { findAvailablePort } from '../portUtils.js';
  */
 
 /**
- * Known limitation of the env field: it is comma separated, and Docker allows a
- * comma inside a value. The kafka profile in IMAGE_PROFILES ships
- * `KAFKA_LISTENERS=PLAINTEXT://0.0.0.0:9092,PLAINTEXT://0.0.0.0:9093`, which
- * the wizard's own split(',') would cut in half. This is the existing field
- * format — buildContainerOptions and buildCreationSummary both parse it the
- * same way — so recreating such a container reproduces the breakage rather
- * than causing it. Fixing the format is a separate change that reaches all
- * three readers at once.
+ * The env field is a comma-separated list of `KEY=VALUE` entries, and Docker
+ * allows a comma inside a value (e.g. Kafka's
+ * `KAFKA_LISTENERS=PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093`). Values
+ * therefore escape their own commas and backslashes (`\,`, `\\`) and every
+ * reader goes through `envInput.js`; `containerToCreationValues` re-escapes on
+ * the way in and `applyFix` re-escapes on the way out.
  *
  * @see ownEnvOf
  * @see applyFix
@@ -102,14 +101,15 @@ export function containerToCreationValues(container, config, imageEnv = null) {
     imageName: row.image ?? '',
     containerName: row.name ?? '',
     portInput: portInputOf(row.ports),
-    envInput: ownEnvOf(config?.env ?? null, imageEnv).join(','),
+    // The container's real Env may carry commas inside a value; escape them so
+    // the field round-trips through buildContainerOptions unchanged.
+    envInput: formatEnvEntries(ownEnvOf(config?.env ?? null, imageEnv)),
   };
 }
 
 /** Split the wizard's comma-separated env field back into entries. */
 function envEntries(envInput) {
-  return (envInput || '')
-    .split(',')
+  return splitEnvEntries(envInput)
     .map((s) => s.trim())
     .filter(Boolean);
 }
@@ -176,7 +176,9 @@ export function applyFix(values, fix, ctx = {}) {
       changedFields.push('envInput');
     }
     if (changedFields.length > 0) {
-      next.envInput = entries.join(',');
+      // Re-escape the values so a comma inside one of them stays part of that
+      // entry instead of splitting the list.
+      next.envInput = formatEnvEntries(entries);
     }
   }
 
