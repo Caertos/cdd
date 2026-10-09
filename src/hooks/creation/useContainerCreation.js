@@ -27,6 +27,11 @@ import {
   secretToBuffer,
   clearBuffer,
 } from '../../helpers/secrets.js';
+import {
+  splitEnvEntries,
+  parseEnvPairs,
+  formatEnvEntries,
+} from '../../helpers/envInput.js';
 
 const MAX_VISIBLE = 6;
 
@@ -704,8 +709,32 @@ export function useContainerCreation({
       return prepareReview();
     }
 
-    // Step 4 (review) — confirmed: call onCreate
+    // Step 4 (review) — confirmed: revalidate before calling onCreate.
+    // The prefill/recreate flow jumps straight here, so the step checks that
+    // the wizard ran on the way in were never applied.
     if (f.step === 4) {
+      for (const step of [0, 1, 2]) {
+        const result = validateStep(step, currentValues, stepCtx);
+        if (!result.ok) {
+          setTimedMessage(result.error, 'red');
+          return;
+        }
+      }
+      // Step 3 only checks syntax here (legacy 1-arg form, no required-env) so
+      // a legitimate recreation of a container missing a required var — the
+      // very situation the diagnosis is fixing — is not blocked.
+      if (!validateEnvVars(currentValues.envInput)) {
+        const { errors } = validateEnvVars(
+          currentValues.envInput,
+          currentValues.imageName,
+          imageProfiles
+        );
+        setTimedMessage(
+          errors[0] ?? 'Environment variables contain a syntax error.',
+          'red'
+        );
+        return;
+      }
       safeCall(onCreate, currentValues);
       return;
     }
@@ -847,16 +876,15 @@ export function useContainerCreation({
     const profile = imageProfiles[baseName];
     const suggested = profile?.suggestedEnv ?? [];
     if (!suggested.length) return;
-    const addedKeys = envInput
-      .split(',')
-      .map((s) => s.split('=')[0].trim())
+    const addedKeys = parseEnvPairs(envInput)
+      .map((p) => p.key)
       .filter(Boolean);
     const next = suggested.find((s) => !addedKeys.includes(s.split('=')[0]));
     if (!next) {
       setTimedMessage('All suggested env vars added', 'yellow');
       return;
     }
-    const newEnvInput = envInput ? `${envInput},${next}` : next;
+    const newEnvInput = formatEnvEntries([...splitEnvEntries(envInput), next]);
     dispatch({
       type: 'SET',
       payload: {
@@ -876,7 +904,9 @@ export function useContainerCreation({
     const secretBuf = secretToBuffer(secret);
 
     try {
-      const pairs = envInput ? envInput.split(',') : [];
+      // Entries are unescaped here; formatEnvEntries re-escapes on the way out
+      // so a comma in another value is not mistaken for a separator.
+      const pairs = splitEnvEntries(envInput);
 
       // Try to find a secret key with empty value
       let targetIdx = -1;
@@ -895,7 +925,7 @@ export function useContainerCreation({
       if (targetIdx >= 0) {
         // Fill the empty secret field
         pairs[targetIdx] = pairs[targetIdx].replace(/=$/, `=${secret}`);
-        const newEnvInput = pairs.join(',');
+        const newEnvInput = formatEnvEntries(pairs);
         dispatch({
           type: 'SET',
           payload: {
@@ -934,12 +964,9 @@ export function useContainerCreation({
    */
   function hasSecretsInEnv() {
     if (!envInput) return false;
-    return envInput.split(',').some((pair) => {
-      const eqIdx = pair.indexOf('=');
-      if (eqIdx === -1) return false;
-      const key = pair.slice(0, eqIdx).trim();
-      return isSecretKey(key);
-    });
+    return parseEnvPairs(envInput).some(
+      ({ key, value }) => value !== null && isSecretKey(key)
+    );
   }
 
   /**
@@ -948,7 +975,7 @@ export function useContainerCreation({
    */
   function isCurrentFieldSecret() {
     if (!envInput) return false;
-    const lastPair = envInput.split(',').pop()?.trim() ?? '';
+    const lastPair = splitEnvEntries(envInput).pop()?.trim() ?? '';
     const eqIdx = lastPair.indexOf('=');
     if (eqIdx === -1) return false;
     const key = lastPair.slice(0, eqIdx).trim();

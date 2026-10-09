@@ -9,6 +9,7 @@ import {
   withFreeName,
   FIELD_STEPS,
 } from '../src/helpers/diagnostics/prefill.js';
+import { buildContainerOptions } from '../src/helpers/containerOptionsBuilder.js';
 import { DIAGNOSTIC_RULES } from '../src/helpers/diagnostics/rules.js';
 
 const container = {
@@ -124,6 +125,25 @@ describe('containerToCreationValues', () => {
       'envInput',
       'imageName',
       'portInput',
+    ]);
+  });
+});
+
+describe('containerToCreationValues — a comma in the real Config.Env (V1)', () => {
+  test('escapes the comma so nothing is truncated downstream', () => {
+    // Reproduces the audit exploit: docker create -e POSTGRES_PASSWORD=hunter2,s3cr3t.
+    // The prefill used to join(',') and the value split in two, so the recreated
+    // container silently kept only "hunter2".
+    const cfg = { env: ['POSTGRES_PASSWORD=hunter2,s3cr3t'], cmd: [] };
+    const values = containerToCreationValues(
+      { id: 'c', name: 'db', image: 'postgres:17-alpine', ports: [] },
+      cfg,
+      []
+    );
+    expect(values.envInput).toBe('POSTGRES_PASSWORD=hunter2\\,s3cr3t');
+    // End to end: the escaped field yields ONE Env entry with the real comma.
+    expect(buildContainerOptions(values).Env).toEqual([
+      'POSTGRES_PASSWORD=hunter2,s3cr3t',
     ]);
   });
 });

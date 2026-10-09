@@ -1,6 +1,7 @@
 import { normalizeImageName } from './imageNameUtils.js';
 import { isSecretKey, findWeakSecrets } from './secrets.js';
 import { hostPortsOf } from './portUtils.js';
+import { parseEnvPairs } from './envInput.js';
 
 /**
  * @typedef {Object} SummaryRow
@@ -128,18 +129,13 @@ export function buildCreationSummary(values, ctx) {
   }
 
   // — Env —
-  const envVars = (envInput || '')
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean);
-  if (envVars.length > 0) {
-    const envLines = envVars.map((v) => {
-      const eqIdx = v.indexOf('=');
-      if (eqIdx === -1) return v;
-      const key = v.slice(0, eqIdx);
-      if (!isSecretKey(key)) return v;
+  const envPairs = parseEnvPairs(envInput);
+  if (envPairs.length > 0) {
+    const envLines = envPairs.map(({ key, value }) => {
+      if (value === null) return key;
+      if (!isSecretKey(key)) return `${key}=${value}`;
       // Nothing to hide in an empty value, and dots would claim otherwise.
-      if (!v.slice(eqIdx + 1).trim()) return `${key}=${EMPTY_VALUE}`;
+      if (!value.trim()) return `${key}=${EMPTY_VALUE}`;
       return `${key}=\u2022\u2022\u2022\u2022\u2022\u2022`;
     });
     rows.push({ key: 'env', step: 3, label: 'Env', values: envLines });
@@ -230,9 +226,8 @@ export function buildCreationWarnings(values, ctx) {
   const baseName = normalizeImageName(imageName);
   const profile = imageProfiles[baseName];
   if (profile?.requiredEnv?.length) {
-    const presentKeys = (envInput || '')
-      .split(',')
-      .map((s) => s.split('=')[0].trim())
+    const presentKeys = parseEnvPairs(envInput)
+      .map((p) => p.key)
       .filter(Boolean);
     const missing = profile.requiredEnv.filter((k) => !presentKeys.includes(k));
     if (missing.length > 0) {
@@ -252,16 +247,7 @@ export function buildCreationWarnings(values, ctx) {
     // Named given, not values: `values` is the wizard-values parameter and
     // shadowing it here made the two impossible to tell apart.
     const given = new Map(
-      (envInput || '')
-        .split(',')
-        .map((s) => s.trim())
-        .filter(Boolean)
-        .map((s) => {
-          const at = s.indexOf('=');
-          return at === -1
-            ? [s, null]
-            : [s.slice(0, at).trim(), s.slice(at + 1)];
-        })
+      parseEnvPairs(envInput).map(({ key, value }) => [key, value])
     );
     const empty = profile.requiredEnv.filter((k) => {
       if (!given.has(k)) return false;
@@ -278,16 +264,10 @@ export function buildCreationWarnings(values, ctx) {
   }
 
   // Secrets in plain text
-  const envVars = (envInput || '')
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean);
-  for (const v of envVars) {
-    const eqIdx = v.indexOf('=');
-    if (eqIdx === -1) continue;
-    const key = v.slice(0, eqIdx);
+  for (const { key, value } of parseEnvPairs(envInput)) {
+    if (value === null) continue;
     // No value, nothing in plain text: the empty-value warning covers it.
-    if (isSecretKey(key) && v.slice(eqIdx + 1).trim()) {
+    if (isSecretKey(key) && value.trim()) {
       warnings.push({
         kind: 'secret-plain',
         level: 'warn',

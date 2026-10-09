@@ -108,6 +108,19 @@ describe('maskEnvPairs', () => {
     const result = maskEnvPairs('SECRET_KEY=abc', { maskChar: '*' });
     expect(result).toBe('SECRET_KEY=******');
   });
+
+  test('masks the whole value when it contains an escaped comma', () => {
+    // V1 regression: split(',') used to expose "s3cr3t" as a second pair.
+    const result = maskEnvPairs('POSTGRES_PASSWORD=hunter2\\,s3cr3t');
+    expect(result).not.toContain('s3cr3t');
+    expect(result).not.toContain('hunter2');
+    expect(result).toBe('POSTGRES_PASSWORD=••••••');
+  });
+
+  test('keeps an escaped comma inside a non-secret value after rejoin', () => {
+    const result = maskEnvPairs('KAFKA=a\\,b,POSTGRES_DB=app');
+    expect(result).toBe('KAFKA=a\\,b,POSTGRES_DB=app');
+  });
 });
 
 describe('secretRanges', () => {
@@ -149,6 +162,16 @@ describe('secretRanges', () => {
   test('no secrets', () => {
     const ranges = secretRanges('DB=app,PORT=8080');
     expect(ranges).toEqual([]);
+  });
+
+  test('covers the whole value when it contains an escaped comma', () => {
+    // V1 regression: the range used to stop at the escaped comma, so "s3cr3t"
+    // stayed visible in the text field.
+    const input = 'POSTGRES_PASSWORD=hunter2\\,s3cr3t';
+    const ranges = secretRanges(input);
+    expect(ranges).toHaveLength(1);
+    expect(ranges[0]).toEqual({ start: 18, end: input.length });
+    expect(ranges[0].end - ranges[0].start).toBe('hunter2\\,s3cr3t'.length);
   });
 });
 
@@ -203,8 +226,32 @@ describe('redactForLog', () => {
   });
 
   test('redacts within longer text', () => {
+    // V2: the whole value of a secret pair is masked, not just the token up to
+    // the first space. The old regex left " and DB=app" looking like text when
+    // it was really part of the password.
     const result = redactForLog('Creating with PASSWORD=secret123 and DB=app');
-    expect(result).toBe('Creating with PASSWORD=*** and DB=app');
+    expect(result).toBe('Creating with PASSWORD=***');
+  });
+
+  test('redacts a value with spaces, parentheses, braces or escaped commas', () => {
+    // A2 regression: these tails used to survive the old `[^,}\s)]+` capture.
+    expect(redactForLog('POSTGRES_PASSWORD=abc def')).toBe(
+      'POSTGRES_PASSWORD=***'
+    );
+    expect(redactForLog('API_TOKEN=a)b')).toBe('API_TOKEN=***');
+    expect(redactForLog('AUTH_KEY=x}y')).toBe('AUTH_KEY=***');
+    expect(redactForLog('POSTGRES_PASSWORD=hunter2\\,s3cr3t')).toBe(
+      'POSTGRES_PASSWORD=***'
+    );
+  });
+
+  test('accepts an array of env entries and masks each secret pair', () => {
+    expect(redactForLog(['POSTGRES_PASSWORD=abc def'])).toEqual([
+      'POSTGRES_PASSWORD=***',
+    ]);
+    expect(
+      redactForLog(['POSTGRES_PASSWORD=a,b', 'POSTGRES_DB=app'])
+    ).toEqual(['POSTGRES_PASSWORD=***', 'POSTGRES_DB=app']);
   });
 
   test('handles empty/null input', () => {
