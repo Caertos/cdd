@@ -9,23 +9,47 @@ const EMPTY_ERRORS = new Map();
 /**
  * Stable key for the running containers currently on screen. The visible list
  * is a fresh slice on every render, so depending on its identity would restart
- * the interval on each render; the joined ids only change when the set of
- * polled containers really changes.
+ * the interval on each render; sorting the ids before joining makes the key
+ * change only when the SET of polled container ids changes, not when the same
+ * set is merely reordered.
  *
  * @param {Array<Object>} containers - Visible containers (may be a non-array)
- * @returns {string} Comma-joined ids of the running containers
+ * @returns {string} Sorted, comma-joined ids of the running containers
  */
 const runningKey = (containers) => {
   if (!Array.isArray(containers)) return '';
   return containers
     .filter((c) => c && c.state === 'running')
     .map((c) => c.id)
+    .sort()
     .join(',');
 };
 
 const runningTargets = (containers) => {
   if (!Array.isArray(containers)) return [];
   return containers.filter((c) => c && c.state === 'running');
+};
+
+/**
+ * Keeps only the entries whose id is still present. Returns the same map when
+ * every key is still present, so a key change that keeps the whole set causes
+ * no state update and React can skip the re-render.
+ *
+ * @param {Map<string, *>} map - Current per-id values
+ * @param {Set<string>} idSet - Ids that must be kept
+ * @returns {Map<string, *>} The original map, or a pruned copy
+ */
+const pruneToIds = (map, idSet) => {
+  for (const id of map.keys()) {
+    if (!idSet.has(id)) {
+      const next = new Map();
+      for (const [keptId, value] of map) {
+        if (idSet.has(keptId)) next.set(keptId, value);
+      }
+      return next;
+    }
+  }
+  return map;
 };
 
 /**
@@ -51,35 +75,55 @@ export function useSharedContainerStats(visibleContainers) {
   const key = runningKey(visibleContainers);
 
   useEffect(() => {
-    if (!key) {
-      setStats(EMPTY_STATS);
-      setErrors(EMPTY_ERRORS);
-      return;
-    }
+    // Drop only the ids that left the visible set on a key change: entries for
+    // containers that are still present keep their last published values, so
+    // adding or removing one row does not blank every other row until the next
+    // fetch settles. With no running containers the id set is empty and both
+    // Maps end up empty, as before.
+    const ids = new Set(runningTargets(containersRef.current).map((c) => c.id));
+    setStats((prev) => pruneToIds(prev, ids));
+    setErrors((prev) => pruneToIds(prev, ids));
+
+    if (!key) return;
 
     let cancelled = false;
 
-    const refresh = async () => {
-      const targets = runningTargets(containersRef.current);
-      const results = await Promise.all(
-        targets.map(async (container) => {
-          try {
-            return { id: container.id, stats: await getStats(container.id) };
-          } catch {
-            return { id: container.id, error: STATS_ERROR };
-          }
-        })
-      );
+    // Publish each container as soon as its own request settles. Updating the
+    // Maps per-id keeps one slow (or non-settling) request from blocking the
+    // CPU/MEM bars of every other visible row.
+    const publish = (id, snapshot, error) => {
       if (cancelled) return;
-
-      const nextStats = new Map();
-      const nextErrors = new Map();
-      for (const result of results) {
-        if (result.error) nextErrors.set(result.id, result.error);
-        else nextStats.set(result.id, result.stats);
+      if (error) {
+        setStats((prev) => {
+          if (!prev.has(id)) return prev;
+          const next = new Map(prev);
+          next.delete(id);
+          return next;
+        });
+        setErrors((prev) => new Map(prev).set(id, error));
+      } else {
+        setStats((prev) => new Map(prev).set(id, snapshot));
+        setErrors((prev) => {
+          if (!prev.has(id)) return prev;
+          const next = new Map(prev);
+          next.delete(id);
+          return next;
+        });
       }
-      setStats(nextStats);
-      setErrors(nextErrors);
+    };
+
+    const poll = async (id) => {
+      try {
+        publish(id, await getStats(id));
+      } catch {
+        publish(id, null, STATS_ERROR);
+      }
+    };
+
+    const refresh = () => {
+      for (const container of runningTargets(containersRef.current)) {
+        poll(container.id);
+      }
     };
 
     refresh();

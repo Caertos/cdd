@@ -93,18 +93,55 @@ describe('useSharedContainerStats', () => {
     expect(result.current.stats.has('bad')).toBe(false);
   });
 
-  test('changing the visible list re-subscribes and drops the container that left', async () => {
-    mockGetStats.mockResolvedValue(SAMPLE);
-    const bCalls = () =>
-      mockGetStats.mock.calls.filter(([id]) => id === 'b').length;
+  test('a pending request does not block the other containers from publishing', async () => {
+    mockGetStats.mockImplementation((id) =>
+      id === 'slow' ? new Promise(() => {}) : Promise.resolve(SAMPLE)
+    );
+    const { result } = renderHook(() =>
+      useSharedContainerStats([container('slow'), container('fast')])
+    );
 
+    await flush();
+
+    expect(mockGetStats).toHaveBeenCalledWith('slow');
+    expect(mockGetStats).toHaveBeenCalledWith('fast');
+    // 'slow' never settles, but 'fast' must already be visible.
+    expect(result.current.stats.get('fast')).toEqual(SAMPLE);
+    expect(result.current.stats.has('slow')).toBe(false);
+  });
+
+  test('reordering the same running set does not re-subscribe', async () => {
+    mockGetStats.mockResolvedValue(SAMPLE);
     const { rerender } = renderHook(
       (props) => useSharedContainerStats(props.list),
       { initialProps: { list: [container('a'), container('b')] } }
     );
 
     await flush();
+    expect(mockGetStats).toHaveBeenCalledTimes(2);
+
+    act(() => {
+      rerender({ list: [container('b'), container('a')] });
+    });
+    await flush();
+
+    // Same set, only reordered: the key is unchanged, so no immediate re-poll.
+    expect(mockGetStats).toHaveBeenCalledTimes(2);
+  });
+
+  test('changing the visible list re-subscribes and drops the container that left', async () => {
+    mockGetStats.mockResolvedValue(SAMPLE);
+    const bCalls = () =>
+      mockGetStats.mock.calls.filter(([id]) => id === 'b').length;
+
+    const { result, rerender } = renderHook(
+      (props) => useSharedContainerStats(props.list),
+      { initialProps: { list: [container('a'), container('b')] } }
+    );
+
+    await flush();
     expect(bCalls()).toBe(1);
+    expect(result.current.stats.has('b')).toBe(true);
     const before = bCalls();
 
     act(() => {
@@ -115,7 +152,39 @@ describe('useSharedContainerStats', () => {
     await act(async () => {
       jest.advanceTimersByTime(REFRESH_INTERVALS.CONTAINER_STATS * 3);
     });
-    // 'b' left the visible window: it is never polled again.
+    // 'b' left the visible window: it is never polled again, and its entry is
+    // pruned so a stale snapshot cannot survive if it re-enters later.
     expect(bCalls()).toBe(before);
+    expect(result.current.stats.has('b')).toBe(false);
+  });
+
+  test('adding a container keeps the retained stats until they re-resolve', async () => {
+    let aHangs = false;
+    mockGetStats.mockImplementation((id) => {
+      if (id === 'a' && aHangs) return new Promise(() => {});
+      return Promise.resolve(SAMPLE);
+    });
+
+    const { result, rerender } = renderHook(
+      (props) => useSharedContainerStats(props.list),
+      { initialProps: { list: [container('a')] } }
+    );
+
+    await flush();
+    expect(result.current.stats.get('a')).toEqual(SAMPLE);
+
+    // 'a' is still running but its next fetch never settles; 'b' is new.
+    aHangs = true;
+    act(() => {
+      rerender({ list: [container('a'), container('b')] });
+    });
+
+    // Right after the key change the retained id is not blanked.
+    expect(result.current.stats.get('a')).toEqual(SAMPLE);
+
+    await flush();
+    // 'b' eventually publishes while 'a' keeps its previous value.
+    expect(result.current.stats.get('b')).toEqual(SAMPLE);
+    expect(result.current.stats.get('a')).toEqual(SAMPLE);
   });
 });
