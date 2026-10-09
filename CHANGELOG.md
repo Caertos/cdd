@@ -7,6 +7,25 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 - Nothing yet.
 
+## [4.11.0] - 2026-10-08
+
+Make the list scale — search it, order it, and fit it to the terminal.
+
+### Added
+- **`/` opens a live search over the list.** Matches name, image and state, case- and accent-insensitively, with every word required (`node exit`). `Enter` keeps the query applied, `Esc` clears it, and the header reads `12 of 25 containers · search: "pg"`.
+- **`O` cycles the sort order** — problems first (new default), by name, or newest first. `o` and `Shift+O` work too.
+- **The container list is windowed to the terminal.** It renders the rows that fit and reports `↑ N more` / `↓ N more`.
+
+### Changed
+- **The default order is now "problems first"**, not Docker's order. Containers CDD has a health verdict for rise to the top. This is the most visible change when opening the new version.
+- `ContainerRow` receives its stats as props; `useContainerStats` is deprecated in favour of `useSharedContainerStats`.
+
+### Fixed
+- **D8** — the selection is anchored to the container id, so a background refresh can no longer move the highlight (and the next action) to a different container.
+- **D24** — `p` on a container in `created` state reports it is already stopped instead of surfacing Docker's raw error, and the key is no longer offered when there is nothing to stop.
+- **D25** — `/` was advertised in the help and did nothing; it now opens the search.
+- **D10** — removed the per-row stats pollers (one per container every 1.5 s); a single poller now refreshes the visible running rows.
+
 ## [4.10.0] - 2026-10-05
 
 CDD stops showing you state and starts explaining it.

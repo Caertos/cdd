@@ -1,5 +1,7 @@
 # CDD — CLI Docker Dashboard
 
+🇬🇧 [Read in English](README.md)
+
 <p align="center">
   <img src="https://img.shields.io/npm/v/cdd-cli?color=blue&label=npm%20package" alt="npm version"/>
   <img src="https://img.shields.io/npm/dt/cdd-cli?color=green&label=downloads" alt="npm downloads"/>
@@ -11,116 +13,25 @@
 
 ---
 
-## 🎉 Novedades en v4.10
+## 🎉 Novedades en v4.11
 
-**CDD explica por qué murió un contenedor — y te ofrece arreglarlo.**
+**Encuentra un contenedor rápido, pone arriba los rotos y deja que la lista quepa en la pantalla.**
 
-Todas las demás herramientas de este nicho — lazydocker, ctop, Docker Desktop — te enseñan `EXITED (1)` y te pasan el log. Ninguna te dice por qué. Quien instala una TUI para no escribir `docker ps` es exactamente quien no quiere leer 200 líneas de arranque de Postgres para descubrir que faltaba una variable.
+La lista era un volcado de todo lo que devolvía Docker. Con seis contenedores estaba bien; con veinticinco era una pared. La v4.11 la hace escalar:
 
-Selecciona un contenedor que está fallando y el panel aparece solo:
+- **`/` busca en la lista en vivo** — por nombre, imagen o estado, sin distinguir mayúsculas ni acentos, y exigiendo todas las palabras (`node exit` encuentra contenedores node parados). `Enter` mantiene la búsqueda, `Esc` la limpia, y la cabecera dice cuánto se muestra y por qué: `12 of 25 containers · search: "pg"`.
+- **`O` cicla el orden** — *problemas primero* (el nuevo orden por defecto), por nombre, o los más recientes primero. Lo que CDD ya sabe que está mal sube arriba.
+- **La lista cabe en la terminal** — pinta solo las filas que entran y cuenta el resto (`↑ 3 more` / `↓ 9 more`), en vez de empujar todo el dashboard fuera de la pantalla.
 
-```
-╭─ Diagnosis: mi-basedatos ─────────────────────────────────────╮
-│                                                                │
-│  It keeps dying after 2s and Docker restarts it.              │
-│                                                                │
-│  Likely cause:                                                 │
-│    Postgres refuses to start without a password. The image     │
-│    needs POSTGRES_PASSWORD defined.                           │
-│                                                                │
-│  Last lines:                                                   │
-│    Error: Database is uninitialized and superuser password…   │
-│                                                                │
-│  [F] Recreate and set POSTGRES_PASSWORD  [L] Full log          │
-╰────────────────────────────────────────────────────────────────╯
-```
+**Y la selección es segura.** El marcado va anclado al contenedor, no a su posición: si un contenedor desaparece durante el refresco de fondo, la selección ya no salta a lo que ocupó su lugar — que era la vía para pulsar `E` (borrar) sobre el contenedor equivocado.
 
-- **Sin pulsar ninguna tecla.** Si algo está mal, se explica solo. Un contenedor que paraste tú no recibe panel alguno.
-- **`F` lo recrea con la corrección aplicada** — el asistente se abre ya relleno y ya en el paso de revisión, con cada valor que CDD cambió marcado como `↑ changed by CDD`. Nada se aplica a tus espaldas, y el contenedor que falló conserva su nombre: el nuevo se llama `mi-basedatos-2`.
-- **Después pregunta.** *"Created mi-basedatos-2. Delete mi-basedatos, the container that failed?"* Responde "no" y se queda exactamente donde estaba.
-- **Cuando no lo sabe, lo dice** — y muestra las últimas líneas. Esa es la regla, no un plan B: una causa plausible pero equivocada cuesta más confianza de la que construyen diez aciertos.
+Bajo el capó, un solo sondeo de stats alimenta las filas visibles en vez de un temporizador por fila: veinticinco contenedores corriendo son un ciclo, no veinticinco.
 
-**Once reglas se publican ya:** credenciales faltantes de Postgres / MySQL / SQL Server, puerto de host ocupado, imagen sin comando, falta de memoria, permiso denegado en un volumen, ejecutable no encontrado, un job que terminó en vez de servir, y conexión rechazada a otro host. El catálogo es **datos**, no código: añadir una regla es añadir un elemento a una lista.
+Cuatro defectos de siempre quedan arreglados: **D8** (la selección actuando sobre el contenedor equivocado), **D24** (`p` sobre un contenedor nunca arrancado mostrando el error crudo de Docker), **D25** (`/` anunciada en la ayuda sin hacer nada) y **D10** (un temporizador de stats por fila).
 
-### v4.8 — Arranca Docker sin salir de la terminal
+> **El orden por defecto cambió a «problemas primero»**, ya no el de Docker. Es lo que más se nota al abrir la nueva versión, y es deliberado: una vez que CDD distingue un contenedor roto de uno parado, enterrarlo en una lista alfabética sería desperdiciar ese trabajo.
 
-Cuando Docker no es accesible, CDD comprueba si sabe cómo iniciarlo. Si lo sabe, aparece la tecla `S` en la pantalla de conexión y te guía para lanzar Docker.
-
-- **Windows** — encuentra Docker Desktop en sus ubicaciones de instalación estándar y lo inicia directamente, sin contraseña (plataforma principal)
-- **macOS** — abre Docker Desktop con `open -a Docker`
-- **Linux (rootless)** — inicia el servicio de usuario sin contraseña
-- **Linux (servicio del sistema)** — cede la terminal a `sudo` para que escribas tu contraseña
-- **Espera en vivo** — muestra el tiempo transcurrido y la espera típica, y recarga tus contenedores automáticamente cuando Docker está listo
-
-### v4.7 — Teclas en la pantalla de conexión
-
-**Cuenta atrás de reintento en vivo y teclas en la pantalla de conexión.**
-
-Cuando Docker no es accesible, CDD ya no te deja sin explicaciones. La pantalla de conexión muestra la cuenta atrás hasta el siguiente reintento automático y te da teclas directas para actuar.
-
-- **Cuenta atrás en vivo** — segundos hasta el siguiente intento de reconexión automática
-- **`R` reintenta al instante** — fuerza la carga de contenedores sin esperar al temporizador
-- **`Q` sale directamente** — sin confirmación; la app ya está en un estado degradado
-- **Aviso más simple** — `ConnectionNotice` solo recibe `{ error, nextRetryIn }`
-
-### v4.6 — Gestión de secretos
-
-**Gestión de secretos — las contraseñas permanecen ocultas.**
-
-CDD ahora protege las variables de entorno sensibles por defecto. Contraseñas, tokens y claves de API aparecen enmascarados en el asistente y la pantalla de revisión, y nunca aparecen en los logs de debug.
-
-- **Enmascaramiento automático** — variables como `POSTGRES_PASSWORD`, `JWT_SECRET` o `API_KEY` se muestran como `••••••` mientras escribes
-- **`Ctrl+R` para revelar** — alterna la visibilidad de valores secretos cuando necesitas verificarlos
-- **`Ctrl+G` para generar** — crea contraseñas fuertes y sin caracteres ambiguos directamente en el asistente
-- **Sin contraseñas de ejemplo** — los perfiles de imagen ya no sugieren `secret` o `change-me` como valores por defecto
-- **Advertencias de contraseña débil** — la pantalla de revisión señala contraseñas comunes o cortas y sugiere generar una más fuerte
-- **Seguro para debug** — los secretos se redactan de toda salida de log, incluso en modo debug
-
-### Por qué es importante
-
-Antes de v4.6, seleccionar un perfil de Postgres pre-rellenaba `POSTGRES_PASSWORD=secret`. La mayoría de usuarios acepta esto sin pensarlo — y termina con una base de datos protegida por una contraseña literal `secret`. Peor aún, si compartes tu pantalla o revisas tu historial de terminal dos días después, cada contraseña es visible en texto plano.
-
-Ahora CDD fomenta prácticas seguras sin frenarte: valores vacíos para secretos, generación con una tecla y enmascaramiento que puedes alternar cuando lo necesites.
-
-### v4.6.1 — Manejo de conexión Docker
-
-**Mensajes de error claros cuando Docker no es accesible.**
-
-Antes de v4.6.1, si Docker estaba detenido o no era accesible, CDD mostraba "No containers found" — un mensaje engañoso que hacía pensar que algo estaba mal con los contenedores. Ahora CDD detecta fallos de conexión y muestra una pantalla de error clara y accionable.
-
-- **Pantalla de error clara** — "Can't reach Docker" con detalles técnicos específicos
-- **Sugerencias accionables** — te dice exactamente cómo solucionarlo (`sudo systemctl start docker`, abrir Docker Desktop)
-- **Auto-reintento** — CDD sigue intentando conectarse cada 5 segundos en segundo plano
-- **Reintento manual** — presiona `R` para reintentar inmediatamente sin esperar
-- **Indicador de datos obsoletos** — al reconectarse, los datos antiguos de contenedores se atenuan visualmente hasta que llegan datos frescos
-- **Strings centralizados** — todo el texto de la UI se movió a `src/helpers/strings.js` para futura internacionalización
-
----
-
-## Versiones anteriores
-
-### v4.1 — Shell interactivo
-
-**Abre un shell dentro de cualquier contenedor con una sola tecla.**
-
-Presiona `S` y CDD te lleva a un shell interactivo completo (`bash` o `sh`) dentro del contenedor seleccionado — sin necesidad de escribir `docker exec`.
-
-- **Shell auto-detectado** — CDD sondea el contenedor y elige `bash` o `sh` automáticamente
-- **Soporte de terminal completo** — ejecuta `psql`, `python3`, `node`, `redis-cli`, o cualquier comando dentro del contenedor
-- **Salida limpia** — escribe `exit` o presiona `Ctrl+D` para volver al dashboard
-
-### v4.5 — Asistente de creación interactivo
-
-Olvídate de los flags de `docker run`, las variables de entorno olvidadas y los tags `:latest` que fallan en silencio. Presiona `C` y CDD te guía para crear un contenedor en segundos:
-
-- **20 perfiles de imagen curados** disponibles sin conexión — postgres, redis, nginx, node, mysql, mongo y más
-- **Tags por defecto que realmente funcionan**: `postgres:17-alpine`, `redis:7-alpine`, `nginx:1.27-alpine` — sin más fallos silenciosos por `:latest`
-- **Búsqueda en vivo en Docker Hub** con un solo `Tab` — con indicador `[searching Docker Hub...]` para que siempre sepas qué está pasando
-- **Sugerencias contextuales de variables de entorno** — ¿creando un contenedor de Postgres? CDD sugiere `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` automáticamente
-- **Revisa antes de crear** — ves exactamente qué se va a crear (tag de imagen resuelto, puertos auto-asignados, advertencias) antes de que el contenedor exista
-- **HUD sensible al contexto** — solo se muestran las teclas que tienen sentido en ese momento, nada más
-
-Así debería sentirse la experiencia de desarrollo.
+Las notas de versiones anteriores se guardan en [`CHANGELOG.md`](CHANGELOG.md).
 
 ---
 
@@ -433,5 +344,3 @@ Consulta [CONTRIBUTING.md](CONTRIBUTING.md).
 MIT/ISC — ver [`LICENSE`](LICENSE).
 
 ---
-
-🇬🇧 [Read in English](README.md)
