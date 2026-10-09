@@ -28,7 +28,7 @@ const delay = (ms) => new Promise((r) => setTimeout(r, ms));
 /**
  * Renders an Ink element and returns a driver with keyboard input and waits.
  * Remember to call `unmount()` in afterEach: App keeps intervals alive
- * (useContainers every 3 s, useContainerStats every 1.5 s).
+ * (useContainers every 3 s, useSharedContainerStats every 1.5 s).
  */
 export function renderApp(element) {
   const instance = render(element);

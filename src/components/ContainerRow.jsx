@@ -2,7 +2,6 @@ import React from 'react';
 import { Box, Text } from 'ink';
 import StatsBar from './StatsBar.jsx';
 import PropTypes from 'prop-types';
-import { useContainerStats } from '../hooks/useContainerStats.js';
 import { STRINGS } from '../helpers/strings.js';
 import { levelStyle } from '../helpers/health.js';
 
@@ -28,7 +27,10 @@ const verdictText = (verdict) => {
  * @param {Object} props
  * @param {Object} props.container - Container object with id, name, image, state and ports
  * @param {Object} [props.verdict] - Health verdict from useContainerHealth
+ * @param {boolean} [props.isSelected=false] - Whether the row is selected
  * @param {boolean} [props.isStale=false] - Whether the data is potentially outdated
+ * @param {Object} [props.stats] - Live stats for the row (from useSharedContainerStats)
+ * @param {string} [props.statsError] - Stats error to show next to the state
  * @returns {JSX.Element}
  */
 export default function ContainerRow({
@@ -36,9 +38,10 @@ export default function ContainerRow({
   verdict,
   isSelected = false,
   isStale = false,
+  stats = { cpuPercent: 0, memPercent: 0 },
+  statsError = '',
 }) {
-  const { id, name, image, state } = container;
-  const { stats, statsError } = useContainerStats(id, state);
+  const { name, image, state } = container;
 
   const formatPorts = (ports) => {
     if (!ports || ports.length === 0) return '';
@@ -112,4 +115,9 @@ ContainerRow.propTypes = {
   }),
   isSelected: PropTypes.bool,
   isStale: PropTypes.bool,
+  stats: PropTypes.shape({
+    cpuPercent: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+    memPercent: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+  }),
+  statsError: PropTypes.string,
 };

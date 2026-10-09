@@ -15,6 +15,7 @@ import PropTypes from 'prop-types';
 import { Box, Text } from 'ink';
 import ContainerRow from './ContainerRow.jsx';
 import { useVisibleWindow } from '../hooks/useVisibleWindow.js';
+import { useSharedContainerStats } from '../hooks/useSharedContainerStats.js';
 import { STRINGS } from '../helpers/strings.js';
 
 export default function ContainerList({
@@ -33,6 +34,11 @@ export default function ContainerList({
     availableRows: budget,
   });
 
+  // Only the rows actually on screen are polled (D10): the shared hook gets
+  // the visible slice, never the full list.
+  const windowed = containers.slice(offset, offset + visibleCount);
+  const { stats, errors } = useSharedContainerStats(windowed);
+
   return (
     <>
       {hiddenAbove > 0 ? (
@@ -40,7 +46,7 @@ export default function ContainerList({
           <Text dimColor>{STRINGS.listWindow.moreAbove(hiddenAbove)}</Text>
         </Box>
       ) : null}
-      {containers.slice(offset, offset + visibleCount).map((container, i) => {
+      {windowed.map((container, i) => {
         const iGlobal = offset + i;
         return (
           <Box key={container.id} flexDirection="row" paddingLeft={1}>
@@ -49,6 +55,8 @@ export default function ContainerList({
               verdict={health?.get(container.id)}
               isSelected={iGlobal === selected}
               isStale={isStale}
+              stats={stats.get(container.id)}
+              statsError={errors.get(container.id)}
             />
           </Box>
         );
