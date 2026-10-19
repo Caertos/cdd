@@ -5,10 +5,33 @@ import { SuggestionPanel } from './SuggestionPanel.jsx';
 import { ControlsHUD } from './ControlsHUD.jsx';
 import { CreationSummary } from './CreationSummary.jsx';
 import { secretRanges } from '../helpers/secrets.js';
+import { sanitizeTerminalText } from '../helpers/sanitizeTerminalText.js';
 import PropTypes from 'prop-types';
 
 /** Number of steps in the wizard. Must stay in sync with WIZARD_STEP_COUNT in constants.js. */
 const WIZARD_STEP_COUNT = 5;
+
+/**
+ * Map a position in the raw text to the position it takes in the text the
+ * field shows.
+ *
+ * The cursor counts characters of the raw value, but the field displays the
+ * sanitised one, so without this the cursor would sit on a different
+ * character whenever a control sequence was removed. The display position is
+ * how much of the text before the cursor survives the sanitiser.
+ *
+ * A cursor that falls inside a half-written sequence lands at the end of the
+ * visible text before it, which is the closest honest answer: the rest of
+ * the sequence is not on the screen.
+ *
+ * @param {string} raw - The value as it is held in the state
+ * @param {number} cursor - Position in the raw value
+ * @returns {number} Position in the displayed value
+ */
+function displayCursorFor(raw, cursor) {
+  if (typeof cursor !== 'number' || cursor < 0) return cursor;
+  return sanitizeTerminalText(String(raw ?? '').slice(0, cursor)).length;
+}
 
 /**
  * Prompt UI shown when creating a new container.
@@ -53,29 +76,36 @@ export default function ContainerCreationPrompt(props) {
     isLoadingPreview = false,
     revealSecrets = false,
   } = props;
+  // The wizard can be prefilled from a container that was inspected, so the
+  // fields may hold text CDD did not write. They are sanitised for the screen
+  // only: the state keeps the original, so what is created does not change.
+  const safeImageName = sanitizeTerminalText(imageName);
+  const safeContainerName = sanitizeTerminalText(containerName);
+  const safePortInput = sanitizeTerminalText(portInput);
+  const safeEnvInput = sanitizeTerminalText(envInput);
   const prompts = [
     {
       label: 'Name of the image to create (e.g., nginx:1.27-alpine):',
-      value: imageName,
-      cursor: cursors.imageName,
+      value: safeImageName,
+      cursor: displayCursorFor(imageName, cursors.imageName),
       required: true,
     },
     {
       label: 'Name of the container (optional):',
-      value: containerName,
-      cursor: cursors.containerName,
+      value: safeContainerName,
+      cursor: displayCursorFor(containerName, cursors.containerName),
       required: false,
     },
     {
       label: 'Ports (optional, format 8080:80,443:443):',
-      value: portInput,
-      cursor: cursors.portInput,
+      value: safePortInput,
+      cursor: displayCursorFor(portInput, cursors.portInput),
       required: false,
     },
     {
       label: 'Environment variables (optional, format VAR1=val1,VAR2=val2):',
-      value: envInput,
-      cursor: cursors.envInput,
+      value: safeEnvInput,
+      cursor: displayCursorFor(envInput, cursors.envInput),
       required: false,
     },
   ];
@@ -84,8 +114,11 @@ export default function ContainerCreationPrompt(props) {
   const showSuggestions =
     step === 0 && (isSearchingHub || activeItems.length > 0);
   const hasSuggestions = suggestions?.length > 0 || hubResults?.length > 0;
-  // Compute mask ranges for secret fields (step 3 = env vars)
-  const maskRanges = step === 3 && !revealSecrets ? secretRanges(envInput) : [];
+  // Compute mask ranges for secret fields (step 3 = env vars). The ranges are
+  // computed on the text the field actually shows, so a secret can never end
+  // up outside the dots because a control character was removed.
+  const maskRanges =
+    step === 3 && !revealSecrets ? secretRanges(safeEnvInput) : [];
   return (
     <Box
       flexDirection="column"
