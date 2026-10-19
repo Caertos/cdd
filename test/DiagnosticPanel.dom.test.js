@@ -27,6 +27,9 @@ function expectNoControlBytes(text) {
   // The same check in a shape a human can read in the failure message: the
   // escaped bytes are visible there instead of invisible control characters.
   expect(JSON.stringify(text)).not.toMatch(/\\u001b|\\u009b|\\u009d/);
+  // No C0 control (but TAB) and no DEL: a line feed would break the line of
+  // the panel and let the text that follows draw itself as another line.
+  expect(text).not.toMatch(/[\u0000-\u0008\u000a-\u001f\u007f]/);
 }
 
 function diagnosis(overrides = {}) {

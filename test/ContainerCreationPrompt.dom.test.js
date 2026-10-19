@@ -30,7 +30,7 @@ function expectNoControlBytes(text) {
   // escaped bytes are visible there instead of invisible control characters.
   expect(JSON.stringify(text)).not.toMatch(/\\u001b|\\u009b|\\u009d/);
   // No C0 control (but TAB and LF) and no DEL.
-  expect(text).not.toMatch(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/);
+  expect(text).not.toMatch(/[\u0000-\u0008\u000a-\u001f\u007f]/);
 }
 
 /**
