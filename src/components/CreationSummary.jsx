@@ -3,6 +3,7 @@ import { Box, Text } from 'ink';
 import PropTypes from 'prop-types';
 import { isSecretKey } from '../helpers/secrets.js';
 import { EMPTY_VALUE } from '../helpers/creationSummary.js';
+import { sanitizeTerminalText } from '../helpers/sanitizeTerminalText.js';
 
 const WARNING_COLORS = {
   'image-pull': 'yellow',
@@ -46,28 +47,33 @@ export function CreationSummary({
                 {row.label}{' '}
               </Text>
               <Text color={row.changed ? 'green' : undefined}>
-                {row.values
-                  .map((v, vi) => {
-                    // For env rows, apply reveal logic
-                    if (row.key === 'env') {
-                      const eqIdx = v.indexOf('=');
-                      if (eqIdx !== -1) {
-                        const key = v.slice(0, eqIdx);
-                        const value = v.slice(eqIdx + 1).trim();
-                        // An empty secret has nothing to mask or reveal.
-                        const hasValue = value !== '' && value !== EMPTY_VALUE;
-                        if (isSecretKey(key) && hasValue) {
-                          if (revealSecrets) {
-                            return v; // Show full value
+                {/* The values can come from a container that was inspected, so
+                    they are text CDD did not write. */}
+                {sanitizeTerminalText(
+                  row.values
+                    .map((v, vi) => {
+                      // For env rows, apply reveal logic
+                      if (row.key === 'env') {
+                        const eqIdx = v.indexOf('=');
+                        if (eqIdx !== -1) {
+                          const key = v.slice(0, eqIdx);
+                          const value = v.slice(eqIdx + 1).trim();
+                          // An empty secret has nothing to mask or reveal.
+                          const hasValue =
+                            value !== '' && value !== EMPTY_VALUE;
+                          if (isSecretKey(key) && hasValue) {
+                            if (revealSecrets) {
+                              return v; // Show full value
+                            }
+                            // Show masked with Ctrl+R hint
+                            return `${key}=•••••• [^R]`;
                           }
-                          // Show masked with Ctrl+R hint
-                          return `${key}=\u2022\u2022\u2022\u2022\u2022\u2022 [^R]`;
                         }
                       }
-                    }
-                    return v;
-                  })
-                  .join(', ')}
+                      return v;
+                    })
+                    .join(', ')
+                )}
               </Text>
             </Box>
             {row.changed && (
@@ -78,7 +84,7 @@ export function CreationSummary({
             {row.origin && (
               <Box paddingLeft={4}>
                 <Text dimColor>
-                  {'\u2193'} {row.origin}
+                  {'\u2193'} {sanitizeTerminalText(row.origin)}
                 </Text>
               </Box>
             )}
@@ -94,7 +100,7 @@ export function CreationSummary({
         <Box flexDirection="column" paddingTop={1}>
           {warnings.map((w, idx) => (
             <Text key={idx} color={WARNING_COLORS[w.kind] || 'yellow'}>
-              {'\u26A0 '} {w.text}
+              {'⚠ '} {sanitizeTerminalText(w.text)}
             </Text>
           ))}
         </Box>
