@@ -2,6 +2,7 @@ import React from 'react';
 import { Box, Text } from 'ink';
 import PropTypes from 'prop-types';
 import { STRINGS } from '../helpers/strings.js';
+import { sanitizeTerminalText } from '../helpers/sanitizeTerminalText.js';
 
 const T = STRINGS.dockerLauncher;
 
@@ -106,7 +107,7 @@ export function DockerLauncher({ method, status, elapsedMs, error }) {
         padding={1}
       >
         <Text bold color="red">
-          {error || T.launchFailed}
+          {sanitizeTerminalText(error) || T.launchFailed}
         </Text>
         <Text> </Text>
         <Text>{T.failedHint}</Text>

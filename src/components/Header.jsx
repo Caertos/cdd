@@ -4,6 +4,7 @@ import chalk from 'chalk';
 import PropTypes from 'prop-types';
 import { getAppVersion } from '../helpers/appInfo.js';
 import { STRINGS } from '../helpers/strings.js';
+import { sanitizeTerminalText } from '../helpers/sanitizeTerminalText.js';
 
 /**
  * Header component displayed at the top of the CLI UI.
@@ -34,7 +35,11 @@ export default function Header({
 }) {
   const formattedVersion = VERSION === 'unknown' ? 'unknown' : `v${VERSION}`;
   const summary = query.trim()
-    ? STRINGS.filter.summary(visibleCount, totalCount, query)
+    ? STRINGS.filter.summary(
+        visibleCount,
+        totalCount,
+        sanitizeTerminalText(query)
+      )
     : STRINGS.containerFound(totalCount);
 
   return (

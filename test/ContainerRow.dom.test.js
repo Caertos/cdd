@@ -6,6 +6,13 @@ import { render } from '@testing-library/react';
 import { jest } from '@jest/globals';
 import ContainerRow from '../src/components/ContainerRow.jsx';
 import { STRINGS } from '../src/helpers/strings.js';
+import {
+  LEGIT,
+  expectNoControlBytes,
+  hostile,
+  nodeWithText,
+  sanitised,
+} from './support/terminalControls.js';
 
 const renderRow = (props) => render(<ContainerRow {...props} />);
 
@@ -174,5 +181,84 @@ describe('ContainerRow', () => {
     });
     const el = getByText('🔴 died 2s');
     expect(el.getAttribute('data-color')).toBe('red');
+  });
+});
+
+// The stats error and the ports come from Docker, not from CDD: a daemon can
+// put anything in them. A terminal executes part of what it is given, so
+// these two have to reach the screen without their control bytes.
+describe('ContainerRow — the stats error reaches the screen sanitised', () => {
+  test('the error leaves no control byte in the DOM', () => {
+    const { container } = renderRow({
+      container: base,
+      statsError: hostile('error'),
+    });
+    const error = nodeWithText(container, sanitised('error'));
+    expect(error).toBeTruthy();
+    expectNoControlBytes(error.textContent);
+  });
+
+  test('the words of the error survive', () => {
+    const { container } = renderRow({
+      container: base,
+      statsError: hostile('error'),
+    });
+    const error = nodeWithText(container, sanitised('error'));
+    expect(error.textContent).toContain(sanitised('error'));
+  });
+
+  test('the url of the hyperlink does not stay on screen', () => {
+    const { container } = renderRow({
+      container: base,
+      statsError: hostile('error'),
+    });
+    expect(container.textContent).not.toContain('evil.example');
+  });
+
+  test('legitimate text is not mangled', () => {
+    const { container } = renderRow({
+      container: base,
+      statsError: LEGIT,
+    });
+    const error = nodeWithText(container, LEGIT);
+    expect(error).toBeTruthy();
+    expect(error.textContent).toContain(LEGIT);
+    expectNoControlBytes(error.textContent);
+  });
+});
+
+describe('ContainerRow — the ports reach the screen sanitised', () => {
+  test('the ports leave no control byte in the DOM', () => {
+    const { container } = renderRow({
+      container: { ...base, ports: [hostile('port')] },
+    });
+    const ports = nodeWithText(container, sanitised('port'));
+    expect(ports).toBeTruthy();
+    expectNoControlBytes(ports.textContent);
+  });
+
+  test('the words of the ports survive', () => {
+    const { container } = renderRow({
+      container: { ...base, ports: [hostile('port')] },
+    });
+    const ports = nodeWithText(container, sanitised('port'));
+    expect(ports.textContent).toContain(sanitised('port'));
+  });
+
+  test('the url of the hyperlink does not stay on screen', () => {
+    const { container } = renderRow({
+      container: { ...base, ports: [hostile('port')] },
+    });
+    expect(container.textContent).not.toContain('evil.example');
+  });
+
+  test('legitimate text is not mangled', () => {
+    const { container } = renderRow({
+      container: { ...base, ports: [LEGIT] },
+    });
+    const ports = nodeWithText(container, LEGIT);
+    expect(ports).toBeTruthy();
+    expect(ports.textContent).toContain(LEGIT);
+    expectNoControlBytes(ports.textContent);
   });
 });

@@ -54,7 +54,10 @@ export default function ContainerRow({
 
   const truncate = (s, max = 20) => {
     if (!s) return '';
-    return s.length > max ? s.slice(0, max - 1) + '…' : s;
+    // Counted in code points: cutting by UTF-16 units would split an emoji
+    // in half and leave a lone surrogate on the screen.
+    const chars = Array.from(s);
+    return chars.length > max ? chars.slice(0, max - 1).join('') + '…' : s;
   };
 
   const stateInfo = verdict ? verdictText(verdict) : stateText(state);
@@ -80,12 +83,14 @@ export default function ContainerRow({
       <Box width={12} minWidth={12} paddingRight={1}>
         <Text color={stateInfo.color} dimColor={dimColor} wrap="truncate-end">
           {stateInfo.text}
-          {statsError ? <Text color="red"> {statsError}</Text> : null}
+          {statsError ? (
+            <Text color="red"> {sanitizeTerminalText(statsError)}</Text>
+          ) : null}
         </Text>
       </Box>
       <Box flexGrow={1} flexShrink={1} paddingLeft={0} paddingRight={1}>
         <Text color="yellow" dimColor={dimColor} wrap="truncate-end">
-          {formatPorts(container.ports)}
+          {sanitizeTerminalText(formatPorts(container.ports))}
         </Text>
       </Box>
       <Box flexShrink={0} paddingLeft={1}>

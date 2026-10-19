@@ -18,7 +18,10 @@ import { useControls } from './hooks/useControls.js';
 import { useDockerLauncher } from './hooks/useDockerLauncher.js';
 import { useTerminalHeight } from './hooks/useTerminalHeight.js';
 import { reservedRows } from './helpers/reservedRows.js';
-import { sanitizeTerminalText } from './helpers/sanitizeTerminalText.js';
+import {
+  sanitizeTerminalText,
+  sanitizedCursorIndex,
+} from './helpers/sanitizeTerminalText.js';
 import ContainerSection from './components/ContainerSection.jsx';
 import MessageFeedback from './components/MessageFeedback.jsx';
 import Header from './components/Header.jsx';
@@ -152,8 +155,11 @@ export default function App() {
           <Box paddingLeft={1}>
             <PromptField
               label={STRINGS.filter.label}
-              value={controls.view.query}
-              cursor={controls.view.cursor}
+              value={sanitizeTerminalText(controls.view.query)}
+              cursor={sanitizedCursorIndex(
+                controls.view.query,
+                controls.view.cursor
+              )}
             />
           </Box>
         )}
