@@ -560,3 +560,27 @@ describe('buildCreationSummary — empty secrets and recreations', () => {
     expect(portsRow({ recreating: false }).origin).toBe('assigned by CDD');
   });
 });
+
+describe('buildCreationSummary — values with escaped commas (V1)', () => {
+  const envRow = (envInput) =>
+    buildCreationSummary(
+      { imageName: 'postgres', containerName: '', portInput: '', envInput },
+      { rawImageInput: 'postgres', imageProfiles: profiles, previewedPorts: null }
+    ).find((r) => r.key === 'env');
+
+  test('a secret whose value carries a comma is masked in full', () => {
+    // The review used to split on the comma and render "s3cr3t" in the clear.
+    const row = envRow('POSTGRES_PASSWORD=hunter2\\,s3cr3t,POSTGRES_DB=app');
+    expect(row.values).toEqual([
+      'POSTGRES_PASSWORD=\u2022\u2022\u2022\u2022\u2022\u2022',
+      'POSTGRES_DB=app',
+    ]);
+    expect(row.values.join('\n')).not.toContain('s3cr3t');
+    expect(row.values.join('\n')).not.toContain('hunter2');
+  });
+
+  test('a non-secret value keeps its real comma in one line', () => {
+    const row = envRow('KAFKA_LISTENERS=a\\,b');
+    expect(row.values).toEqual(['KAFKA_LISTENERS=a,b']);
+  });
+});

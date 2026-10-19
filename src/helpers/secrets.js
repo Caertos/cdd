@@ -1,4 +1,5 @@
 import { randomInt } from 'crypto';
+import { parseEnvPairs, envEntrySpans, formatEnvEntries } from './envInput.js';
 
 /**
  * Creates a Buffer from a secret string for secure handling.
@@ -80,16 +81,16 @@ export function maskEnvPairs(envInput, options = {}) {
   const { reveal = false, maskChar = '•' } = options;
   if (reveal || !envInput) return envInput;
 
-  return envInput
-    .split(',')
-    .map((pair) => {
-      const eqIdx = pair.indexOf('=');
-      if (eqIdx === -1) return pair;
-      const key = pair.slice(0, eqIdx);
-      if (!isSecretKey(key)) return pair;
-      return `${key}=${maskChar.repeat(6)}`;
-    })
-    .join(',');
+  const masked = parseEnvPairs(envInput).map(({ key, value }) => {
+    // An entry without '=' has no value to hide.
+    if (value === null) return key;
+    if (!isSecretKey(key)) return `${key}=${value}`;
+    // Mask the WHOLE value: a value with commas used to leak its tail.
+    return `${key}=${maskChar.repeat(6)}`;
+  });
+  // Re-escape around the rejoin so a comma inside a non-secret value stays
+  // part of that value instead of splitting the list.
+  return formatEnvEntries(masked);
 }
 
 /**
@@ -103,20 +104,13 @@ export function secretRanges(envInput) {
   if (!envInput) return [];
 
   const ranges = [];
-  let offset = 0;
-
-  const pairs = envInput.split(',');
-  for (const pair of pairs) {
-    const eqIdx = pair.indexOf('=');
-    if (eqIdx !== -1) {
-      const key = pair.slice(0, eqIdx);
-      if (isSecretKey(key)) {
-        const valueStart = offset + eqIdx + 1;
-        const valueEnd = offset + pair.length;
-        ranges.push({ start: valueStart, end: valueEnd });
-      }
+  // Spans are computed on the original string so the range covers escaped
+  // commas too: `POSTGRES_PASSWORD=a\,b` masks `a\,b`, not just `a`.
+  for (const span of envEntrySpans(envInput)) {
+    if (span.eqIndex === -1) continue;
+    if (isSecretKey(span.key)) {
+      ranges.push({ start: span.eqIndex + 1, end: span.end });
     }
-    offset += pair.length + 1; // +1 for the comma
   }
 
   return ranges;
@@ -145,19 +139,43 @@ export function generateSecret(length = 24) {
 }
 
 /**
- * Replaces sensitive values with '***' in any text before logging.
- * @param {string} text
- * @returns {string}
+ * Replaces sensitive values with '***' before logging.
+ *
+ * Accepts either an array of `KEY=VALUE` entries (each secret pair becomes
+ * `KEY=***`) or a free string (each secret value is replaced in full, escaped
+ * commas included). The old value regex `[^,}\s)]+` stopped at a space, `)`,
+ * `}`, or a comma, logging the tail of the secret.
+ *
+ * @param {string|string[]} text
+ * @returns {string|string[]}
  */
 export function redactForLog(text) {
-  if (!text) return text;
+  if (Array.isArray(text)) {
+    return text.map((entry) => {
+      if (typeof entry !== 'string') return entry;
+      const at = entry.indexOf('=');
+      if (at === -1) return entry;
+      const key = entry.slice(0, at).trim();
+      if (!isSecretKey(key)) return entry;
+      return `${key}=***`;
+    });
+  }
 
-  // Match patterns like KEY=value where KEY contains a secret pattern
-  // Handles: UPPERCASE_KEY, lowercase_key, MixedCase_Key, keys with numbers
-  return text.replace(
-    /([a-zA-Z0-9_]*(?:PASSWORD|PASSWD|SECRET|TOKEN|APIKEY|API_KEY|PRIVATE_KEY|ACCESS_KEY|CREDENTIAL|AUTH)[a-zA-Z0-9_]*)\s*=\s*[^,}\s)]+/gi,
-    '$1=***'
-  );
+  if (!text || typeof text !== 'string') return text;
+
+  const spans = envEntrySpans(text);
+  if (!spans.length) return text;
+
+  let result = '';
+  let cursor = 0;
+  for (const span of spans) {
+    if (span.eqIndex === -1 || !isSecretKey(span.key)) continue;
+    result += text.slice(cursor, span.eqIndex + 1);
+    result += '***';
+    cursor = span.end;
+  }
+  result += text.slice(cursor);
+  return result;
 }
 
 /**
@@ -180,19 +198,16 @@ export function findWeakSecrets(envInput) {
   ];
 
   const weak = [];
-  const pairs = envInput.split(',');
 
-  for (const pair of pairs) {
-    const eqIdx = pair.indexOf('=');
-    if (eqIdx === -1) continue;
+  for (const { key, value } of parseEnvPairs(envInput)) {
+    if (value === null) continue;
 
-    const key = pair.slice(0, eqIdx).trim();
-    const value = pair.slice(eqIdx + 1).trim();
+    const trimmed = value.trim();
 
-    if (!isSecretKey(key) || !value) continue;
+    if (!isSecretKey(key) || !trimmed) continue;
 
     for (const { pattern, reason } of weakPatterns) {
-      if (pattern.test(value)) {
+      if (pattern.test(trimmed)) {
         weak.push({ key, reason });
         break;
       }
@@ -200,8 +215,8 @@ export function findWeakSecrets(envInput) {
 
     // Also flag very short passwords (less than 4 chars)
     if (
-      value.length > 0 &&
-      value.length < 4 &&
+      trimmed.length > 0 &&
+      trimmed.length < 4 &&
       !weak.some((w) => w.key === key)
     ) {
       weak.push({ key, reason: 'short' });

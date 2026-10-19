@@ -81,3 +81,32 @@ describe('buildContainerOptions — port edge cases', () => {
     expect(buildContainerOptions({ imageName: 'nginx' }).Image).toBeUndefined();
   });
 });
+
+describe('buildContainerOptions — escaped env commas (V1)', () => {
+  test('an escaped comma keeps the value in a single Env entry', () => {
+    const opts = buildContainerOptions({
+      imageName: 'postgres:17-alpine',
+      envInput: 'POSTGRES_PASSWORD=hunter2\\,s3cr3t',
+    });
+    expect(opts.Env).toEqual(['POSTGRES_PASSWORD=hunter2,s3cr3t']);
+  });
+
+  test('Kafka listeners with escaped commas survive intact', () => {
+    const opts = buildContainerOptions({
+      imageName: 'kafka',
+      envInput:
+        'KAFKA_LISTENERS=PLAINTEXT://0.0.0.0:9092\\,CONTROLLER://0.0.0.0:9093',
+    });
+    expect(opts.Env).toEqual([
+      'KAFKA_LISTENERS=PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093',
+    ]);
+  });
+
+  test('escaped commas are unescaped in the value Docker receives', () => {
+    const opts = buildContainerOptions({
+      imageName: 'x',
+      envInput: 'A=1\\,2,B=3',
+    });
+    expect(opts.Env).toEqual(['A=1,2', 'B=3']);
+  });
+});

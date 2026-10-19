@@ -1,3 +1,5 @@
+import { splitEnvEntries } from './envInput.js';
+
 /**
  * Builds Docker container creation options from raw user inputs.
  *
@@ -19,8 +21,9 @@ export function buildContainerOptions({
   portInput,
   envInput,
 }) {
-  const env = (envInput || '')
-    .split(',')
+  // Values are unescaped on purpose: Docker must receive the real commas
+  // (`KAFKA_LISTENERS=a\,b` becomes the single entry `KAFKA_LISTENERS=a,b`).
+  const env = splitEnvEntries(envInput)
     .map((s) => s.trim())
     .filter(Boolean);
   const ports = (portInput || '')

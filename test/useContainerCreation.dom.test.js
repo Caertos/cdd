@@ -1033,3 +1033,91 @@ describe('useContainerCreation — recreation port origin', () => {
     expect(originOf(expose)).toBe('assigned by CDD');
   });
 });
+
+describe('useContainerCreation — the review revalidates before create (V1)', () => {
+  function mount(onCreate) {
+    const expose = { current: null };
+    render(
+      <HookTester
+        onCreate={(d) => onCreate.push(d)}
+        onCancel={() => {}}
+        dbImages={[]}
+        expose={expose}
+      />
+    );
+    return expose;
+  }
+
+  test('a prefilled malformed env is blocked at the review, onCreate never runs', async () => {
+    const created = [];
+    const expose = mount(created);
+    await act(async () => {
+      // "BARE" has no '=' — the prefill path used to skip every step check.
+      await expose.current.prefillCreation(
+        {
+          imageName: 'postgres:17-alpine',
+          containerName: 'db',
+          portInput: '',
+          envInput: 'BARE',
+        },
+        []
+      );
+    });
+    expect(expose.current.step).toBe(4);
+
+    act(() => {
+      expose.current.nextStep();
+    });
+
+    expect(expose.current.step).toBe(4);
+    expect(expose.current.message).toMatch(/missing an '=' sign/i);
+    expect(created).toHaveLength(0);
+  });
+
+  test('a prefilled env with an escaped comma is accepted and passed through intact', async () => {
+    const created = [];
+    const expose = mount(created);
+    await act(async () => {
+      await expose.current.prefillCreation(
+        {
+          imageName: 'postgres:17-alpine',
+          containerName: 'db',
+          portInput: '',
+          envInput: 'POSTGRES_PASSWORD=hunter2\\,s3cr3t',
+        },
+        []
+      );
+    });
+
+    await act(async () => {
+      expose.current.nextStep();
+    });
+
+    expect(created).toHaveLength(1);
+    expect(created[0].envInput).toBe('POSTGRES_PASSWORD=hunter2\\,s3cr3t');
+  });
+
+  test('a recreation missing a required var is not blocked by the review check', async () => {
+    // The diagnosis is fixing precisely this case, so the review must not turn
+    // the "missing required env" warning into a hard block.
+    const created = [];
+    const expose = mount(created);
+    await act(async () => {
+      await expose.current.prefillCreation(
+        {
+          imageName: 'postgres:17-alpine',
+          containerName: 'db-2',
+          portInput: '',
+          envInput: '',
+        },
+        []
+      );
+    });
+
+    await act(async () => {
+      expose.current.nextStep();
+    });
+
+    expect(created).toHaveLength(1);
+  });
+});
