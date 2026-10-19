@@ -2,6 +2,7 @@ import { normalizeImageName } from './imageNameUtils.js';
 import { isSecretKey, findWeakSecrets } from './secrets.js';
 import { hostPortsOf } from './portUtils.js';
 import { parseEnvPairs } from './envInput.js';
+import { sanitizeTerminalText } from './sanitizeTerminalText.js';
 
 /**
  * @typedef {Object} SummaryRow
@@ -129,7 +130,12 @@ export function buildCreationSummary(values, ctx) {
   }
 
   // — Env —
-  const envPairs = parseEnvPairs(envInput);
+  // The env can come from a container that was inspected, so it may carry
+  // control sequences. What to mask is decided on the text the review shows:
+  // decided on the raw text, the "=" of a sequence could be mistaken for the
+  // "=" of the variable, the key would not look like a secret, and the value
+  // would be shown in clear.
+  const envPairs = parseEnvPairs(sanitizeTerminalText(envInput));
   if (envPairs.length > 0) {
     const envLines = envPairs.map(({ key, value }) => {
       if (value === null) return key;

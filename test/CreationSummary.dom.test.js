@@ -4,6 +4,7 @@
 import React from 'react';
 import { render } from '@testing-library/react';
 import { CreationSummary } from '../src/components/CreationSummary.jsx';
+import { buildCreationSummary } from '../src/helpers/creationSummary.js';
 
 const ESC = '\u001b';
 const CSI = `${ESC}[`;
@@ -172,8 +173,7 @@ describe('CreationSummary — rows CDD changed', () => {
   test('an untouched row does not', () => {
     const { queryByText } = renderRows([
       { key: 'env', step: 3, label: 'Env', values: ['POSTGRES_PASSWORD'] },
-    ]);
-    expect(queryByText(/changed by CDD/)).toBeNull();
+    ]);    expect(queryByText(/changed by CDD/)).toBeNull();
   });
 
   test('only the changed rows are marked', () => {
@@ -328,5 +328,36 @@ describe('CreationSummary — terminal control sequences', () => {
       { key: 'image', step: 0, label: 'Image', values: [value] },
     ]);
     expect(container.textContent).toContain(value);
+  });
+});
+
+describe('CreationSummary — the review of an env that carries a sequence', () => {
+  // The env of a recreated container comes from its inspect, so it can carry
+  // control sequences. The review must decide what to mask on the text it
+  // shows: deciding on the raw text, the "=" of a sequence could pass for the
+  // "=" of the variable and the secret would be shown in clear.
+  test('the secret is masked, not shown', () => {
+    const rows = buildCreationSummary(
+      {
+        imageName: 'postgres',
+        containerName: '',
+        portInput: '',
+        envInput: `${ESC}]52;c;cGFzcw==\u0007POSTGRES_PASSWORD=hunter2`,
+      },
+      { rawImageInput: 'postgres', imageProfiles: {}, previewedPorts: null }
+    );
+    const { container } = render(
+      <CreationSummary
+        rows={rows}
+        warnings={[]}
+        focusedRow={0}
+        isLoadingPreview={false}
+        revealSecrets={false}
+      />
+    );
+    const text = container.textContent;
+    expect(text).not.toContain('hunter2');
+    expect(text).toContain('\u2022');
+    expectNoControlBytes(text);
   });
 });

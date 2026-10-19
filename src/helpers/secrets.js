@@ -94,6 +94,21 @@ export function maskEnvPairs(envInput, options = {}) {
 }
 
 /**
+ * The position of a UTF-16 index among the text's code points.
+ *
+ * The field that paints the mask walks the text by code point, so a range
+ * counted in UTF-16 units would sit one character off whenever a character
+ * outside the basic plane (an emoji, for instance) came before the secret.
+ *
+ * @param {string} text
+ * @param {number} utf16Index - Position in UTF-16 code units
+ * @returns {number} Position among the code points
+ */
+function codePointIndex(text, utf16Index) {
+  return Array.from(text.slice(0, utf16Index)).length;
+}
+
+/**
  * Calculates which character ranges in an env input string should be masked.
  * Used by TextField to mask without altering the value or cursor position.
  *
@@ -109,7 +124,10 @@ export function secretRanges(envInput) {
   for (const span of envEntrySpans(envInput)) {
     if (span.eqIndex === -1) continue;
     if (isSecretKey(span.key)) {
-      ranges.push({ start: span.eqIndex + 1, end: span.end });
+      ranges.push({
+        start: codePointIndex(envInput, span.eqIndex + 1),
+        end: codePointIndex(envInput, span.end),
+      });
     }
   }
 

@@ -166,6 +166,29 @@ describe('buildCreationSummary', () => {
     expect(envRow.values.some((v) => v.includes('\u2022'))).toBe(true);
   });
 
+  test('a secret is masked even when the entry carries a control sequence', () => {
+    // The env can come from a container that was inspected. Deciding what to
+    // mask on the raw text let the "=" of the sequence pass for the "=" of
+    // the variable: the key stopped looking like a secret and the value was
+    // shown in clear.
+    const rows = buildCreationSummary(
+      {
+        imageName: 'postgres',
+        containerName: '',
+        portInput: '',
+        envInput: '\u001b]52;c;cGFzcw==\u0007POSTGRES_PASSWORD=hunter2',
+      },
+      {
+        rawImageInput: 'postgres',
+        imageProfiles: profiles,
+        previewedPorts: null,
+      }
+    );
+    const envRow = rows.find((r) => r.key === 'env');
+    expect(envRow.values.join(' ')).not.toContain('hunter2');
+    expect(envRow.values.join(' ')).toContain('\u2022');
+  });
+
   test('empty env shows (none)', () => {
     const rows = buildCreationSummary(
       { imageName: 'nginx', containerName: '', portInput: '', envInput: '' },
