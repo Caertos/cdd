@@ -1,6 +1,7 @@
 import React from 'react';
 import { Box, Text } from 'ink';
 import PropTypes from 'prop-types';
+import { sanitizeTerminalText } from '../helpers/sanitizeTerminalText.js';
 
 /**
  * Renders an autocomplete suggestion panel as a boxed list below the image input.
@@ -39,13 +40,16 @@ export function SuggestionPanel({
       {visible.map((item, localIdx) => {
         const globalIdx = visibleOffset + localIdx;
         const isFocused = globalIdx === selectedIndex;
+        // The list comes from Docker Hub, so the name of a repository is text
+        // somebody else wrote: its escape sequences never reach the screen.
+        const safeItem = sanitizeTerminalText(item);
         return (
           <Text
             key={item}
             color={isFocused ? 'cyan' : undefined}
             dimColor={!isFocused}
           >
-            {isFocused ? `› ${item}` : `  ${item}`}
+            {isFocused ? `› ${safeItem}` : `  ${safeItem}`}
           </Text>
         );
       })}
