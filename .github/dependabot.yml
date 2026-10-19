@@ -5,3 +5,11 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    groups:
+      react:
+        # react and react-dom must resolve to the exact same version: React 19
+        # refuses to load when they differ. Updating them separately leaves a
+        # PR that breaks every jsdom test suite (see #76).
+        patterns:
+          - "react"
+          - "react-dom"
