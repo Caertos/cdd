@@ -1,6 +1,7 @@
 import React from 'react';
 import { Box, Text } from 'ink';
 import PropTypes from 'prop-types';
+import { sanitizeTerminalText } from '../helpers/sanitizeTerminalText.js';
 
 /**
  * Small component that shows a feedback message in the UI.
@@ -14,7 +15,9 @@ export default function MessageFeedback({ message, color }) {
   if (!message) return null;
   return (
     <Box marginBottom={1}>
-      <Text color={color}>{message}</Text>
+      {/* The message often quotes a daemon error, so it is not CDD's own
+          wording: its control sequences are removed before it is shown. */}
+      <Text color={color}>{sanitizeTerminalText(message)}</Text>
     </Box>
   );
 }

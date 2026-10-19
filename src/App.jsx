@@ -18,6 +18,7 @@ import { useControls } from './hooks/useControls.js';
 import { useDockerLauncher } from './hooks/useDockerLauncher.js';
 import { useTerminalHeight } from './hooks/useTerminalHeight.js';
 import { reservedRows } from './helpers/reservedRows.js';
+import { sanitizeTerminalText } from './helpers/sanitizeTerminalText.js';
 import ContainerSection from './components/ContainerSection.jsx';
 import MessageFeedback from './components/MessageFeedback.jsx';
 import Header from './components/Header.jsx';
@@ -201,7 +202,7 @@ export default function App() {
             ) : (
               controls.debugLogs.slice(-15).map((line, idx) => (
                 <Text key={idx} color="gray">
-                  {line}
+                  {sanitizeTerminalText(line)}
                 </Text>
               ))
             )}

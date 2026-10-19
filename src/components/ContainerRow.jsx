@@ -4,6 +4,7 @@ import StatsBar from './StatsBar.jsx';
 import PropTypes from 'prop-types';
 import { STRINGS } from '../helpers/strings.js';
 import { levelStyle } from '../helpers/health.js';
+import { sanitizeTerminalText } from '../helpers/sanitizeTerminalText.js';
 
 const stateText = (state) => {
   if (!state || typeof state !== 'string') {
@@ -13,7 +14,7 @@ const stateText = (state) => {
     return { text: STRINGS.stateRunning, color: 'green' };
   if (state === 'exited') return { text: STRINGS.stateExited, color: 'red' };
   if (state === 'paused') return { text: STRINGS.statePaused, color: 'yellow' };
-  return { text: state.toUpperCase(), color: 'gray' };
+  return { text: sanitizeTerminalText(state).toUpperCase(), color: 'gray' };
 };
 
 const verdictText = (verdict) => {
@@ -68,12 +69,12 @@ export default function ContainerRow({
       </Box>
       <Box width={19} flexShrink={0} paddingRight={1}>
         <Text color="cyan" dimColor={dimColor} wrap="truncate-end">
-          {truncate(name, 18)}
+          {truncate(sanitizeTerminalText(name), 18)}
         </Text>
       </Box>
       <Box width={18} flexShrink={1} paddingRight={1}>
         <Text color="gray" dimColor={dimColor} wrap="truncate-end">
-          {truncate(image, 18)}
+          {truncate(sanitizeTerminalText(image), 18)}
         </Text>
       </Box>
       <Box width={12} minWidth={12} paddingRight={1}>

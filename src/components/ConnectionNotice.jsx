@@ -2,6 +2,7 @@ import React from 'react';
 import { Box, Text } from 'ink';
 import PropTypes from 'prop-types';
 import { DockerLauncher } from './DockerLauncher.jsx';
+import { sanitizeTerminalText } from '../helpers/sanitizeTerminalText.js';
 
 /**
  * Connection error screen shown when Docker is unreachable.
@@ -35,7 +36,9 @@ export function ConnectionNotice({ error, nextRetryIn, launcher }) {
         </Text>
       ))}
       <Text> </Text>
-      <Text dimColor>Technical detail: {error.technical}</Text>
+      <Text dimColor>
+        Technical detail: {sanitizeTerminalText(error.technical)}
+      </Text>
       <Text> </Text>
       <Box justifyContent="space-between">
         <Text>

@@ -2,6 +2,7 @@ import React from 'react';
 import { TextField } from './TextField.jsx';
 import { Text } from 'ink';
 import PropTypes from 'prop-types';
+import { sanitizeTerminalText } from '../helpers/sanitizeTerminalText.js';
 
 /**
  * PromptField shows a label and the current typed value for an input field.
@@ -39,7 +40,8 @@ export function PromptField({ label, value, cursor, required, maskRanges }) {
  */
 export function PromptMessage({ message, color }) {
   if (!message) return null;
-  return <Text color={color || 'yellow'}>{message}</Text>;
+  // The message can quote a daemon error, so it is not CDD's own wording.
+  return <Text color={color || 'yellow'}>{sanitizeTerminalText(message)}</Text>;
 }
 
 PromptField.propTypes = {
