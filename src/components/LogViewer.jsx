@@ -2,6 +2,7 @@ import React from 'react';
 import { Text } from 'ink';
 import PropTypes from 'prop-types';
 import { STRINGS } from '../helpers/strings.js';
+import { sanitizeTerminalText } from '../helpers/sanitizeTerminalText.js';
 
 /**
  * Log viewer overlay component. Shows the most recent lines.
@@ -18,11 +19,17 @@ export default function LogViewer({ logs, onExit: _onExit, container }) {
 
   return (
     <>
-      <Text color="green">{STRINGS.logsTitle(container?.name)}</Text>
+      <Text color="green">
+        {STRINGS.logsTitle(sanitizeTerminalText(container?.name))}
+      </Text>
       {visibleLogs.length === 0 ? (
         <Text dimColor>{STRINGS.noLogs}</Text>
       ) : (
-        visibleLogs.map((line, idx) => <Text key={idx}>{line}</Text>)
+        // The log is written by the container, not by CDD: its escape
+        // sequences are sanitised away before Ink writes them to the screen.
+        visibleLogs.map((line, idx) => (
+          <Text key={idx}>{sanitizeTerminalText(line)}</Text>
+        ))
       )}
     </>
   );

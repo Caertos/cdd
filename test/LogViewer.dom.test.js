@@ -8,6 +8,30 @@ import LogViewer from '../src/components/LogViewer.jsx';
 const lines = (count) =>
   Array.from({ length: count }, (_, i) => `line-${i}`);
 
+const ESC = '\u001b';
+const BEL = '\u0007';
+const CSI = `${ESC}[`;
+const OSC = `${ESC}]`;
+const ST = `${ESC}\\`;
+/** The 8-bit heads: the same sequences with a shorter introducer. */
+const C1_CSI = '\u009b';
+const C1_OSC = '\u009d';
+
+/**
+ * The rendered text must carry no control byte at all: not the ESC that
+ * starts an escape sequence, not the 8-bit heads (0x9B, 0x9D).
+ *
+ * @param {string} text - The text the rendered node actually shows
+ */
+function expectNoControlBytes(text) {
+  expect(text).not.toContain(ESC);
+  expect(text).not.toContain(C1_CSI);
+  expect(text).not.toContain(C1_OSC);
+  // The same check in a shape a human can read in the failure message: the
+  // escaped bytes are visible there instead of invisible control characters.
+  expect(JSON.stringify(text)).not.toMatch(/\\u001b|\\u009b|\\u009d/);
+}
+
 describe('LogViewer', () => {
   test('titles with the container name', () => {
     const { getByText } = render(
@@ -39,5 +63,70 @@ describe('LogViewer', () => {
     const placeholder = getByText('No logs...');
     expect(placeholder.getAttribute('data-dim')).toBe('true');
     expect(container.textContent).not.toContain('line-');
+  });
+});
+
+describe('LogViewer — terminal control sequences', () => {
+  // The log is written by the container, not by CDD. Ink writes it to stdout
+  // verbatim, so a sequence the container prints would be executed by the
+  // terminal. These tests are the regression: they must FAIL the moment the
+  // `sanitizeTerminalText` call is removed from the component.
+
+  test('a fake colour sequence is stripped and its words stay readable', () => {
+    const { container } = render(
+      <LogViewer logs={[`${CSI}31mFAKE-RED${CSI}0m`]} />
+    );
+    const text = container.textContent;
+    expect(text).toContain('FAKE-RED');
+    expectNoControlBytes(text);
+  });
+
+  test('an OSC-8 hyperlink is stripped, its label stays and the url does not', () => {
+    const hostile = `${OSC}8;;https://evil.example/pwned${ST}CLICK-ME${OSC}8;;${ST}`;
+    const { container } = render(<LogViewer logs={[hostile]} />);
+    const text = container.textContent;
+    expect(text).toContain('CLICK-ME');
+    expect(text).not.toContain('evil.example');
+    expectNoControlBytes(text);
+  });
+
+  test('a screen wipe is stripped and leaves no control byte behind', () => {
+    const { container } = render(
+      <LogViewer logs={[`${CSI}2J${CSI}Hcleared`]} />
+    );
+    const text = container.textContent;
+    expect(text).toContain('cleared');
+    expectNoControlBytes(text);
+  });
+
+  test('the 8-bit CSI and OSC heads are stripped too', () => {
+    const { container } = render(
+      <LogViewer logs={[`${C1_CSI}31mFAKE-RED${C1_OSC}0;title${BEL}after`]} />
+    );
+    const text = container.textContent;
+    expect(text).toContain('FAKE-RED');
+    expect(text).toContain('after');
+    expectNoControlBytes(text);
+  });
+
+  test('a hostile container name cannot colour the title', () => {
+    const { container } = render(
+      <LogViewer logs={['a']} container={{ name: `${CSI}31mevil${CSI}0m` }} />
+    );
+    const text = container.textContent;
+    expect(text).toContain('evil logs, press ESC to exit');
+    expectNoControlBytes(text);
+  });
+
+  test('ordinary text is rendered verbatim, byte for byte', () => {
+    // The sanitiser must not mutilate what is legitimate: the symbols Ink
+    // escapes itself, the accents and the emoji all have to come out as they
+    // went in.
+    const line = 'a & b < c > d — ñandú 🐳 café';
+    const { container } = render(<LogViewer logs={[line]} />);
+    expect(container.textContent).toContain(line);
+    expect(container.textContent).toBe(
+      `Container logs, press ESC to exit${line}`
+    );
   });
 });
