@@ -19,7 +19,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          # Ink 7 requires Node >=22; the E2E suite runs only on this version.
+          # The project requires Node >=22 (see "engines" in package.json).
           node-version: 22
           cache: pnpm
 

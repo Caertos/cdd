@@ -30,7 +30,7 @@
   "type": "module",
   "packageManager": "pnpm@12.9.1",
   "engines": {
-    "node": ">=18"
+    "node": ">=22"
   },
   "devEngines": {
     "packageManager": {
@@ -53,7 +53,7 @@
   "dependencies": {
     "chalk": "^6.0.0",
     "dockerode": "^5",
-    "ink": "^7.1.1",
+    "ink": "^8.0.0",
     "prop-types": "^15.8.1",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"
