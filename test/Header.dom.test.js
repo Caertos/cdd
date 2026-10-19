@@ -7,6 +7,13 @@ import path from 'path';
 import { render } from '@testing-library/react';
 import { jest } from '@jest/globals';
 import { STRINGS } from '../src/helpers/strings.js';
+import {
+  LEGIT,
+  expectNoControlBytes,
+  hostile,
+  nodeWithText,
+  sanitised,
+} from './support/terminalControls.js';
 
 afterEach(() => jest.resetModules());
 
@@ -67,5 +74,47 @@ describe('Header', () => {
       <Header visibleCount={12} totalCount={25} query="pg" />
     );
     expect(getByText(STRINGS.filter.summary(12, 25, 'pg'))).toBeTruthy();
+  });
+});
+
+// The query is what the user typed, but it can also be a paste: a terminal
+// executes part of what it is given, so the summary has to reach the screen
+// without the control bytes of the query.
+describe('Header — the filter query reaches the screen sanitised', () => {
+  test('the summary leaves no control byte in the DOM', async () => {
+    const Header = await loadHeader(() => '4.7.1');
+    const { container } = render(
+      <Header visibleCount={12} totalCount={25} query={hostile('query')} />
+    );
+    const summary = nodeWithText(container, 'search:');
+    expect(summary).toBeTruthy();
+    expectNoControlBytes(summary.textContent);
+  });
+
+  test('the words of the query survive', async () => {
+    const Header = await loadHeader(() => '4.7.1');
+    const { container } = render(
+      <Header visibleCount={12} totalCount={25} query={hostile('query')} />
+    );
+    const summary = nodeWithText(container, 'search:');
+    expect(summary.textContent).toContain(sanitised('query'));
+  });
+
+  test('the url of the hyperlink does not stay on screen', async () => {
+    const Header = await loadHeader(() => '4.7.1');
+    const { container } = render(
+      <Header visibleCount={12} totalCount={25} query={hostile('query')} />
+    );
+    expect(container.textContent).not.toContain('evil.example');
+  });
+
+  test('legitimate text is not mangled', async () => {
+    const Header = await loadHeader(() => '4.7.1');
+    const { container } = render(
+      <Header visibleCount={12} totalCount={25} query={LEGIT} />
+    );
+    const summary = nodeWithText(container, 'search:');
+    expect(summary.textContent).toContain(LEGIT);
+    expectNoControlBytes(summary.textContent);
   });
 });

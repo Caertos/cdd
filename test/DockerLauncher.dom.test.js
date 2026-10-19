@@ -4,6 +4,13 @@
 import React from 'react';
 import { render } from '@testing-library/react';
 import { DockerLauncher } from '../src/components/DockerLauncher.jsx';
+import {
+  LEGIT,
+  expectNoControlBytes,
+  hostile,
+  nodeWithText,
+  sanitised,
+} from './support/terminalControls.js';
 
 const METHOD = {
   kind: 'linux-system',
@@ -119,5 +126,63 @@ describe('DockerLauncher', () => {
       />
     );
     expect(getByText('Docker is ready.')).toBeTruthy();
+  });
+});
+
+// The failure message is the output of the launcher process, not CDD's own
+// wording. A terminal executes part of what it is given, so it has to reach
+// the screen without its control bytes.
+describe('DockerLauncher — the launch error reaches the screen sanitised', () => {
+  test('the failure message leaves no control byte in the DOM', () => {
+    const { container } = render(
+      <DockerLauncher
+        method={METHOD}
+        status="failed"
+        elapsedMs={0}
+        error={hostile('error')}
+      />
+    );
+    const message = nodeWithText(container, sanitised('error'));
+    expect(message).toBeTruthy();
+    expectNoControlBytes(message.textContent);
+  });
+
+  test('the words of the failure message survive', () => {
+    const { container } = render(
+      <DockerLauncher
+        method={METHOD}
+        status="failed"
+        elapsedMs={0}
+        error={hostile('error')}
+      />
+    );
+    expect(container.textContent).toContain(sanitised('error'));
+  });
+
+  test('the url of the hyperlink does not stay on screen', () => {
+    const { container } = render(
+      <DockerLauncher
+        method={METHOD}
+        status="failed"
+        elapsedMs={0}
+        error={hostile('error')}
+      />
+    );
+    expect(container.textContent).not.toContain('evil.example');
+  });
+
+  test('legitimate text is not mangled', () => {
+    const { container } = render(
+      <DockerLauncher
+        method={METHOD}
+        status="failed"
+        elapsedMs={0}
+        error={LEGIT}
+      />
+    );
+    const message = nodeWithText(container, LEGIT);
+    expect(message).toBeTruthy();
+    expect(message.textContent).toContain(LEGIT);
+    expectNoControlBytes(message.textContent);
   });
 });

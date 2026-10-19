@@ -4,6 +4,13 @@
 import React from 'react';
 import { render } from '@testing-library/react';
 import { STRINGS } from '../src/helpers/strings.js';
+import {
+  LEGIT,
+  expectNoControlBytes,
+  hostile,
+  nodeWithText,
+  sanitised,
+} from './support/terminalControls.js';
 
 const row = (id, name) => ({
   id,
@@ -83,5 +90,60 @@ describe('ContainerSection', () => {
       onCreate: () => {},
     });
     expect(getByText(STRINGS.emptyTitle)).toBeTruthy();
+  });
+});
+
+// The no-match message quotes the query back to the user, and the query can
+// be a paste. A terminal executes part of what it is given, so the message
+// has to reach the screen without the control bytes of the query.
+describe('ContainerSection — the filter query reaches the screen sanitised', () => {
+  test('the no-match message leaves no control byte in the DOM', async () => {
+    const { container } = await renderSection({
+      containers: [],
+      connectionStatus: 'ok',
+      query: hostile('query'),
+      totalCount: 25,
+      onCreate: () => {},
+    });
+    const message = nodeWithText(container, sanitised('query'));
+    expect(message).toBeTruthy();
+    expectNoControlBytes(message.textContent);
+  });
+
+  test('the words of the query survive', async () => {
+    const { container } = await renderSection({
+      containers: [],
+      connectionStatus: 'ok',
+      query: hostile('query'),
+      totalCount: 25,
+      onCreate: () => {},
+    });
+    const message = nodeWithText(container, sanitised('query'));
+    expect(message.textContent).toContain(sanitised('query'));
+  });
+
+  test('the url of the hyperlink does not stay on screen', async () => {
+    const { container } = await renderSection({
+      containers: [],
+      connectionStatus: 'ok',
+      query: hostile('query'),
+      totalCount: 25,
+      onCreate: () => {},
+    });
+    expect(container.textContent).not.toContain('evil.example');
+  });
+
+  test('legitimate text is not mangled', async () => {
+    const { container } = await renderSection({
+      containers: [],
+      connectionStatus: 'ok',
+      query: LEGIT,
+      totalCount: 25,
+      onCreate: () => {},
+    });
+    const message = nodeWithText(container, LEGIT);
+    expect(message).toBeTruthy();
+    expect(message.textContent).toContain(LEGIT);
+    expectNoControlBytes(message.textContent);
   });
 });

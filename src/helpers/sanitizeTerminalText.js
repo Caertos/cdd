@@ -191,6 +191,35 @@ function sanitizeString(text) {
 }
 
 /**
+ * Map a position in the raw text to the position it takes in the text the
+ * field shows.
+ *
+ * The cursor counts characters of the raw value, but the field displays the
+ * sanitised one, so without this the cursor would sit on a different
+ * character whenever a control sequence was removed. The display position is
+ * how much of the text before the cursor survives the sanitiser.
+ *
+ * Both sides are counted in code points, like the editor that moves the
+ * cursor: a character outside the basic plane (an emoji) is one character,
+ * not two.
+ *
+ * A cursor that falls inside a half-written sequence lands at the end of the
+ * visible text before it, which is the closest honest answer: the rest of
+ * the sequence is not on the screen.
+ *
+ * @param {string} raw - The value as it is held in the state
+ * @param {number} cursor - Position in the raw value
+ * @returns {number} Position in the displayed value
+ */
+export function sanitizedCursorIndex(raw, cursor) {
+  if (typeof cursor !== 'number' || cursor < 0) return cursor;
+  const prefix = Array.from(String(raw ?? ''))
+    .slice(0, cursor)
+    .join('');
+  return Array.from(sanitizeTerminalText(prefix)).length;
+}
+
+/**
  * Remove the terminal control sequences from a piece of untrusted text.
  *
  * Meant for the render boundary: call it on anything that comes from a

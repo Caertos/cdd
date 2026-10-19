@@ -4,6 +4,7 @@ import ContainerList from './ContainerList.jsx';
 import { EmptyState } from './EmptyState.jsx';
 import PropTypes from 'prop-types';
 import { STRINGS } from '../helpers/strings.js';
+import { sanitizeTerminalText } from '../helpers/sanitizeTerminalText.js';
 
 /**
  * Section that displays the list of containers or a message when none exist.
@@ -40,7 +41,7 @@ export default function ContainerSection({
       return (
         <Box flexDirection="column" paddingLeft={1}>
           <Text color="yellow">
-            {STRINGS.filter.noMatch(totalCount, query)}
+            {STRINGS.filter.noMatch(totalCount, sanitizeTerminalText(query))}
           </Text>
           <Text dimColor>{STRINGS.filter.noMatchHint}</Text>
         </Box>

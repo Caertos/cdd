@@ -23,16 +23,16 @@ export function ConnectionNotice({ error, nextRetryIn, launcher }) {
       padding={1}
     >
       <Text bold color="red">
-        {error.title}
+        {sanitizeTerminalText(error.title)}
       </Text>
       <Text> </Text>
-      <Text>{error.detail}</Text>
+      <Text>{sanitizeTerminalText(error.detail)}</Text>
       <Text> </Text>
       <Text bold>Try this:</Text>
       {error.hints.map((hint, i) => (
         <Text key={i}>
           {'  · '}
-          {hint}
+          {sanitizeTerminalText(hint)}
         </Text>
       ))}
       <Text> </Text>

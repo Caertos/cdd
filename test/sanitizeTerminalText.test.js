@@ -1,7 +1,10 @@
 /**
  * @jest-environment node
  */
-import { sanitizeTerminalText } from '../src/helpers/sanitizeTerminalText.js';
+import {
+  sanitizeTerminalText,
+  sanitizedCursorIndex,
+} from '../src/helpers/sanitizeTerminalText.js';
 
 const ESC = '\u001b';
 const BEL = '\u0007';
@@ -218,5 +221,31 @@ describe('sanitizeTerminalText — properties', () => {
         /[\u0000-\u001f\u007f-\u009f]/
       );
     }
+  });
+});
+
+describe('sanitizedCursorIndex — the cursor in the text the field shows', () => {
+  test('a cursor in plain text keeps its position', () => {
+    expect(sanitizedCursorIndex('hello', 3)).toBe(3);
+  });
+
+  test('a removed sequence shortens the distance to the cursor', () => {
+    // The raw position 6 is just before the "B", which is the second
+    // character of what the field shows.
+    expect(sanitizedCursorIndex(`A${CSI}31mBCD`, 6)).toBe(1);
+  });
+
+  test('the cursor counts code points, not UTF-16 units', () => {
+    // The editor that moves the cursor counts code points, so an emoji is
+    // one character: the cursor must land on the same one.
+    expect(sanitizedCursorIndex('\u{1F511}abc', 2)).toBe(2);
+    // An emoji before a removed sequence: the raw position 6 is just before
+    // the "a", which is the second character of what the field shows.
+    expect(sanitizedCursorIndex(`\u{1F511}${CSI}31mab`, 6)).toBe(1);
+  });
+
+  test('a cursor outside the text is left alone', () => {
+    expect(sanitizedCursorIndex('abc', -1)).toBe(-1);
+    expect(sanitizedCursorIndex('abc', undefined)).toBeUndefined();
   });
 });
