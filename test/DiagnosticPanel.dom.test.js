@@ -5,6 +5,30 @@ import React from 'react';
 import { render } from '@testing-library/react';
 import { DiagnosticPanel } from '../src/components/DiagnosticPanel.jsx';
 
+const ESC = '\u001b';
+const BEL = '\u0007';
+const CSI = `${ESC}[`;
+const OSC = `${ESC}]`;
+const ST = `${ESC}\\`;
+/** The 8-bit heads: the same sequences with a shorter introducer. */
+const C1_CSI = '\u009b';
+const C1_OSC = '\u009d';
+
+/**
+ * The rendered text must carry no control byte at all: not the ESC that
+ * starts an escape sequence, not the 8-bit heads (0x9B, 0x9D).
+ *
+ * @param {string} text - The text the rendered node actually shows
+ */
+function expectNoControlBytes(text) {
+  expect(text).not.toContain(ESC);
+  expect(text).not.toContain(C1_CSI);
+  expect(text).not.toContain(C1_OSC);
+  // The same check in a shape a human can read in the failure message: the
+  // escaped bytes are visible there instead of invisible control characters.
+  expect(JSON.stringify(text)).not.toMatch(/\\u001b|\\u009b|\\u009d/);
+}
+
 function diagnosis(overrides = {}) {
   return {
     what: 'It died after 2s with exit code 1.',
@@ -185,5 +209,109 @@ describe('DiagnosticPanel — long content', () => {
       <DiagnosticPanel diagnosis={diagnosis({ why })} containerName="db" />
     );
     expect(getByText(why)).toBeTruthy();
+  });
+});
+
+describe('DiagnosticPanel — terminal control sequences', () => {
+  // The panel shows text CDD did not write: the words of a daemon error and
+  // the tail of a container log. Ink writes them to stdout verbatim, so a
+  // sequence in there would be executed by the terminal. These tests are the
+  // regression: they must FAIL the moment the `sanitizeTerminalText` calls
+  // are removed from the component.
+
+  test('a fake colour sequence in the diagnosis is stripped', () => {
+    const { container } = render(
+      <DiagnosticPanel
+        diagnosis={diagnosis({ what: `${CSI}31mFAKE-RED${CSI}0m` })}
+        containerName="db"
+      />
+    );
+    const text = container.textContent;
+    expect(text).toContain('FAKE-RED');
+    expectNoControlBytes(text);
+  });
+
+  test('a fake colour sequence in the cause is stripped', () => {
+    const { container } = render(
+      <DiagnosticPanel
+        diagnosis={diagnosis({ why: `${CSI}35mFAKE-MAGENTA${CSI}0m` })}
+        containerName="db"
+      />
+    );
+    const text = container.textContent;
+    expect(text).toContain('FAKE-MAGENTA');
+    expectNoControlBytes(text);
+  });
+
+  test('an OSC-8 hyperlink in the log tail is stripped', () => {
+    const hostile = `${OSC}8;;https://evil.example/pwned${ST}CLICK-ME${OSC}8;;${ST}`;
+    const { container } = render(
+      <DiagnosticPanel
+        diagnosis={diagnosis({ why: null, tail: [hostile] })}
+        containerName="db"
+      />
+    );
+    const text = container.textContent;
+    expect(text).toContain('CLICK-ME');
+    expect(text).not.toContain('evil.example');
+    expectNoControlBytes(text);
+  });
+
+  test('a screen wipe in the log tail is stripped', () => {
+    const { container } = render(
+      <DiagnosticPanel
+        diagnosis={diagnosis({ why: null, tail: [`${CSI}2J${CSI}Hcleared`] })}
+        containerName="db"
+      />
+    );
+    const text = container.textContent;
+    expect(text).toContain('cleared');
+    expectNoControlBytes(text);
+  });
+
+  test('the 8-bit CSI and OSC heads are stripped too', () => {
+    const { container } = render(
+      <DiagnosticPanel
+        diagnosis={diagnosis({
+          what: `${C1_CSI}31mFAKE-RED${C1_OSC}0;title${BEL}after`,
+        })}
+        containerName="db"
+      />
+    );
+    const text = container.textContent;
+    expect(text).toContain('FAKE-RED');
+    expect(text).toContain('after');
+    expectNoControlBytes(text);
+  });
+
+  test('a hostile container name cannot smuggle a sequence into the title', () => {
+    const { container } = render(
+      <DiagnosticPanel
+        diagnosis={diagnosis()}
+        containerName={`${CSI}31mevil${CSI}0m`}
+      />
+    );
+    const text = container.textContent;
+    expect(text).toContain('Diagnosis: evil');
+    expectNoControlBytes(text);
+  });
+
+  test('ordinary text is rendered verbatim, byte for byte', () => {
+    // The sanitiser must not mutilate what is legitimate: the symbols Ink
+    // escapes itself, the accents and the emoji all have to come out as they
+    // went in.
+    const what = 'It died & said <why> — ñandú 🐳';
+    const why = 'a & b < c > d — café ünïcodé';
+    const tail = 'Error: <boom> & friends 🐛';
+    const { container } = render(
+      <DiagnosticPanel
+        diagnosis={diagnosis({ what, why, tail: [tail] })}
+        containerName="db"
+      />
+    );
+    const text = container.textContent;
+    expect(text).toContain(what);
+    expect(text).toContain(why);
+    expect(text).toContain(tail);
   });
 });

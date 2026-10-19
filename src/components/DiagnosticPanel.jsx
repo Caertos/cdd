@@ -2,6 +2,7 @@ import React from 'react';
 import { Box, Text } from 'ink';
 import PropTypes from 'prop-types';
 import { STRINGS } from '../helpers/strings.js';
+import { sanitizeTerminalText } from '../helpers/sanitizeTerminalText.js';
 
 /**
  * Why the selected container is in the state it is in.
@@ -40,12 +41,12 @@ export function DiagnosticPanel({
       marginTop={1}
     >
       <Text bold color="yellow">
-        {panelTitle(containerName)}
+        {panelTitle(sanitizeTerminalText(containerName))}
       </Text>
 
       <Text> </Text>
 
-      {diagnosis && <Text>{diagnosis.what}</Text>}
+      {diagnosis && <Text>{sanitizeTerminalText(diagnosis.what)}</Text>}
 
       {isLoading ? (
         <>
@@ -59,10 +60,11 @@ export function DiagnosticPanel({
             <Box paddingLeft={2} flexDirection="column">
               <Text bold>{likelyCause}</Text>
               <Text>
-                {diagnosis.why ??
-                  (diagnosis.tail.length > 0
+                {diagnosis.why
+                  ? sanitizeTerminalText(diagnosis.why)
+                  : diagnosis.tail.length > 0
                     ? notRecognized
-                    : STRINGS.diagnostics.noOutput)}
+                    : STRINGS.diagnostics.noOutput}
               </Text>
             </Box>
 
@@ -73,7 +75,7 @@ export function DiagnosticPanel({
                   <Text bold>{lastLines}</Text>
                   {diagnosis.tail.map((line, i) => (
                     <Text key={i} dimColor>
-                      {line}
+                      {sanitizeTerminalText(line)}
                     </Text>
                   ))}
                 </Box>
