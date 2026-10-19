@@ -29,7 +29,13 @@ describe('sanitizeTerminalText — text that must survive untouched', () => {
   });
 
   test('the controls that mean something in a line of text are kept', () => {
-    expect(sanitizeTerminalText('a\nb\r\nc\td')).toBe('a\nb\nc\td');
+    expect(sanitizeTerminalText('a\tb')).toBe('a\tb');
+  });
+
+  test('a line feed is removed: it would break the line of the panel', () => {
+    // A line feed in text CDD did not write would draw the rest of the text
+    // as another line of the panel — a fake row, a fake prompt.
+    expect(sanitizeTerminalText('safe\nFAKE ROW')).toBe('safeFAKE ROW');
   });
 
   test('a carriage return is removed: it would overwrite the line', () => {

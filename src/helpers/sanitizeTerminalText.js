@@ -18,10 +18,12 @@
  * PM/APC, the charset designators and every other two-byte escape), the C1
  * controls (including the 8-bit CSI and OSC), BEL, the C0 controls that mean
  * nothing inside a line of text, CR — which would move the cursor back and
- * overwrite the start of the line — and DEL.
+ * overwrite the start of the line — LF, which would break the line and let
+ * the text that follows draw itself as another line of the panel, and DEL.
  *
- * What it keeps: every printable character, plus the two C0 controls that
- * carry meaning in a line of text — LF and TAB. Text with `&`, `<`, `>`,
+ * What it keeps: every printable character, plus TAB, the one C0 control
+ * that carries meaning in a single line of text (the alignment of a table, for
+ * instance). Text with `&`, `<`, `>`,
  * accents or emoji comes out exactly as it went in, and so does anything CDD
  * writes on purpose: the colours of the TUI come from Ink props and from
  * chalk, never from the text this helper is given.
@@ -45,7 +47,7 @@ const C1_OSC = 0x9d;
 const C1_FIRST = 0x80;
 const C1_LAST = 0x9f;
 /** The C0 controls that still mean something inside a line of text. */
-const KEPT_C0 = new Set(['\n', '\t']);
+const KEPT_C0 = new Set(['\t']);
 /** The latin-1 shadow of a UTF-8 encoded C1 byte (0xC2 0x9B → 0xC2 + 0x9B). */
 const LATIN1_SHADOW = '\u00c2';
 
