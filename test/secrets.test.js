@@ -146,6 +146,17 @@ describe('secretRanges', () => {
     expect(secretRanges(null)).toEqual([]);
   });
 
+  test('the range counts code points, not UTF-16 units', () => {
+    // The field that paints the mask walks the text by code point, so the
+    // range has to be counted the same way: an emoji before the secret would
+    // otherwise shift the dots one character to the right and leave the first
+    // character of the secret in clear.
+    const ranges = secretRanges('\u{1F511}POSTGRES_PASSWORD=secret');
+    // The emoji is one code point, the key is 17, the "=" is one: the secret
+    // starts at 19 and ends at 25.
+    expect(ranges).toEqual([{ start: 19, end: 25 }]);
+  });
+
   test('value with = inside', () => {
     // KEY is not a secret key, so no range
     const ranges = secretRanges('KEY=a=b');
