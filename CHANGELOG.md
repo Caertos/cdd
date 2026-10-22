@@ -6,6 +6,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Fixed
+- **The stats bars no longer touch the row above and below.** The bars use seven-eighths blocks instead of full cells, which leaves a thin gap between rows, and there is more room between the CPU and the MEM group.
+
 ### Changed
 - **The minimum supported Node is now 22.** The manifest said `>=18` while the dependency tree had required Node 22 for a while — `ink` (7 and now 8), `chalk` 6, `cli-truncate` 6 and `slice-ansi` 9 all declare `engines: node >=22`. The supported range is now stated honestly, and CI runs on Node 22 and 24 instead of 18, 20 and 22.
 - **`ink` 7 → 8.** The TUI dependency moves to the major release. No behaviour change for users; the rendered output is the same.

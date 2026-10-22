@@ -5,6 +5,12 @@ import PropTypes from 'prop-types';
 
 const BAR_WIDTH = 8;
 
+// Seven eighths of a cell tall, not the whole cell: the missing eighth leaves a
+// thin gap between the bars of two consecutive rows, which a terminal cannot do
+// any other way. The empty track is the lowest eighth only.
+const FILLED = '▇';
+const EMPTY = '▁';
+
 /**
  * Small visual bar that shows CPU and memory usage percentages.
  *
@@ -20,7 +26,7 @@ export default function StatsBar({ cpu, mem }) {
   return (
     <Text>
       CPU: {cpuBar}
-      {colorize(cpu, ` ${formatPercent(cpu)}%`)}  MEM: {memBar}
+      {colorize(cpu, ` ${formatPercent(cpu)}%`)}   MEM: {memBar}
       {colorize(mem, ` ${formatPercent(mem)}%`)}
     </Text>
   );
@@ -45,7 +51,7 @@ function makeBar(value, width) {
     : 0;
   const filled = Math.round((normalized / 100) * safeWidth);
   const empty = Math.max(0, safeWidth - filled);
-  const bar = '█'.repeat(filled) + '░'.repeat(empty);
+  const bar = FILLED.repeat(filled) + EMPTY.repeat(empty);
   return colorize(normalized, bar);
 }
 
