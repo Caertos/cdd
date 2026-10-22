@@ -272,6 +272,7 @@ export const STRINGS = {
     imageRequired: 'Image name is required',
     imageInvalidChars: 'Image name contains invalid characters',
     imageDashDash: 'Image name cannot start with --',
+    imageLeadingDash: 'Image name cannot start with a hyphen',
     imageInvalidFormat: 'Invalid image name format',
   },
 };

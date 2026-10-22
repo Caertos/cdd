@@ -41,7 +41,9 @@ export function timingSafeEqual(a, b) {
 
 /**
  * Fragments of env var names that mark a value as sensitive.
- * Matched case-insensitively against the variable name.
+ * Matched case-insensitively as a SUBSTRING of the variable name, so only
+ * unambiguous fragments belong here ('OAUTH', 'AUTHORIZATION'); ambiguous
+ * ones like 'AUTH' are handled by the whole-word rule below.
  */
 export const SECRET_KEY_PATTERNS = [
   'PASSWORD',
@@ -53,8 +55,16 @@ export const SECRET_KEY_PATTERNS = [
   'PRIVATE_KEY',
   'ACCESS_KEY',
   'CREDENTIAL',
-  'AUTH',
+  'OAUTH',
+  'AUTHORIZATION',
 ];
+
+/**
+ * 'AUTH' as a whole word: preceded and followed by a delimiter or the
+ * string boundary. 'AUTHOR' is a name, not a secret; 'AUTH_TOKEN',
+ * 'BASIC_AUTH', 'AUTH' alone are secrets.
+ */
+const AUTH_WORD = /(?:^|[^A-Z0-9])AUTH(?:$|[^A-Z0-9])/;
 
 /**
  * Does this variable name indicate a sensitive value?
@@ -64,7 +74,9 @@ export const SECRET_KEY_PATTERNS = [
 export function isSecretKey(name) {
   if (!name) return false;
   const upper = name.toUpperCase();
-  return SECRET_KEY_PATTERNS.some((p) => upper.includes(p));
+  return (
+    SECRET_KEY_PATTERNS.some((p) => upper.includes(p)) || AUTH_WORD.test(upper)
+  );
 }
 
 /**

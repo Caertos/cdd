@@ -71,9 +71,14 @@ export const DB_IMAGES = [
  * Per-image profiles with required env vars, default exposed port, and suggested env vars.
  * Keys are normalized image names (no tag, no registry prefix).
  *
+ * Null prototype on purpose. The lookup key comes from an image name typed by
+ * the user (`imageProfiles[baseName]`), and a plain object literal would answer
+ * an inherited `Object.prototype` key (`'constructor'`) with a function instead
+ * of "no profile". With no prototype every lookup is own-key only.
+ *
  * @type {Record<string, { requiredEnv: string[], defaultPort: string, suggestedEnv: string[] }>}
  */
-export const IMAGE_PROFILES = {
+export const IMAGE_PROFILES = Object.assign(Object.create(null), {
   nginx: {
     requiredEnv: [],
     defaultPort: '80',
@@ -238,7 +243,7 @@ export const IMAGE_PROFILES = {
     ],
     defaultTag: '7.1-apache',
   },
-};
+});
 
 /**
  * Given an image name (with or without tag), returns the image name with a

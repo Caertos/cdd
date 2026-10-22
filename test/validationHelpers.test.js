@@ -124,7 +124,8 @@ describe('isValidContainerId', () => {
     ['a'.repeat(64), true],          // full sha256
     ['abc123def456', true],          // short id of 12
     ['mi-contenedor_1.0', true],     // valid name
-    ['org/app', true],               // with slash
+    ['org/app', false],              // slashes never appear
+    ['/leading-slash', false],
     ['', false],
     [null, false],
     [undefined, false],
@@ -177,6 +178,28 @@ describe('validateImageName', () => {
   test('starts with -- → specific error', () => {
     expect(validateImageName('--rm').error).toBe(STRINGS.validation.imageDashDash);
   });
+
+  test.each([['-nginx'], ['-latest']])(
+    '%p → leading hyphen error',
+    (n) => {
+      expect(validateImageName(n)).toEqual({
+        valid: false,
+        error: STRINGS.validation.imageLeadingDash,
+      });
+    }
+  );
+
+  test('_nginx → invalid format (first char must be alphanumeric)', () => {
+    expect(validateImageName('_nginx')).toEqual({
+      valid: false,
+      error: STRINGS.validation.imageInvalidFormat,
+    });
+  });
+
+  test.each([['myapp-2:1.0'], ['my_container']])(
+    '%p keeps inner hyphens/underscores valid',
+    (n) => expect(validateImageName(n).valid).toBe(true)
+  );
 
   test('impossible format → "Invalid format"', () => {
     expect(validateImageName('nginx::').error).toBe(
