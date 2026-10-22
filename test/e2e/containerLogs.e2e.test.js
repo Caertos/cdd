@@ -8,6 +8,7 @@ import {
   removeTestContainer,
   TINY_IMAGE,
 } from './support/docker.js';
+import { selectContainer } from './support/selection.js';
 
 const hasDocker = await dockerAvailable();
 const describeE2E = hasDocker ? describe : describe.skip;
@@ -39,7 +40,7 @@ describeE2E('E2E — log viewer', () => {
     });
     try {
       ui = renderApp(<App />);
-      await ui.waitForText(name.slice(0, 17));
+      await selectContainer(ui, name);
       await ui.press('l');
       // LogViewer: `${container.name} logs, press ESC to exit`
       await ui.waitForText('logs, press ESC to exit');
@@ -59,7 +60,7 @@ describeE2E('E2E — log viewer', () => {
     });
     try {
       ui = renderApp(<App />);
-      await ui.waitForText(name.slice(0, 17));
+      await selectContainer(ui, name);
       await ui.press('l');
       await ui.waitForText('No logs...');
     } finally {

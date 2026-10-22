@@ -10,6 +10,7 @@ import {
   removeTestContainer,
   TINY_IMAGE,
 } from './support/docker.js';
+import { selectContainer } from './support/selection.js';
 
 const hasDocker = await dockerAvailable();
 const describeE2E = hasDocker ? describe : describe.skip;
@@ -27,27 +28,10 @@ if (!hasDocker) {
  * Renders the app with `target` selected.
  *
  * Navigating is a harness concern, not part of the feature: the panel
- * appears on its own for whichever failing container is selected. Detection
- * by eye is unreliable here because ContainerRow truncates long names with an
- * ellipsis, so the marker is matched against the same 17-char prefix the row
- * shows.
+ * appears on its own for whichever failing container is selected.
  */
 async function renderWithSelection(ui, target) {
-  const prefix = target.name.slice(0, 17);
-  await ui.waitForText(prefix);
-  // The app sorts the list (problems first) while docker.listContainers does
-  // not, and this daemon may hold other containers: counting indexes would
-  // land on the wrong row. Arrow down until the marker sits on the target.
-  const marked = () =>
-    ui
-      .frame()
-      .split('\n')
-      .some((line) => line.includes('➤') && line.includes(prefix));
-  const list = await docker.listContainers({ all: true });
-  for (let i = 0; i <= list.length && !marked(); i++) {
-    await ui.press(KEY.down);
-  }
-  if (!marked()) throw new Error(`Selection never reached ${target.name}`);
+  await selectContainer(ui, target.name);
 }
 
 describeE2E('E2E — diagnosis panel', () => {
