@@ -109,6 +109,96 @@ describe('getLogsStream', () => {
   });
 });
 
+describe('getLogsStream — D9: the handle closes the stream', () => {
+  function spyStream() {
+    const stream = new EventEmitter();
+    stream.destroy = jest.fn();
+    return stream;
+  }
+
+  test('the handle exposes stop() and it destroys the stream', async () => {
+    const stream = spyStream();
+    const { getLogsStream } = await loadLogs((opts, cb) => cb(null, stream));
+    const handle = getLogsStream('cid', jest.fn(), jest.fn(), jest.fn());
+
+    expect(typeof handle.stop).toBe('function');
+    handle.stop();
+    expect(stream.destroy).toHaveBeenCalledTimes(1);
+  });
+
+  test('after stop() a late chunk never reaches onData', async () => {
+    const stream = spyStream();
+    const { getLogsStream } = await loadLogs((opts, cb) => cb(null, stream));
+    const onData = jest.fn();
+    const onEnd = jest.fn();
+    const handle = getLogsStream('cid', onData, onEnd, jest.fn());
+
+    handle.stop();
+    stream.emit('data', Buffer.from('late'));
+    stream.emit('end');
+
+    expect(onData).not.toHaveBeenCalled();
+    expect(onEnd).not.toHaveBeenCalled();
+  });
+
+  test('stop() is idempotent and destroys only once', async () => {
+    const stream = spyStream();
+    const { getLogsStream } = await loadLogs((opts, cb) => cb(null, stream));
+    const handle = getLogsStream('cid');
+
+    handle.stop();
+    expect(() => handle.stop()).not.toThrow();
+    expect(stream.destroy).toHaveBeenCalledTimes(1);
+  });
+
+  test('stop() detaches the listeners and a late error cannot crash', async () => {
+    const stream = spyStream();
+    const { getLogsStream } = await loadLogs((opts, cb) => cb(null, stream));
+    const onError = jest.fn();
+    const handle = getLogsStream('cid', jest.fn(), jest.fn(), onError);
+    expect(stream.listenerCount('data')).toBe(1);
+
+    handle.stop();
+    expect(stream.listenerCount('data')).toBe(0);
+    expect(stream.listenerCount('end')).toBe(0);
+    // Emitting 'error' with zero listeners throws in Node; the handle parks
+    // a no-op so a socket error during teardown cannot take the process down.
+    expect(() => stream.emit('error', new Error('late'))).not.toThrow();
+    expect(onError).not.toHaveBeenCalled();
+  });
+
+  test('a stream handed over after stop() is destroyed on arrival', async () => {
+    let handOver = null;
+    const { getLogsStream } = await loadLogs((opts, cb) => {
+      handOver = cb;
+    });
+    const onData = jest.fn();
+    const handle = getLogsStream('cid', onData);
+
+    handle.stop();
+    const stream = spyStream();
+    handOver(null, stream);
+
+    expect(stream.destroy).toHaveBeenCalledTimes(1);
+    stream.emit('data', Buffer.from('late'));
+    expect(onData).not.toHaveBeenCalled();
+  });
+
+  test('stop() before the daemon reports an error stays silent', async () => {
+    let handOver = null;
+    const { getLogsStream } = await loadLogs((opts, cb) => {
+      handOver = cb;
+    });
+    const onError = jest.fn();
+    const handle = getLogsStream('cid', jest.fn(), jest.fn(), onError);
+
+    handle.stop();
+    handOver(new Error('404'));
+
+    expect(onError).not.toHaveBeenCalled();
+  });
+});
+
 /**
  * Build one frame of a Docker multiplexed stream: 1 byte channel, 3 reserved,
  * 4 bytes of big-endian payload length, then the payload.

@@ -300,7 +300,10 @@ export function useControls(containers = [], overrides = {}) {
    */
   const startLogsStream = React.useCallback(
     (containerId) => {
-      getLogsStream(
+      // Re-opening replaces any previous stream, so reopening the viewer
+      // ten times leaves zero live streams (D9).
+      logsViewer.stopLogsStream();
+      logsViewer.logsStreamRef.current = getLogsStream(
         containerId,
         (data) =>
           logsViewer.setLogs((prev) => {
