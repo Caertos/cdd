@@ -119,6 +119,89 @@ describe('LogViewer — scrolling', () => {
   });
 });
 
+describe('LogViewer — search', () => {
+  const search = (extra = {}) => ({
+    open: false,
+    query: '',
+    cursor: 0,
+    filter: false,
+    matchCount: 0,
+    matchPos: -1,
+    ...extra,
+  });
+
+  test('shows the key hint when there is no search', () => {
+    const { container } = render(<LogViewer logs={['a']} search={search()} />);
+    expect(container.textContent).toContain(STRINGS.logsHint);
+  });
+
+  test('highlights every match, case-insensitively, keeping the text', () => {
+    const { container } = render(
+      <LogViewer
+        logs={['Error: disk', 'fine']}
+        search={search({ query: 'error', matchCount: 1 })}
+      />
+    );
+    const marked = [...container.querySelectorAll('[data-inverse="true"]')];
+    expect(marked.map((n) => n.textContent)).toEqual(['Error']);
+    expect(container.textContent).toContain('Error: disk');
+  });
+
+  test('highlights nothing without a query', () => {
+    const { container } = render(<LogViewer logs={['Error']} search={search()} />);
+    expect(container.querySelectorAll('[data-inverse="true"]')).toHaveLength(0);
+  });
+
+  test('applied search shows the query, the counter and the filter state', () => {
+    const { container } = render(
+      <LogViewer
+        logs={['x']}
+        search={search({ query: 'x', matchCount: 12, matchPos: 2 })}
+      />
+    );
+    expect(container.textContent).toContain('/x');
+    expect(container.textContent).toContain('3 of 12 matches');
+    expect(container.textContent).toContain('filter off');
+  });
+
+  test('open field shows the query being typed and Enter/Esc help', () => {
+    const { container } = render(
+      <LogViewer
+        logs={['x']}
+        search={search({
+          open: true,
+          query: 'abc',
+          cursor: 3,
+          filter: true,
+          matchCount: 1,
+        })}
+      />
+    );
+    expect(container.textContent).toContain('abc');
+    expect(container.textContent).toContain('1 match');
+    expect(container.textContent).toContain('[Enter] keep');
+    expect(container.textContent).toContain('filter on');
+  });
+
+  test('a filter with nothing to show says there are no matches', () => {
+    const { container } = render(
+      <LogViewer logs={[]} search={search({ query: 'zzz', filter: true })} />
+    );
+    expect(container.textContent).toContain('no matches');
+    expect(container.textContent).not.toContain('No logs...');
+  });
+
+  test('control sequences in the query cannot reach the screen', () => {
+    const { container } = render(
+      <LogViewer
+        logs={['x']}
+        search={search({ query: `${ESC}[31mred`, matchCount: 0 })}
+      />
+    );
+    expectNoControlBytes(container.textContent);
+  });
+});
+
 describe('LogViewer — terminal control sequences', () => {
   // The log is written by the container, not by CDD. Ink writes it to stdout
   // verbatim, so a sequence the container prints would be executed by the

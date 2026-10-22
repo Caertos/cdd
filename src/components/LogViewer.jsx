@@ -3,21 +3,23 @@ import { Box, Text } from 'ink';
 import PropTypes from 'prop-types';
 import { STRINGS } from '../helpers/strings.js';
 import { sanitizeTerminalText } from '../helpers/sanitizeTerminalText.js';
+import { splitHighlight } from '../helpers/logSearch.js';
+import { PromptField } from './PromptField.jsx';
 
 /**
- * Log viewer panel. Shows a window onto the log inside a bordered box that
- * reserves its rows in the layout, so the frame never grows to the terminal
- * height and makes Ink stack a copy per redraw.
+ * Log viewer panel. Shows a window onto the log, a header that says whether
+ * it is following, and a last row that is either the hint or the search.
  * Purely presentational — keyboard handling is centralized in useControls.
  *
  * @param {Object} props
- * @param {Array<string>} props.logs - Array of log lines
+ * @param {Array<string>} props.logs - The lines to draw (already filtered when the filter is on)
  * @param {Function} [props.onExit] - Optional callback when the viewer closes
  * @param {Object} [props.container] - Optional container metadata (used for title)
  * @param {number} [props.height=15] - Lines shown at once
  * @param {number} [props.scrollOffset=0] - Lines scrolled up from the newest
  * @param {boolean} [props.following=true] - Whether new lines pull the view down
  * @param {number} [props.pending=0] - Lines that arrived while paused
+ * @param {Object} [props.search] - { open, query, cursor, filter, matchCount, matchPos }
  * @returns {JSX.Element}
  */
 export default function LogViewer({
@@ -28,6 +30,7 @@ export default function LogViewer({
   scrollOffset = 0,
   following = true,
   pending = 0,
+  search,
 }) {
   // Clamp here too: a burst of lines or a trimmed buffer must never leave the
   // window past either end.
@@ -36,6 +39,7 @@ export default function LogViewer({
   const end = logs.length - offset;
   const start = Math.max(0, end - height);
   const visibleLogs = logs.slice(start, end);
+  const query = search?.query ?? '';
 
   return (
     <Box
@@ -49,7 +53,7 @@ export default function LogViewer({
         {following ? '' : STRINGS.logsPaused(pending)}
       </Text>
       {visibleLogs.length === 0 ? (
-        <Text dimColor>{STRINGS.noLogs}</Text>
+        <Text dimColor>{query ? STRINGS.logsMatches(0, -1) : STRINGS.noLogs}</Text>
       ) : (
         // The log is written by the container, not by CDD: its escape
         // sequences are sanitised away before Ink writes them to the screen.
@@ -57,16 +61,67 @@ export default function LogViewer({
         // grows past the rows reserved for it.
         visibleLogs.map((line, idx) => (
           <Text key={start + idx} wrap="truncate">
-            {sanitizeTerminalText(line)}
+            {highlighted(sanitizeTerminalText(line), query)}
           </Text>
         ))
       )}
-      <Text dimColor wrap="truncate">
-        {STRINGS.logsHint}
-      </Text>
+      <Footer search={search} />
     </Box>
   );
 }
+
+/** The line, with the matches of the query inverted. */
+function highlighted(line, query) {
+  if (!query) return line;
+  return splitHighlight(line, query).map((part, i) =>
+    part.match ? (
+      <Text key={i} inverse>
+        {part.text}
+      </Text>
+    ) : (
+      part.text
+    )
+  );
+}
+
+/** The last row: the search field and its counters, or the key hint. */
+function Footer({ search }) {
+  if (search?.open) {
+    return (
+      <Box columnGap={2}>
+        <PromptField
+          label={STRINGS.logsSearchLabel}
+          value={sanitizeTerminalText(search.query)}
+          cursor={search.cursor}
+        />
+        <Text dimColor wrap="truncate">
+          {STRINGS.logsMatches(search.matchCount, search.matchPos)}
+          {'  '}
+          {STRINGS.logsSearchKeys(true, search.filter)}
+        </Text>
+      </Box>
+    );
+  }
+  if (search?.query) {
+    return (
+      <Text dimColor wrap="truncate">
+        {`/${sanitizeTerminalText(search.query)}  `}
+        {STRINGS.logsMatches(search.matchCount, search.matchPos)}
+        {'  '}
+        {STRINGS.logsSearchKeys(false, search.filter)}
+      </Text>
+    );
+  }
+  return (
+    <Text dimColor wrap="truncate">
+      {STRINGS.logsHint}
+    </Text>
+  );
+}
+
+Footer.propTypes = {
+  search: PropTypes.object,
+};
 
 LogViewer.propTypes = {
   logs: PropTypes.arrayOf(PropTypes.string).isRequired,
@@ -76,4 +131,5 @@ LogViewer.propTypes = {
   scrollOffset: PropTypes.number,
   following: PropTypes.bool,
   pending: PropTypes.number,
+  search: PropTypes.object,
 };

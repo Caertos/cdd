@@ -7,7 +7,7 @@
 
 /**
  * Context identifiers. In each instant CDD is in exactly one context.
- * @typedef {'list'|'filter'|'wizard'|'wizard-list'|'wizard-discard'|'wizard-review'|'logs'|'confirm'|'help'|'debug'} ContextId
+ * @typedef {'list'|'filter'|'wizard'|'wizard-list'|'wizard-discard'|'wizard-review'|'logs'|'logs-search'|'confirm'|'help'|'debug'} ContextId
  */
 
 /**
@@ -413,6 +413,36 @@ export const KEYMAP = {
       priority: 78,
     },
     {
+      id: 'logs.search',
+      keys: ['/'],
+      label: 'Search',
+      help: 'Search the log (matches are highlighted)',
+      priority: 76,
+    },
+    {
+      id: 'logs.next',
+      keys: ['n'],
+      label: 'Next',
+      help: 'Next match',
+      priority: 74,
+    },
+    {
+      id: 'logs.prev',
+      // keyNameOf() reports Shift+N as 'shift+N', so both spellings are listed
+      // (the same reason sort.cycle lists 'O' twice).
+      keys: ['N', 'shift+N'],
+      label: 'Prev',
+      help: 'Previous match',
+      priority: 74,
+    },
+    {
+      id: 'logs.filter',
+      keys: ['ctrl+f'],
+      label: 'Filter',
+      help: 'Show only the matching lines (toggle)',
+      priority: 72,
+    },
+    {
       id: 'logs.follow',
       keys: ['f'],
       label: 'Follow',
@@ -425,6 +455,38 @@ export const KEYMAP = {
       label: 'Close',
       help: 'Close the logs viewer',
       priority: 60,
+    },
+    {
+      id: 'app.help',
+      keys: ['?'],
+      label: 'Help',
+      help: 'Show this help',
+      priority: 5,
+    },
+  ],
+  // The log search field. Like the list filter, almost every character is text
+  // and is resolved before the keymap; only the control keys live here.
+  'logs-search': [
+    {
+      id: 'logs-search.apply',
+      keys: ['enter'],
+      label: 'Keep',
+      help: 'Close the field and keep the search',
+      priority: 90,
+    },
+    {
+      id: 'logs-search.clear',
+      keys: ['escape'],
+      label: 'Clear',
+      help: 'Close the field and clear the search',
+      priority: 80,
+    },
+    {
+      id: 'logs.filter',
+      keys: ['ctrl+f'],
+      label: 'Filter',
+      help: 'Show only the matching lines (toggle)',
+      priority: 70,
     },
     {
       id: 'app.help',
@@ -567,6 +629,7 @@ export const KEYMAP = {
  * @param {boolean} [state.confirmDiscard]
  * @param {boolean} [state.showHelp]
  * @param {boolean} [state.showLogs]
+ * @param {boolean} [state.logSearchOpen] - The log search field is open
  * @param {boolean} [state.isFiltering] - The list filter field is open
  * @param {boolean} [state.creatingContainer]
  * @param {boolean} [state.hasActiveList]
@@ -579,7 +642,7 @@ export const KEYMAP = {
 export function getActiveContext(state) {
   if (state.confirmErase) return 'confirm';
   if (state.showHelp) return 'help';
-  if (state.showLogs) return 'logs';
+  if (state.showLogs) return state.logSearchOpen ? 'logs-search' : 'logs';
   if (state.isFiltering) return 'filter';
   if (state.creatingContainer && state.confirmDiscard) return 'wizard-discard';
   if (state.creatingContainer && state.wizardStep === 4) return 'wizard-review';

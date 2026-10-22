@@ -148,6 +148,10 @@ The log opens in a panel under the list. Scrolling up pauses following (the head
 | `PgUp` / `PgDn` | Scroll one page                                     |
 | `Home` / `End`  | First line / newest line (and follow again)         |
 | `f`             | Toggle auto-follow                                  |
+| `/`             | Search: matches are highlighted and counted         |
+| `n` / `N`       | Next / previous match                               |
+| `Ctrl+F`        | Show only the matching lines (toggle)               |
+| `Enter` / `Esc` | In the search field: keep the search / clear it     |
 | `Esc` / `Q`     | Close logs viewer                                   |
 | `?`             | Show help panel                                     |
 

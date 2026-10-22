@@ -216,6 +216,7 @@ export const STRINGS = {
     'wizard-discard': 'Discard Confirmation',
     'wizard-review': 'Review',
     logs: 'Logs Viewer',
+    'logs-search': 'Log Search',
     confirm: 'Confirmation',
     'confirm-quit': 'Quit Confirmation',
     help: 'Help',
@@ -227,7 +228,16 @@ export const STRINGS = {
   logsTitle: (name) => `${name ?? 'Container'} logs, press ESC to exit`,
   logsPaused: (pending) =>
     ` ⏸ paused${pending > 0 ? ` · ${pending} new` : ''} · [End] latest`,
-  logsHint: '[Home] top  [End] latest  [F] follow  [?] more',
+  logsHint: '[/] search  [Home] top  [End] latest  [F] follow  [?] more',
+  logsSearchLabel: '/',
+  logsMatches: (count, pos) =>
+    count === 0
+      ? 'no matches'
+      : pos >= 0
+        ? `${pos + 1} of ${count} matches`
+        : `${count} ${count === 1 ? 'match' : 'matches'}`,
+  logsSearchKeys: (open, filter) =>
+    `${open ? '[Enter] keep  [Esc] clear' : '[n/N] next/prev  [/] edit'}  [Ctrl+F] filter ${filter ? 'on' : 'off'}`,
   noLogs: 'No logs...',
 
   // ── Debug ──

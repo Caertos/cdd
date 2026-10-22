@@ -491,13 +491,44 @@ describe('the log viewer keys (TASK-10)', () => {
   test.each([
     [{ home: true }, '', 'logs.top'],
     [{ end: true }, '', 'logs.bottom'],
+    [{}, '/', 'logs.search'],
+    [{}, 'n', 'logs.next'],
+    [{ shift: true }, 'N', 'logs.prev'],
+    [{ ctrl: true }, 'f', 'logs.filter'],
     [{}, 'f', 'logs.follow'],
   ])('%j + %j resolves to %s in the logs context', (key, input, id) => {
     expect(resolveKey('logs', input, key, {}).id).toBe(id);
   });
 
+  test('the search field is its own context, above logs', () => {
+    expect(getActiveContext({ showLogs: true, logSearchOpen: true })).toBe(
+      'logs-search'
+    );
+    expect(getActiveContext({ showLogs: true })).toBe('logs');
+    // Without the viewer open there is no log search.
+    expect(getActiveContext({ logSearchOpen: true })).toBe('list');
+  });
+
+  test('help still wins over the search field', () => {
+    expect(
+      getActiveContext({ showHelp: true, showLogs: true, logSearchOpen: true })
+    ).toBe('help');
+  });
+
+  test('Enter keeps the search, Esc clears it, Ctrl+F toggles the filter', () => {
+    expect(resolveKey('logs-search', '', { return: true }, {}).id).toBe(
+      'logs-search.apply'
+    );
+    expect(resolveKey('logs-search', '', { escape: true }, {}).id).toBe(
+      'logs-search.clear'
+    );
+    expect(resolveKey('logs-search', 'f', { ctrl: true }, {}).id).toBe(
+      'logs.filter'
+    );
+  });
+
   test('the help lists the new keys under readable names', () => {
     const labels = getBindings('logs', {}).flatMap((b) => displayKeys(b.keys));
-    expect(labels).toEqual(expect.arrayContaining(['Home', 'End']));
+    expect(labels).toEqual(expect.arrayContaining(['Home', 'End', '/', 'n']));
   });
 });

@@ -259,6 +259,7 @@ export default function App() {
             scrollOffset={controls.logsScrollOffset}
             following={controls.logsFollowing}
             pending={controls.logsPending}
+            search={controls.logsSearch}
           />
         )}
         <Spacer />
