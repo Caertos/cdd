@@ -4,7 +4,9 @@ All notable changes to this project will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased]
+## [4.12.0] - 2026-10-22
+
+The log viewer becomes scrollable and searchable, and CDD can tell you — and help you — when there is a newer release on npm.
 
 ### Added
 - **CDD tells you when a newer version is on npm, and can update itself.** On start it checks the npm registry (at most once a day, in the background, 3 s timeout); when there is a newer release the header shows `↑ vX.Y.Z [U]`, and `U` runs the right command for how CDD was installed (npm, pnpm, yarn or bun) after asking. Turn it off with `CDD_NO_UPDATE_CHECK=1` or `NO_UPDATE_NOTIFIER=1`. (TASK-20)
@@ -23,6 +25,8 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **`ink` 7 → 8.** The TUI dependency moves to the major release. No behaviour change for users; the rendered output is the same.
 
 ## [4.11.1] - 2026-10-22
+
+> Never published to npm; the fix ships in 4.12.0.
 
 ### Fixed
 - **D9** — closing the logs viewer now closes the log stream for real. `getLogsStream` returns a `{ stop() }` handle that is stored, stopped on close (including on quit and on unmount) and replaced on reopen, so opening and closing the viewer no longer leaks one live stream per round.

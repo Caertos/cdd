@@ -674,8 +674,10 @@ export function useControls(containers = [], overrides = {}) {
       'logs.close': () => logsViewer.closeLogs(),
       'logs.up': () => logsViewer.scrollLogs(1),
       'logs.down': () => logsViewer.scrollLogs(-1),
-      'logs.pageup': () => logsViewer.scrollLogs(logsViewer.viewHeightRef.current - 1),
-      'logs.pagedown': () => logsViewer.scrollLogs(-(logsViewer.viewHeightRef.current - 1)),
+      'logs.pageup': () =>
+        logsViewer.scrollLogs(logsViewer.viewHeightRef.current - 1),
+      'logs.pagedown': () =>
+        logsViewer.scrollLogs(-(logsViewer.viewHeightRef.current - 1)),
       'logs.follow': () => logsViewer.toggleFollow(),
       'logs.top': () => logsViewer.scrollToTop(),
       'logs.bottom': () => logsViewer.scrollToBottom(),
@@ -707,7 +709,10 @@ export function useControls(containers = [], overrides = {}) {
           const text =
             updater.method?.kind === 'npx'
               ? STRINGS.update.npx(updater.method.display)
-              : STRINGS.update.manual(updater.latest, updater.method?.display ?? '');
+              : STRINGS.update.manual(
+                  updater.latest,
+                  updater.method?.display ?? ''
+                );
           actions.setMessage(text);
           actions.setMessageColor('yellow');
           return;
@@ -841,7 +846,10 @@ export function useControls(containers = [], overrides = {}) {
     }
 
     // The log search field, same priority as the list filter above.
-    if (ctx === 'logs-search' && logsViewer.handleSearchKey(input, normalizedKey)) {
+    if (
+      ctx === 'logs-search' &&
+      logsViewer.handleSearchKey(input, normalizedKey)
+    ) {
       return;
     }
 

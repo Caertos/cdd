@@ -41,7 +41,8 @@ export default function Header({
   // (reservedRows would have to change otherwise). `latest` already passed
   // isValidVersion inside checkForUpdate, so it needs no sanitising here.
   const showUpdate =
-    update?.latest && (update.status === 'available' || update.status === 'failed');
+    update?.latest &&
+    (update.status === 'available' || update.status === 'failed');
   const summary = query.trim()
     ? STRINGS.filter.summary(
         visibleCount,

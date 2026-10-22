@@ -45,8 +45,7 @@ const MIN_LIST_ROWS_WITH_LOGS = 2;
  */
 export function logViewLines(terminalRows) {
   if (!Number.isFinite(terminalRows)) return LOG_VIEW_LINES;
-  const room =
-    terminalRows - BASE_CHROME_ROWS - 4 - MIN_LIST_ROWS_WITH_LOGS;
+  const room = terminalRows - BASE_CHROME_ROWS - 4 - MIN_LIST_ROWS_WITH_LOGS;
   return Math.min(LOG_VIEW_LINES, Math.max(MIN_LOG_LINES, room));
 }
 

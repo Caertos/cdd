@@ -53,7 +53,9 @@ export default function LogViewer({
         {following ? '' : STRINGS.logsPaused(pending)}
       </Text>
       {visibleLogs.length === 0 ? (
-        <Text dimColor>{query ? STRINGS.logsMatches(0, -1) : STRINGS.noLogs}</Text>
+        <Text dimColor>
+          {query ? STRINGS.logsMatches(0, -1) : STRINGS.noLogs}
+        </Text>
       ) : (
         // The log is written by the container, not by CDD: its escape
         // sequences are sanitised away before Ink writes them to the screen.
