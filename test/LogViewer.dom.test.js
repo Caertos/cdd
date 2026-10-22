@@ -4,6 +4,7 @@
 import React from 'react';
 import { render } from '@testing-library/react';
 import LogViewer from '../src/components/LogViewer.jsx';
+import { STRINGS } from '../src/helpers/strings.js';
 
 const lines = (count) =>
   Array.from({ length: count }, (_, i) => `line-${i}`);
@@ -69,6 +70,55 @@ describe('LogViewer', () => {
   });
 });
 
+describe('LogViewer — scrolling', () => {
+  test('height limits the visible lines', () => {
+    const { container } = render(<LogViewer logs={lines(20)} height={5} />);
+    expect(container.textContent).toContain('line-19');
+    expect(container.textContent).toContain('line-15');
+    expect(container.textContent).not.toContain('line-14');
+  });
+
+  test('scrollOffset moves the window toward older lines', () => {
+    const { container } = render(
+      <LogViewer logs={lines(20)} height={5} scrollOffset={5} />
+    );
+    expect(container.textContent).toContain('line-14');
+    expect(container.textContent).toContain('line-10');
+    expect(container.textContent).not.toContain('line-15');
+    expect(container.textContent).not.toContain('line-9');
+  });
+
+  test('an offset past the oldest line stops at the first window', () => {
+    const { container } = render(
+      <LogViewer logs={lines(20)} height={5} scrollOffset={999} />
+    );
+    expect(container.textContent).toContain('line-0');
+    expect(container.textContent).toContain('line-4');
+    expect(container.textContent).not.toContain('line-5');
+  });
+
+  test('says so in the title while paused', () => {
+    const { container } = render(
+      <LogViewer logs={['a']} following={false} />
+    );
+    expect(container.textContent).toContain('paused');
+  });
+
+  test('counts the lines that arrived while paused', () => {
+    const { container } = render(
+      <LogViewer logs={['a']} following={false} pending={47} />
+    );
+    expect(container.textContent).toContain('47 new');
+    expect(container.textContent).toContain('[End] latest');
+  });
+
+  test('says nothing about pending lines while following', () => {
+    const { container } = render(<LogViewer logs={['a']} pending={47} />);
+    expect(container.textContent).not.toContain('47 new');
+    expect(container.textContent).not.toContain('paused');
+  });
+});
+
 describe('LogViewer — terminal control sequences', () => {
   // The log is written by the container, not by CDD. Ink writes it to stdout
   // verbatim, so a sequence the container prints would be executed by the
@@ -129,7 +179,7 @@ describe('LogViewer — terminal control sequences', () => {
     const { container } = render(<LogViewer logs={[line]} />);
     expect(container.textContent).toContain(line);
     expect(container.textContent).toBe(
-      `Container logs, press ESC to exit${line}`
+      `Container logs, press ESC to exit${line}${STRINGS.logsHint}`
     );
   });
 });

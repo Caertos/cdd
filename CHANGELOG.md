@@ -6,6 +6,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added
+- **The log viewer scrolls** with `↑`/`↓` and `PgUp`/`PgDn`, and pauses following when you scroll up. These keys were declared but had no handler (D21).
+
 ### Fixed
 - **The stats bars no longer touch the row above and below.** The bars use seven-eighths blocks instead of full cells, which leaves a thin gap between rows, and there is more room between the CPU and the MEM group.
 - **A stopped container is no longer reported as unhealthy.** Docker keeps the last health status of a stopped container, so one that had been stopped (with every probe passing) showed as `unhealthy` and got a diagnosis panel. The health check now only counts while the container runs.

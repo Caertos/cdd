@@ -239,7 +239,7 @@ describe('keymap ↔ useControls handlers', () => {
   });
 
   // §5.4 (D21) — fixed by TASK-10 (log viewer scroll).
-  test.failing('every keymap binding has a handler in useControls', () => {
+  test('every keymap binding has a handler in useControls', () => {
     const ids = [
       ...new Set(
         Object.values(KEYMAP)
@@ -479,5 +479,25 @@ describe('the filter context (TASK-9 PR D)', () => {
     expect(resolveKey('list', '/', {}, { hasSelection: true }).id).toBe(
       'app.search'
     );
+  });
+});
+
+describe('the log viewer keys (TASK-10)', () => {
+  test('Home and End are named keys', () => {
+    expect(keyNameOf('', { home: true })).toBe('home');
+    expect(keyNameOf('', { end: true })).toBe('end');
+  });
+
+  test.each([
+    [{ home: true }, '', 'logs.top'],
+    [{ end: true }, '', 'logs.bottom'],
+    [{}, 'f', 'logs.follow'],
+  ])('%j + %j resolves to %s in the logs context', (key, input, id) => {
+    expect(resolveKey('logs', input, key, {}).id).toBe(id);
+  });
+
+  test('the help lists the new keys under readable names', () => {
+    const labels = getBindings('logs', {}).flatMap((b) => displayKeys(b.keys));
+    expect(labels).toEqual(expect.arrayContaining(['Home', 'End']));
   });
 });

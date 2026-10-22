@@ -225,6 +225,9 @@ export const STRINGS = {
 
   // ── LogViewer ──
   logsTitle: (name) => `${name ?? 'Container'} logs, press ESC to exit`,
+  logsPaused: (pending) =>
+    ` ⏸ paused${pending > 0 ? ` · ${pending} new` : ''} · [End] latest`,
+  logsHint: '[Home] top  [End] latest  [F] follow  [?] more',
   noLogs: 'No logs...',
 
   // ── Debug ──

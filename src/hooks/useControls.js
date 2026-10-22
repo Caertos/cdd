@@ -305,14 +305,9 @@ export function useControls(containers = [], overrides = {}) {
       logsViewer.stopLogsStream();
       logsViewer.logsStreamRef.current = getLogsStream(
         containerId,
-        (data) =>
-          logsViewer.setLogs((prev) => {
-            const newLogs = [...prev, ...data.split('\n').filter(Boolean)];
-            return newLogs.slice(-1000);
-          }),
+        (data) => logsViewer.appendLogs(data.split('\n').filter(Boolean)),
         () => {},
-        (err) =>
-          logsViewer.setLogs((prev) => [...prev, `Error: ${err.message}`])
+        (err) => logsViewer.appendLogs([`Error: ${err.message}`])
       );
     },
     [logsViewer]
@@ -659,6 +654,15 @@ export function useControls(containers = [], overrides = {}) {
 
       // Logs context
       'logs.close': () => logsViewer.closeLogs(),
+      'logs.up': () => logsViewer.scrollLogs(1),
+      'logs.down': () => logsViewer.scrollLogs(-1),
+      'logs.pageup': () =>
+        logsViewer.scrollLogs(logsViewer.viewHeightRef.current - 1),
+      'logs.pagedown': () =>
+        logsViewer.scrollLogs(-(logsViewer.viewHeightRef.current - 1)),
+      'logs.follow': () => logsViewer.toggleFollow(),
+      'logs.top': () => logsViewer.scrollToTop(),
+      'logs.bottom': () => logsViewer.scrollToBottom(),
 
       // Confirm context
       'confirm.yes': () => eraseConfirmation.processEraseConfirmation('y', {}),
@@ -777,18 +781,6 @@ export function useControls(containers = [], overrides = {}) {
       dispatch(binding.id);
       return;
     }
-
-    // Fallback for logs scrolling (handled by logsViewer)
-    if (ctx === 'logs' && !binding) {
-      if (key.upArrow) {
-        logsViewer.scrollUp?.();
-        return;
-      }
-      if (key.downArrow) {
-        logsViewer.scrollDown?.();
-        return;
-      }
-    }
   });
 
   return {
@@ -804,6 +796,10 @@ export function useControls(containers = [], overrides = {}) {
       : actions.messageColor,
     showLogs: logsViewer.showLogs,
     logs: logsViewer.logs,
+    logsScrollOffset: logsViewer.scrollOffset,
+    logsFollowing: logsViewer.following,
+    logsPending: logsViewer.pendingCount,
+    setLogsViewHeight: logsViewer.setViewHeight,
     exitLogs: logsViewer.closeLogs,
     creatingContainer,
     startCreation: () => {
