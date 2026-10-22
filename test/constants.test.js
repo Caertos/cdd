@@ -107,4 +107,10 @@ describe('IMAGE_PROFILES', () => {
       expect(profile.defaultTag.length).toBeGreaterThan(0);
     }
   });
+
+  test('inherited keys do not answer as profiles', () => {
+    expect(IMAGE_PROFILES['constructor']).toBeUndefined();
+    expect(IMAGE_PROFILES['__proto__']).toBeUndefined();
+    expect(IMAGE_PROFILES['toString']).toBeUndefined();
+  });
 });
