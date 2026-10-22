@@ -36,11 +36,13 @@ await jest.unstable_mockModule(
 );
 
 // Mock the log module to avoid side effects. getLogsTail is what the
-// diagnosis panel and the F key read through useDiagnostics.
+// diagnosis panel and the F key read through useDiagnostics. getLogsStream
+// returns a fresh { stop() } handle per call so the D9 tests can spy on it.
+const mockGetLogsStream = jest.fn(() => ({ stop: jest.fn() }));
 await jest.unstable_mockModule(
   '../src/helpers/dockerService/serviceComponents/containerLogs.js',
   () => ({
-    getLogsStream: () => {},
+    getLogsStream: mockGetLogsStream,
     getLogsTail: jest.fn().mockResolvedValue([]),
   })
 );
@@ -2202,5 +2204,111 @@ describe('useControls — the filter (TASK-9 PR D)', () => {
     });
     expect(expose.current.view.query).toBe('');
     expect(expose.current.view.visible).toHaveLength(2);
+  });
+});
+
+describe('D9 — closing the viewer actually closes the log stream', () => {
+  const running = {
+    id: 'c-running',
+    name: 'en-marcha',
+    image: 'nginx:1.27-alpine',
+    state: 'running',
+    status: 'Up 3 seconds',
+    ports: [],
+  };
+
+  function installHandleFactory() {
+    const stops = [];
+    mockGetLogsStream.mockImplementation(() => {
+      const stop = jest.fn();
+      stops.push(stop);
+      return { stop };
+    });
+    return stops;
+  }
+
+  beforeEach(() => {
+    mockGetLogsStream.mockClear();
+    mockGetLogsStream.mockImplementation(() => ({ stop: jest.fn() }));
+  });
+
+  test('logs.close stops the stream exactly once', async () => {
+    const stop = jest.fn();
+    mockGetLogsStream.mockImplementation(() => ({ stop }));
+    const expose = { current: null };
+    render(<HookTester containers={[running]} expose={expose} />);
+    await act(async () => {});
+
+    await act(async () => {
+      expose.current.dispatch('container.logs');
+    });
+    expect(expose.current.logsViewer.showLogs).toBe(true);
+    expect(mockGetLogsStream).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      expose.current.dispatch('logs.close');
+    });
+    expect(stop).toHaveBeenCalledTimes(1);
+    expect(expose.current.logsViewer.logsStreamRef.current).toBeNull();
+    expect(expose.current.logsViewer.showLogs).toBe(false);
+  });
+
+  test('ten open/close rounds leave no stream behind', async () => {
+    const stops = installHandleFactory();
+    const expose = { current: null };
+    render(<HookTester containers={[running]} expose={expose} />);
+    await act(async () => {});
+
+    for (let i = 0; i < 10; i++) {
+      await act(async () => {
+        expose.current.dispatch('container.logs');
+      });
+      await act(async () => {
+        expose.current.dispatch('logs.close');
+      });
+    }
+
+    expect(stops).toHaveLength(10);
+    for (const stop of stops) expect(stop).toHaveBeenCalledTimes(1);
+    expect(expose.current.logsViewer.logsStreamRef.current).toBeNull();
+  });
+
+  test('reopening replaces the previous stream instead of stacking', async () => {
+    const stops = installHandleFactory();
+    const expose = { current: null };
+    render(<HookTester containers={[running]} expose={expose} />);
+    await act(async () => {});
+
+    await act(async () => {
+      expose.current.dispatch('container.logs');
+    });
+    // Reopen without closing: the old handle must be stopped, the new one kept.
+    await act(async () => {
+      expose.current.dispatch('container.logs');
+    });
+    expect(stops[0]).toHaveBeenCalledTimes(1);
+    expect(stops[1]).not.toHaveBeenCalled();
+
+    await act(async () => {
+      expose.current.dispatch('logs.close');
+    });
+    expect(stops[1]).toHaveBeenCalledTimes(1);
+    expect(expose.current.logsViewer.logsStreamRef.current).toBeNull();
+  });
+
+  test('unmounting with the viewer open stops the stream', async () => {
+    const stop = jest.fn();
+    mockGetLogsStream.mockImplementation(() => ({ stop }));
+    const expose = { current: null };
+    const { unmount } = render(
+      <HookTester containers={[running]} expose={expose} />
+    );
+    await act(async () => {});
+    await act(async () => {
+      expose.current.dispatch('container.logs');
+    });
+
+    unmount();
+    expect(stop).toHaveBeenCalledTimes(1);
   });
 });
