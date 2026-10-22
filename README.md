@@ -99,6 +99,7 @@ Use `↑` / `↓` to navigate containers. The **HUD** at the bottom shows availa
 | `E`       | Erase (remove) selected container — confirmation required |
 | `D`       | Toggle live debug panel                                   |
 | `Q`       | Quit                                                      |
+| `U`       | **Update CDD** — only shown when a newer version is on npm |
 | `?`       | Show help panel for the current screen                    |
 
 After `F` creates the replacement, `y` deletes the container that failed and `n` keeps it. Those two keys only exist while the question is on screen.
@@ -161,6 +162,14 @@ The log opens in a panel under the list. Scrolling up pauses following (the head
 | --- | --------------------- |
 | `y` | Confirm the action    |
 | `n` | Cancel the action     |
+
+---
+
+## Updates
+
+On start, CDD checks the npm registry in the background for a newer release — at most once a day, with a 3 second timeout, and no data beyond the public version manifest. When one exists, the header shows it next to the version (`v4.11.1 · ↑ v4.12.0 [U]`) and `U` runs the install command for the package manager that installed CDD (npm, pnpm, yarn or bun) after asking. Running through npx or from a source checkout? CDD shows the command instead of running it.
+
+Turn the check off with `CDD_NO_UPDATE_CHECK=1` or `NO_UPDATE_NOTIFIER=1`.
 
 ---
 

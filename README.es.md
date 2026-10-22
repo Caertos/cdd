@@ -99,6 +99,7 @@ Usa `↑` / `↓` para navegar por los contenedores. El **HUD** en la parte infe
 | `E`       | Eliminar el contenedor seleccionado — requiere confirmación |
 | `D`       | Activar/desactivar panel de debug en vivo                   |
 | `Q`       | Salir                                                       |
+| `U`       | **Actualizar CDD** — solo aparece cuando hay versión nueva en npm |
 | `?`       | Mostrar la ayuda de la pantalla actual                      |
 
 Tras crear el reemplazo con `F`, `y` borra el contenedor que falló y `n` lo conserva. Esas dos teclas solo existen mientras la pregunta está en pantalla.
@@ -154,6 +155,14 @@ Después de iniciarlo, CDD espera a que el daemon responda y recarga tus contene
 | ----- | ----------------------- |
 | `y`   | Confirmar la acción     |
 | `n`   | Cancelar la acción      |
+
+---
+
+## Actualizaciones
+
+Al arrancar, CDD comprueba el registro de npm en segundo plano si hay una versión nueva — como mucho una vez al día, con un tiempo de espera de 3 segundos y sin más datos que el manifiesto público de la versión. Si la hay, la cabecera la muestra junto a la versión (`v4.11.1 · ↑ v4.12.0 [U]`) y `U` ejecuta el comando de instalación del gestor de paquetes con el que se instaló CDD (npm, pnpm, yarn o bun) tras preguntar. ¿Lo ejecutas con npx o desde una copia del repositorio? CDD muestra el comando en lugar de ejecutarlo.
+
+Desactiva la comprobación con `CDD_NO_UPDATE_CHECK=1` o `NO_UPDATE_NOTIFIER=1`.
 
 ---
 
