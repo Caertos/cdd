@@ -362,4 +362,14 @@ describe('isSecretKey — patterns not covered yet', () => {
   test('lowercase also (case-insensitive)', () => {
     expect(isSecretKey('db_password')).toBe(true);
   });
+
+  test.each(['AUTH', 'OAUTH', 'AUTHORIZATION', 'HTTP_AUTHORIZATION'])(
+    '%s is detected as a secret (AUTH word-boundary rule)',
+    (k) => expect(isSecretKey(k)).toBe(true)
+  );
+
+  test.each(['AUTHOR', 'AUTHORITY', 'AUTHENTICATION'])(
+    '%s is a name, not a secret',
+    (k) => expect(isSecretKey(k)).toBe(false)
+  );
 });
