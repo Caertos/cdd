@@ -13,35 +13,93 @@ async function loadImageUtils(dockerMock) {
   return import('../src/helpers/dockerService/serviceComponents/imageUtils.js');
 }
 
+/** Error shape the docker daemon returns for a missing image. */
+function noSuchImageError() {
+  const err = new Error('(HTTP code 404) no such image - No such image: pg');
+  err.statusCode = 404;
+  err.reason = 'no such image';
+  return err;
+}
+
 describe('imageExists', () => {
-  test('match in RepoTags → true', async () => {
+  test('image present in the daemon → true', async () => {
     const { imageExists } = await loadImageUtils({
-      listImages: jest.fn().mockResolvedValue([{ RepoTags: ['nginx:alpine'] }]),
+      getImage: jest.fn().mockReturnValue({
+        inspect: jest.fn().mockResolvedValue({ Id: 'sha256:abc' }),
+      }),
     });
     expect(await imageExists('nginx:alpine')).toBe(true);
   });
 
-  test('match in RepoDigests → true', async () => {
+  test('image missing (404) → false', async () => {
     const { imageExists } = await loadImageUtils({
-      listImages: jest
-        .fn()
-        .mockResolvedValue([{ RepoDigests: ['nginx@sha256:abc'] }]),
-    });
-    expect(await imageExists('nginx')).toBe(true);
-  });
-
-  test('no match → false', async () => {
-    const { imageExists } = await loadImageUtils({
-      listImages: jest.fn().mockResolvedValue([{ RepoTags: ['redis:7'] }]),
+      getImage: jest.fn().mockReturnValue({
+        inspect: jest.fn().mockRejectedValue(noSuchImageError()),
+      }),
     });
     expect(await imageExists('nginx:alpine')).toBe(false);
   });
 
-  test('missing RepoTags/RepoDigests → does not throw', async () => {
+  // Regression: the old listImages() check matched by substring, so a digest
+  // containing the requested name made any prefix look local.
+  test('a digest containing the name as substring does not make it local → false', async () => {
+    const dockerMock = {
+      getImage: jest.fn((name) => ({
+        inspect: jest.fn(async () => {
+          if (name === 'pg') throw noSuchImageError();
+          return {
+            Id: 'sha256:abc',
+            RepoDigests: ['dpage/pgadmin4@sha256:abc'],
+          };
+        }),
+      })),
+    };
+    const { imageExists } = await loadImageUtils(dockerMock);
+    expect(await imageExists('pg')).toBe(false);
+  });
+
+  test('daemon error that is not a 404 → rejects (unknown, not "missing")', async () => {
     const { imageExists } = await loadImageUtils({
-      listImages: jest.fn().mockResolvedValue([{}]),
+      getImage: jest.fn().mockReturnValue({
+        inspect: jest
+          .fn()
+          .mockRejectedValue(new Error('Cannot connect to the Docker daemon')),
+      }),
     });
-    await expect(imageExists('nginx')).resolves.toBe(false);
+    await expect(imageExists('nginx:alpine')).rejects.toThrow(
+      'Cannot connect to the Docker daemon'
+    );
+  });
+
+  test('"no such image" reason without statusCode → false', async () => {
+    const err = new Error('no such image');
+    err.reason = 'no such image';
+    const { imageExists } = await loadImageUtils({
+      getImage: jest.fn().mockReturnValue({
+        inspect: jest.fn().mockRejectedValue(err),
+      }),
+    });
+    expect(await imageExists('nginx:alpine')).toBe(false);
+  });
+
+  test('empty image name → the daemon decides: 404 means not local → false', async () => {
+    const { imageExists } = await loadImageUtils({
+      getImage: jest.fn().mockReturnValue({
+        inspect: jest.fn().mockRejectedValue(noSuchImageError()),
+      }),
+    });
+    expect(await imageExists('')).toBe(false);
+  });
+
+  test('image without tag is queried verbatim → the daemon resolves it', async () => {
+    const dockerMock = {
+      getImage: jest.fn().mockReturnValue({
+        inspect: jest.fn().mockResolvedValue({ Id: 'sha256:abc' }),
+      }),
+    };
+    const { imageExists } = await loadImageUtils(dockerMock);
+    expect(await imageExists('nginx')).toBe(true);
+    expect(dockerMock.getImage).toHaveBeenCalledWith('nginx');
   });
 });
 
@@ -73,7 +131,6 @@ describe('pullImage', () => {
 
 describe('previewAutoPorts', () => {
   const withImage = (exposed, extra = {}) => ({
-    listImages: jest.fn().mockResolvedValue([{ RepoTags: ['nginx:alpine'] }]),
     getImage: jest.fn().mockReturnValue({
       inspect: jest.fn().mockResolvedValue({ Config: { ExposedPorts: exposed } }),
     }),
@@ -89,7 +146,6 @@ describe('previewAutoPorts', () => {
 
   test('no ExposedPorts but profile → uses defaultPort', async () => {
     const { previewAutoPorts } = await loadImageUtils({
-      listImages: jest.fn().mockResolvedValue([{ RepoTags: ['redis:7-alpine'] }]),
       getImage: jest.fn().mockReturnValue({
         inspect: jest.fn().mockResolvedValue({ Config: {} }),
       }),
@@ -101,7 +157,6 @@ describe('previewAutoPorts', () => {
 
   test('no ExposedPorts and no profile → null', async () => {
     const { previewAutoPorts } = await loadImageUtils({
-      listImages: jest.fn().mockResolvedValue([{ RepoTags: ['raro:1'] }]),
       getImage: jest.fn().mockReturnValue({
         inspect: jest.fn().mockResolvedValue({ Config: {} }),
       }),
@@ -109,25 +164,19 @@ describe('previewAutoPorts', () => {
     expect(await previewAutoPorts('raro:1', [])).toBeNull();
   });
 
-  test('image not local → null', async () => {
+  test('image not local (404) → null', async () => {
     const { previewAutoPorts } = await loadImageUtils({
-      listImages: jest.fn().mockResolvedValue([]),
-    });
-    expect(await previewAutoPorts('nginx:alpine', [])).toBeNull();
-  });
-
-  test('listImages fails → null', async () => {
-    const { previewAutoPorts } = await loadImageUtils({
-      listImages: jest.fn().mockRejectedValue(new Error('down')),
-    });
-    expect(await previewAutoPorts('nginx:alpine', [])).toBeNull();
-  });
-
-  test('inspect fails → null', async () => {
-    const { previewAutoPorts } = await loadImageUtils({
-      listImages: jest.fn().mockResolvedValue([{ RepoTags: ['nginx:alpine'] }]),
       getImage: jest.fn().mockReturnValue({
-        inspect: jest.fn().mockRejectedValue(new Error('no such image')),
+        inspect: jest.fn().mockRejectedValue(noSuchImageError()),
+      }),
+    });
+    expect(await previewAutoPorts('nginx:alpine', [])).toBeNull();
+  });
+
+  test('inspect fails (daemon error) → null', async () => {
+    const { previewAutoPorts } = await loadImageUtils({
+      getImage: jest.fn().mockReturnValue({
+        inspect: jest.fn().mockRejectedValue(new Error('down')),
       }),
     });
     expect(await previewAutoPorts('nginx:alpine', [])).toBeNull();
@@ -143,6 +192,16 @@ describe('previewAutoPorts', () => {
   test('a container with ports undefined → ignored without breaking', async () => {
     const { previewAutoPorts } = await loadImageUtils(withImage({ '80/tcp': {} }));
     await expect(previewAutoPorts('nginx:alpine', [{}])).resolves.toHaveLength(1);
+  });
+
+  test('queries the daemon only once', async () => {
+    const dockerMock = withImage({ '80/tcp': {} });
+    const { previewAutoPorts } = await loadImageUtils(dockerMock);
+    expect(await previewAutoPorts('nginx:alpine', [])).toHaveLength(1);
+    expect(dockerMock.getImage).toHaveBeenCalledTimes(1);
+    expect(dockerMock.getImage.mock.results[0].value.inspect).toHaveBeenCalledTimes(
+      1
+    );
   });
 
   // §5.3 (D15). prepareReview() passes raw listContainers().

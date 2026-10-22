@@ -80,7 +80,7 @@ export async function createContainer(
     exists = await withTimeout(imageExists(imageName), 10000);
   } catch (err) {
     logger.error('Could not check local images for %s', imageName, err);
-    throw new Error('Error listing local images: ' + err.message);
+    throw new Error('Error checking local images: ' + err.message);
   }
   if (!exists) {
     logger.info('Image %s not found locally, pulling', imageName);

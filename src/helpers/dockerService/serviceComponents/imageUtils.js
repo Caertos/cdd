@@ -4,17 +4,39 @@ import { IMAGE_PROFILES } from '../../constants.js';
 import { findAvailablePort, hostPortsOf } from '../../portUtils.js';
 
 /**
+ * Inspect the image in the daemon.
+ * Returns the inspect data, or null when the daemon says the image does not
+ * exist locally. Any other error (daemon down, permission) is thrown: saying
+ * "it does not exist" there would trigger a pointless pull.
+ *
+ * @param {string} imageName - Image name or tag
+ * @returns {Promise<Object|null>} Inspect data, or null when not found locally
+ * @throws {Error} If the daemon fails for any reason other than "no such image"
+ */
+export async function inspectLocalImage(imageName) {
+  try {
+    const image = docker.getImage(imageName);
+    if (!image || typeof image.inspect !== 'function') {
+      throw new Error(
+        'Image inspection is not supported by this docker client'
+      );
+    }
+    return await image.inspect();
+  } catch (err) {
+    if (err?.statusCode === 404 || err?.reason === 'no such image') return null;
+    throw err;
+  }
+}
+
+/**
  * Check whether an image exists locally.
  * @param {string} imageName - Image name or tag
  * @returns {Promise<boolean>}
+ * @throws {Error} If the daemon cannot be queried
  */
 export async function imageExists(imageName) {
-  const images = await docker.listImages();
-  return images.some(
-    (img) =>
-      (img.RepoTags || []).includes(imageName) ||
-      (img.RepoDigests || []).some((d) => d.includes(imageName))
-  );
+  const inspectData = await inspectLocalImage(imageName);
+  return Boolean(inspectData);
 }
 
 /**
@@ -48,19 +70,10 @@ export async function previewAutoPorts(
   containers,
   imageProfiles = IMAGE_PROFILES
 ) {
-  let exists;
   try {
-    exists = await imageExists(imageName);
-  } catch {
-    return null;
-  }
-  if (!exists) return null;
+    const inspectData = await inspectLocalImage(imageName);
+    if (!inspectData) return null;
 
-  try {
-    const image = docker.getImage(imageName);
-    if (!image || typeof image.inspect !== 'function') return null;
-
-    const inspectData = await image.inspect();
     let exposed =
       inspectData?.Config?.ExposedPorts ||
       inspectData?.ContainerConfig?.ExposedPorts ||

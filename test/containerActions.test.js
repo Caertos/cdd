@@ -370,7 +370,7 @@ describe('containerActions — validation and error paths', () => {
     );
   });
 
-  test('failed listImages → "Error listing local images"', async () => {
+  test('failed image check → "Error checking local images"', async () => {
     const imageUtilsMock = {
       imageExists: jest.fn().mockRejectedValue(new Error('boom')),
       pullImage: jest.fn(),
@@ -378,7 +378,7 @@ describe('containerActions — validation and error paths', () => {
     const mod = await loadActions(imageUtilsMock, { listContainers: jest.fn() });
 
     await expect(mod.createContainer('nginx')).rejects.toThrow(
-      'Error listing local images: boom'
+      'Error checking local images: boom'
     );
   });
 
