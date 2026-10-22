@@ -45,25 +45,26 @@ describeE2E('E2E — container actions', () => {
   /**
    * Renders the app and leaves the test container selected.
    *
-   * Visual detection is unreliable: ContainerRow truncates the name with an
-   * ellipsis that can push the name onto a different line than the '➤' marker
-   * when the row wraps. Instead, find the container's index in the same list
-   * order the app uses (docker.listContainers) and navigate down to it.
+   * The app sorts the list (problems first) while docker.listContainers does
+   * not, and the daemon may hold other containers, so counting indexes lands
+   * on the wrong row. Arrow down instead, until the '➤' marker sits on the
+   * same row as the 17-char name prefix the row shows.
    */
   async function renderWithSelection() {
     ui = renderApp(<App />);
-    await ui.waitForText(target.name.slice(0, 17));
+    const prefix = target.name.slice(0, 17);
+    await ui.waitForText(prefix);
 
+    const marked = () =>
+      ui
+        .frame()
+        .split('\n')
+        .some((line) => line.includes('➤') && line.includes(prefix));
     const list = await docker.listContainers({ all: true });
-    const index = list.findIndex((c) =>
-      (c.Names || []).some((n) => n.replace(/^\//, '') === target.name)
-    );
-    if (index === -1) throw new Error(`Container ${target.name} not listed`);
-
-    // Selection starts at 0; move down to the test container's row.
-    for (let i = 0; i < index; i++) {
+    for (let i = 0; i <= list.length && !marked(); i++) {
       await ui.press(KEY.down);
     }
+    if (!marked()) throw new Error(`Selection never reached ${target.name}`);
     return ui;
   }
 
