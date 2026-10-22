@@ -16,6 +16,7 @@ import { useContainers } from './hooks/useContainers.js';
 import { useContainerHealth } from './hooks/useContainerHealth.js';
 import { useControls } from './hooks/useControls.js';
 import { useDockerLauncher } from './hooks/useDockerLauncher.js';
+import { useUpdateCheck } from './hooks/useUpdateCheck.js';
 import { useTerminalHeight } from './hooks/useTerminalHeight.js';
 import {
   reservedRows,
@@ -50,6 +51,9 @@ export default function App({ rows }) {
   const { containers, connection } = useContainers();
   const { health, details } = useContainerHealth(containers);
   const launcher = useDockerLauncher();
+  // NODE_ENV=test makes checkForUpdate skip the network, so the unit and e2e
+  // suites never touch the registry (shouldSkipCheck).
+  const updater = useUpdateCheck();
   // Terminal height feeds the container list's visible-window budget below.
   const terminalRows = useTerminalHeight(rows);
   // health goes in so useControls owns the one diagnosis the panel renders and
@@ -59,6 +63,7 @@ export default function App({ rows }) {
     launcher,
     health,
     details,
+    updater,
   });
 
   // The highlight and this object come from the same id-anchored selection, so
@@ -203,6 +208,7 @@ export default function App({ rows }) {
           totalCount={controls.view.totalCount}
           query={controls.view.query}
           sortMode={controls.view.sortMode}
+          update={{ status: updater.status, latest: updater.latest }}
         />
         <Text> </Text>
         {connection.isStale && (

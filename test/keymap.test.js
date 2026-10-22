@@ -532,3 +532,35 @@ describe('the log viewer keys (TASK-10)', () => {
     expect(labels).toEqual(expect.arrayContaining(['Home', 'End', '/', 'n']));
   });
 });
+
+describe('update bindings', () => {
+  test('U is hidden when no update is available', () => {
+    const ids = getBindings('list', { updateStatus: 'idle' }).map((b) => b.id);
+    expect(ids).not.toContain('app.update');
+  });
+
+  test('U shows when an update is available', () => {
+    const ids = getBindings('list', { updateStatus: 'available' }).map((b) => b.id);
+    expect(ids).toContain('app.update');
+  });
+
+  test('u resolves to app.update in the list', () => {
+    const b = resolveKey('list', 'u', {}, { updateStatus: 'available' });
+    expect(b?.id).toBe('app.update');
+  });
+
+  test('confirm-update context wins over the list', () => {
+    expect(getActiveContext({ updateConfirming: true })).toBe('confirm-update');
+  });
+
+  test('help and logs still take priority over confirm-update', () => {
+    expect(getActiveContext({ updateConfirming: true, showHelp: true })).toBe('help');
+  });
+
+  test('y and Esc answer the confirmation', () => {
+    expect(resolveKey('confirm-update', 'y', {}, {})?.id).toBe('confirm-update.yes');
+    expect(resolveKey('confirm-update', '', { escape: true }, {})?.id).toBe(
+      'confirm-update.no'
+    );
+  });
+});

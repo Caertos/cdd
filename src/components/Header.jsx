@@ -20,6 +20,8 @@ import { sanitizeTerminalText } from '../helpers/sanitizeTerminalText.js';
  * @param {number} props.totalCount - Rows before filtering
  * @param {string} [props.query] - Active filter text, '' when none
  * @param {string} [props.sortMode] - Active sort mode shown under the counter
+ * @param {{ status: string, latest: string|null }} [props.update] - Update
+ *   state from useUpdateCheck; the badge only shows for 'available'/'failed'
  * @returns {JSX.Element}
  * @example
  * <Header visibleCount={12} totalCount={25} query="pg" sortMode="state" />
@@ -32,8 +34,14 @@ export default function Header({
   totalCount = 0,
   query = '',
   sortMode,
+  update,
 }) {
   const formattedVersion = VERSION === 'unknown' ? 'unknown' : `v${VERSION}`;
+  // The badge shares the version's own line so the header never gains a row
+  // (reservedRows would have to change otherwise). `latest` already passed
+  // isValidVersion inside checkForUpdate, so it needs no sanitising here.
+  const showUpdate =
+    update?.latest && (update.status === 'available' || update.status === 'failed');
   const summary = query.trim()
     ? STRINGS.filter.summary(
         visibleCount,
@@ -49,7 +57,12 @@ export default function Header({
         <Text color="gray"> — CLI Docker Dashboard</Text>
       </Text>
       <Box flexDirection="column" alignItems="flex-end">
-        <Text color="gray">{formattedVersion}</Text>
+        <Text color="gray">
+          {formattedVersion}
+          {showUpdate && (
+            <Text color="yellow"> · {STRINGS.update.badge(update.latest)}</Text>
+          )}
+        </Text>
         <Text color="gray">{summary}</Text>
         {sortMode && (
           <Text color="yellow">{STRINGS.sortMode[sortMode] ?? sortMode}</Text>
@@ -64,4 +77,8 @@ Header.propTypes = {
   totalCount: PropTypes.number,
   query: PropTypes.string,
   sortMode: PropTypes.string,
+  update: PropTypes.shape({
+    status: PropTypes.string,
+    latest: PropTypes.string,
+  }),
 };
