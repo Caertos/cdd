@@ -17,7 +17,12 @@ import { useContainerHealth } from './hooks/useContainerHealth.js';
 import { useControls } from './hooks/useControls.js';
 import { useDockerLauncher } from './hooks/useDockerLauncher.js';
 import { useTerminalHeight } from './hooks/useTerminalHeight.js';
-import { reservedRows } from './helpers/reservedRows.js';
+import {
+  reservedRows,
+  logViewLines,
+  helpPanelRows,
+  MIN_LIST_ROWS_WITH_DIAGNOSIS,
+} from './helpers/reservedRows.js';
 import {
   sanitizeTerminalText,
   sanitizedCursorIndex,
@@ -58,15 +63,55 @@ export default function App() {
 
   // Rows left for the container list once the fixed and variable chrome has
   // been subtracted. Never below 1 so the list always has a row to show.
-  const availableRows = Math.max(
-    1,
+  const logLines = logViewLines(terminalRows);
+
+  // The diagnosis gives way to the logs panel while it is open: both answer
+  // "why is this container failing", and together they would not fit. It also
+  // stays out when the terminal is too short to leave the list a few rows:
+  // a frame as tall as the terminal makes Ink stack a copy of it per redraw.
+  const wantsDiagnosis = Boolean(controls.diagnosis || controls.isDiagnosing);
+  const showDiagnosis =
+    wantsDiagnosis &&
+    !controls.showLogs &&
+    !controls.showHelp &&
     terminalRows -
       reservedRows({
-        hasDiagnosis: Boolean(controls.diagnosis || controls.isDiagnosing),
+        hasDiagnosis: true,
         showDebug: controls.showDebugLogs,
         isFiltering: controls.view.isFiltering,
         isStale: connection.isStale,
         hasMessage: Boolean(controls.message),
+      }) >=
+      MIN_LIST_ROWS_WITH_DIAGNOSIS;
+
+  // Help opens under the list, like the logs panel, and takes the logs
+  // panel's place while it is open: both cannot fit, and the list is what the
+  // help is about.
+  const showHelpPanel = controls.showHelp && !controls.creatingContainer;
+  const showLogsPanel = controls.showLogs && !showHelpPanel;
+  const layout = {
+    showDebug: controls.showDebugLogs,
+    isFiltering: controls.view.isFiltering,
+    isStale: connection.isStale,
+    hasMessage: Boolean(controls.message),
+  };
+  const helpRows = showHelpPanel
+    ? helpPanelRows(
+        terminalRows,
+        controls.helpBindings.length,
+        reservedRows(layout)
+      )
+    : 0;
+
+  const availableRows = Math.max(
+    1,
+    terminalRows -
+      reservedRows({
+        ...layout,
+        hasDiagnosis: showDiagnosis,
+        showLogs: showLogsPanel,
+        logLines,
+        helpRows,
       })
   );
 
@@ -83,6 +128,18 @@ export default function App() {
       launcher.reset();
     }
   }, [launcher.status, connection.retry, launcher.reset]);
+
+  // The wizard's height is not measured here, so its help still takes the
+  // screen: stacking it under a prompt of unknown height could overflow.
+  if (controls.showHelp && controls.creatingContainer) {
+    return (
+      <HelpPanel
+        context={controls.helpContext}
+        bindings={controls.helpBindings}
+        maxRows={terminalRows}
+      />
+    );
+  }
 
   if (controls.creatingContainer) {
     return (
@@ -109,12 +166,6 @@ export default function App() {
           isLoadingPreview={controls.creation.isLoadingPreview}
           revealSecrets={controls.creation.revealSecrets}
         />
-        {controls.showHelp && (
-          <HelpPanel
-            context={controls.helpContext}
-            bindings={controls.helpBindings}
-          />
-        )}
       </>
     );
   }
@@ -180,12 +231,27 @@ export default function App() {
         />
         {/* The panel takes room only when a container is failing and we have
             something to say about it — a deliberate stop gets nothing. */}
-        {(controls.diagnosis || controls.isDiagnosing) && (
+        {showDiagnosis && (
           <DiagnosticPanel
             diagnosis={controls.diagnosis}
             containerName={selectedContainer?.name ?? ''}
             isLoading={controls.isDiagnosing}
             fixLabel={controls.diagnosis?.fix?.label ?? null}
+          />
+        )}
+        {showHelpPanel && (
+          <HelpPanel
+            context={controls.helpContext}
+            bindings={controls.helpBindings}
+            maxRows={helpRows}
+          />
+        )}
+        {showLogsPanel && (
+          <LogViewer
+            logs={controls.logs}
+            onExit={controls.exitLogs}
+            container={controls.selectedContainer}
+            height={logLines}
           />
         )}
         <Spacer />
@@ -216,19 +282,6 @@ export default function App() {
         )}
         <Footer />
       </Box>
-      {controls.showHelp && (
-        <HelpPanel
-          context={controls.helpContext}
-          bindings={controls.helpBindings}
-        />
-      )}
-      {controls.showLogs && (
-        <LogViewer
-          logs={controls.logs}
-          onExit={controls.exitLogs}
-          container={controls.selectedContainer}
-        />
-      )}
     </>
   );
 }

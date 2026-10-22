@@ -793,6 +793,7 @@ export function useControls(containers = [], overrides = {}) {
 
   return {
     selected: selection.selected,
+    selectedContainer,
     setSelected: selection.setSelected,
     // Ordered list, its unfiltered size and the active mode — one object the
     // App reads instead of re-deriving the order on its own.
