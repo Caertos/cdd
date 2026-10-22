@@ -8,8 +8,10 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Fixed
 - **The stats bars no longer touch the row above and below.** The bars use seven-eighths blocks instead of full cells, which leaves a thin gap between rows, and there is more room between the CPU and the MEM group.
-- **A stopped container is no longer reported as unhealthy.** Docker keeps the last health status of a stopped container, so one that had been stopped (with every probe passing) showed as \`unhealthy\` and got a diagnosis panel. The health check now only counts while the container runs.
+- **A stopped container is no longer reported as unhealthy.** Docker keeps the last health status of a stopped container, so one that had been stopped (with every probe passing) showed as `unhealthy` and got a diagnosis panel. The health check now only counts while the container runs.
 - **Log lines no longer start with stray bytes.** The 8-byte header of Docker's multiplexed log stream is now stripped, including when a frame is split across chunks.
+- **Opening the logs or the help no longer stacks copies of the screen.** Ink repaints the whole terminal once a frame is as tall as the terminal; the logs, the help and the diagnosis panel now reserve their rows, and give way on short terminals.
+- **The logs panel shows the container's name** in its title.
 
 ### Changed
 - **The minimum supported Node is now 22.** The manifest said `>=18` while the dependency tree had required Node 22 for a while — `ink` (7 and now 8), `chalk` 6, `cli-truncate` 6 and `slice-ansi` 9 all declare `engines: node >=22`. The supported range is now stated honestly, and CI runs on Node 22 and 24 instead of 18, 20 and 22.
