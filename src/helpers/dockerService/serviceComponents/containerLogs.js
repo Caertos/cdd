@@ -63,15 +63,42 @@ export function demultiplexLogStream(buffer) {
 }
 
 /**
- * Return a stream of logs from a container and call callbacks for events.
+ * @typedef {Object} LogStreamHandle
+ * @property {() => void} stop - Cierra el stream y desconecta los callbacks.
+ *                               Idempotente: llamarlo dos veces no falla.
+ */
+
+/**
+ * Abre un stream de logs en seguimiento y devuelve un mando para cerrarlo.
+ *
+ * Antes devolvía nada y el stream se quedaba capturado sólo por sus
+ * callbacks: nadie podía pararlo (D9). El mando de control no expone el
+ * stream crudo — quien lo usa sólo necesita poder cerrarlo.
  *
  * @param {string} containerId - Docker container id
- * @param {Function} onData - Called with chunk string when data arrives
- * @param {Function} onEnd - Called when stream ends
- * @param {Function} onError - Called on error
+ * @param {Function} [onData] - Called with chunk string when data arrives
+ * @param {Function} [onEnd] - Called when stream ends
+ * @param {Function} [onError] - Called on error
+ * @returns {LogStreamHandle}
  */
 export function getLogsStream(containerId, onData, onEnd, onError) {
-  // Use shared safeCall util to call optional callbacks safely
+  let stream = null;
+  let stopped = false;
+  let detach = null;
+
+  const stop = () => {
+    if (stopped) return;
+    stopped = true;
+    if (detach) {
+      detach();
+      detach = null;
+    }
+    if (stream) {
+      const current = stream;
+      stream = null;
+      safeCall(current.destroy?.bind(current));
+    }
+  };
 
   try {
     const container = docker.getContainer(containerId);
@@ -83,7 +110,15 @@ export function getLogsStream(containerId, onData, onEnd, onError) {
         stderr: true,
         tail: 100,
       },
-      (err, stream) => {
+      (err, currentStream) => {
+        if (stopped) {
+          // stop() ran before the daemon handed the stream over. Destroy it
+          // now so it never becomes a zombie nobody can reach (D9).
+          if (currentStream) {
+            safeCall(currentStream.destroy?.bind(currentStream));
+          }
+          return;
+        }
         if (err) {
           logger.error(
             'Failed to open logs stream for container %s',
@@ -94,19 +129,35 @@ export function getLogsStream(containerId, onData, onEnd, onError) {
           return;
         }
         logger.info('Logs stream established for container %s', containerId);
-        stream.on('data', (chunk) => safeCall(onData, chunk.toString()));
-        stream.on('end', () => {
+        stream = currentStream;
+        // The guard inside each listener is belt and braces on top of
+        // removeListener: a chunk already in flight when stop() ran must not
+        // reach setState on a viewer that is gone.
+        const onDataChunk = (chunk) => {
+          if (!stopped) safeCall(onData, chunk.toString());
+        };
+        const onStreamEnd = () => {
+          if (stopped) return;
           logger.debug('Logs stream ended for container %s', containerId);
           safeCall(onEnd);
-        });
-        stream.on('error', (streamErr) => {
+        };
+        const onStreamError = (streamErr) => {
+          if (stopped) return;
           logger.error(
             'Logs stream error for container %s',
             containerId,
             streamErr
           );
           safeCall(onError, streamErr);
-        });
+        };
+        stream.on('data', onDataChunk);
+        stream.on('end', onStreamEnd);
+        stream.on('error', onStreamError);
+        detach = () => {
+          currentStream.removeListener?.('data', onDataChunk);
+          currentStream.removeListener?.('end', onStreamEnd);
+          currentStream.removeListener?.('error', onStreamError);
+        };
       }
     );
   } catch (err) {
@@ -117,6 +168,8 @@ export function getLogsStream(containerId, onData, onEnd, onError) {
     );
     safeCall(onError, err);
   }
+
+  return { stop };
 }
 
 /**
