@@ -13,23 +13,17 @@
 
 ---
 
-## 🎉 Novedades en v4.11
+## 🎉 Novedades en v4.12
 
-**Encuentra un contenedor rápido, pone arriba los rotos y deja que la lista quepa en la pantalla.**
+**El visor de logs se convierte en una herramienta de verdad, y CDD se mantiene al día solo.**
 
-La lista era un volcado de todo lo que devolvía Docker. Con seis contenedores estaba bien; con veinticinco era una pared. La v4.11 la hace escalar:
+- **El visor se desplaza y se pausa.** `↑`/`↓` y `PgUp`/`PgDn` recorren el buffer; al desplazarse hacia arriba se pausa el seguimiento, la cabecera cuenta las líneas que llegan en ese tiempo, y `End` (o `f`) vuelve a la última. Estas teclas estaban en la ayuda pero no hacían nada (D21).
+- **`/` busca en los logs.** Las coincidencias se resaltan y se cuentan (`3 de 27`), `n`/`N` saltan entre ellas con vuelta al inicio, y `Ctrl+F` muestra solo las líneas coincidentes. La búsqueda es literal e ignora mayúsculas.
+- **CDD te avisa cuando hay una versión nueva en npm** — y puede actualizarse solo. Al arrancar comprueba el registro en silencio (como mucho una vez al día, en segundo plano); si hay versión nueva la cabecera muestra `↑ vX.Y.Z [U]`, y `U` ejecuta el comando de instalación adecuado para npm, pnpm, yarn o bun tras preguntar. Se desactiva con `CDD_NO_UPDATE_CHECK=1`.
 
-- **`/` busca en la lista en vivo** — por nombre, imagen o estado, sin distinguir mayúsculas ni acentos, y exigiendo todas las palabras (`node exit` encuentra contenedores node parados). `Enter` mantiene la búsqueda, `Esc` la limpia, y la cabecera dice cuánto se muestra y por qué: `12 of 25 containers · search: "pg"`.
-- **`O` cicla el orden** — *problemas primero* (el nuevo orden por defecto), por nombre, o los más recientes primero. Lo que CDD ya sabe que está mal sube arriba.
-- **La lista cabe en la terminal** — pinta solo las filas que entran y cuenta el resto (`↑ 3 more` / `↓ 9 more`), en vez de empujar todo el dashboard fuera de la pantalla.
+De paso quedan arreglados cuatro fallos de renderizado y de salud: las barras de stats ya no tocan las filas de al lado, un contenedor parado ya no se muestra como unhealthy solo porque Docker conservó su último estado de salud, las líneas de log ya no empiezan con bytes sueltos del stream de Docker, y abrir los logs, la ayuda o el diagnóstico ya no apila copias de la pantalla en el scrollback.
 
-**Y la selección es segura.** El marcado va anclado al contenedor, no a su posición: si un contenedor desaparece durante el refresco de fondo, la selección ya no salta a lo que ocupó su lugar — que era la vía para pulsar `E` (borrar) sobre el contenedor equivocado.
-
-Bajo el capó, un solo sondeo de stats alimenta las filas visibles en vez de un temporizador por fila: veinticinco contenedores corriendo son un ciclo, no veinticinco.
-
-Cuatro defectos de siempre quedan arreglados: **D8** (la selección actuando sobre el contenedor equivocado), **D24** (`p` sobre un contenedor nunca arrancado mostrando el error crudo de Docker), **D25** (`/` anunciada en la ayuda sin hacer nada) y **D10** (un temporizador de stats por fila).
-
-> **El orden por defecto cambió a «problemas primero»**, ya no el de Docker. Es lo que más se nota al abrir la nueva versión, y es deliberado: una vez que CDD distingue un contenedor roto de uno parado, enterrarlo en una lista alfabética sería desperdiciar ese trabajo.
+**Requiere Node 22 o superior** — el rango admitido ya coincide con lo que el árbol de dependencias necesitaba (`ink` 8, `chalk` 6).
 
 Las notas de versiones anteriores se guardan en [`CHANGELOG.md`](CHANGELOG.md).
 
@@ -141,13 +135,20 @@ Después de iniciarlo, CDD espera a que el daemon responda y recarga tus contene
 
 ### Visor de Logs
 
-| Tecla     | Acción                      |
-| --------- | --------------------------- |
-| `↑` / `↓` | Desplazar arriba/abajo      |
-| `PgUp` / `PgDn` | Página arriba/abajo  |
-| `f`       | Activar/desactivar auto-follow |
-| `Esc` / `Q` | Cerrar visor de logs     |
-| `?`       | Mostrar panel de ayuda      |
+El log se abre en un panel bajo la lista. Al desplazarse hacia arriba se pausa el seguimiento (la cabecera lo indica y cuenta las líneas que llegan mientras tanto); `End` vuelve a la última línea y reanuda el seguimiento.
+
+| Tecla             | Acción                                              |
+| ----------------- | --------------------------------------------------- |
+| `↑` / `↓`         | Desplazar una línea                                |
+| `PgUp` / `PgDn`   | Desplazar una página                               |
+| `Home` / `End`    | Primera línea / última línea (y reanudar seguimiento) |
+| `f`               | Activar/desactivar auto-follow                     |
+| `/`               | Buscar: las coincidencias se resaltan y se cuentan  |
+| `n` / `N`         | Siguiente / coincidencia anterior                   |
+| `Ctrl+F`          | Mostrar solo las líneas coincidentes (alternar)     |
+| `Enter` / `Esc`   | En el campo de búsqueda: mantener la búsqueda / limpiarla |
+| `Esc` / `Q`       | Cerrar visor de logs                                |
+| `?`               | Mostrar panel de ayuda                              |
 
 ### Confirmación
 
@@ -282,7 +283,7 @@ Escribe `exit` o presiona `Ctrl+D` para salir del shell y volver al dashboard de
 
 ## Requisitos
 
-- Node.js >= 18
+- Node.js >= 22
 - Docker instalado y ejecutándose (CDD se conecta al socket local de Docker)
 
 ---

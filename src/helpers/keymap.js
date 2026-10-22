@@ -177,7 +177,8 @@ export const KEYMAP = {
       label: 'Update',
       help: 'Update CDD to the newest version on npm',
       priority: 15,
-      when: (s) => s.updateStatus === 'available' || s.updateStatus === 'failed',
+      when: (s) =>
+        s.updateStatus === 'available' || s.updateStatus === 'failed',
     },
   ],
   // The filter field. Almost every character is text and is resolved before

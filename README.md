@@ -13,23 +13,17 @@
 
 ---
 
-## 🎉 What's new in v4.11
+## 🎉 What's new in v4.12
 
-**Find a container fast, put the broken ones on top, and let the list fit the screen.**
+**The log viewer is now a proper tool, and CDD keeps itself up to date.**
 
-The list used to be a plain dump of everything Docker returned. With six containers that was fine; with twenty-five it was a wall. v4.11 makes it scale:
+- **The viewer scrolls and pauses.** `↑`/`↓` and `PgUp`/`PgDn` move through the buffer; scrolling up pauses following, the header counts the lines that arrive meanwhile, and `End` (or `f`) catches up. These keys were listed in the help but did nothing (D21).
+- **`/` searches the logs.** Matches are highlighted and counted (`3 of 27`), `n`/`N` jump between them with wrap-around, and `Ctrl+F` keeps only the matching lines. The search is literal and ignores case.
+- **CDD tells you when a newer version is on npm** — and can update itself. On start it checks the registry quietly (at most once a day, in the background); when there is a newer release the header shows `↑ vX.Y.Z [U]`, and `U` runs the right install command for npm, pnpm, yarn or bun after asking. Opt out with `CDD_NO_UPDATE_CHECK=1`.
 
-- **`/` searches the list live** — by name, image or state, accent- and case-insensitive, with every word required (`node exit` finds stopped node containers). `Enter` keeps the search applied, `Esc` clears it, and the header says how much is shown and what for: `12 of 25 containers · search: "pg"`.
-- **`O` cycles the order** — *problems first* (the new default), by name, or newest first. Whatever CDD already knows is wrong rises to the top.
-- **The list fits the terminal** — it renders only the rows that fit and counts the rest (`↑ 3 more` / `↓ 9 more`), instead of pushing the whole dashboard off screen.
+Along the way, four rendering and health bugs were fixed: the stats bars no longer touch the rows around them, a stopped container is no longer shown as unhealthy just because Docker kept its last health status, log lines no longer start with stray bytes from Docker's stream framing, and opening the logs, help or diagnosis no longer stacks copies of the screen on scrollback.
 
-**And the selection is safe.** The highlight is anchored to the container, not to its slot: if a container disappears during the background refresh, the selection no longer jumps to whatever slid into its place — which used to be a route to pressing `E` (erase) on the wrong container.
-
-Under the hood, one stats poller now feeds the visible rows instead of one timer per row: twenty-five running containers mean one request cycle, not twenty-five.
-
-Four long-standing defects are fixed: **D8** (the selection acting on the wrong container), **D24** (`p` on a never-started container showing Docker's raw error), **D25** (`/` advertised in the help but doing nothing) and **D10** (a stats timer per row).
-
-> **The default order changed to "problems first"**, no longer Docker's order. It is the most visible difference when you open the new version, and it is deliberate: once CDD can tell a broken container from a stopped one, burying it in an alphabetical list would waste that.
+**Requires Node 22 or newer** — the supported range now matches what the dependency tree already needed (`ink` 8, `chalk` 6).
 
 Older release notes are kept in [`CHANGELOG.md`](CHANGELOG.md).
 
@@ -288,7 +282,7 @@ Type `exit` or press `Ctrl+D` to leave the shell and return to the CDD dashboard
 
 ## Requirements
 
-- Node.js >= 18
+- Node.js >= 22
 - Docker installed and running (CDD connects to the local Docker socket)
 
 ---
