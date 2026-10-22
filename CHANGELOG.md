@@ -8,6 +8,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Fixed
 - **The stats bars no longer touch the row above and below.** The bars use seven-eighths blocks instead of full cells, which leaves a thin gap between rows, and there is more room between the CPU and the MEM group.
+- **A stopped container is no longer reported as unhealthy.** Docker keeps the last health status of a stopped container, so one that had been stopped (with every probe passing) showed as \`unhealthy\` and got a diagnosis panel. The health check now only counts while the container runs.
 - **Log lines no longer start with stray bytes.** The 8-byte header of Docker's multiplexed log stream is now stripped, including when a frame is split across chunks.
 
 ### Changed

@@ -113,6 +113,25 @@ describe('evaluateHealth — verdict catalogue', () => {
     expect(v.headline).toBe(STRINGS.health.unhealthy);
   });
 
+  test('a stopped container keeps its stale "unhealthy" but is not unhealthy', () => {
+    // Docker leaves Health.Status as it was when the container stopped. The
+    // verdict must describe the container as it is now: not running, so no
+    // health check is running either.
+    const clean = evaluateHealth(
+      { state: 'exited' },
+      finished(0, 3_600_000, { healthStatus: 'unhealthy' }),
+      NOW
+    );
+    expect(clean.code).toBe('stopped');
+
+    const died = evaluateHealth(
+      { state: 'exited' },
+      finished(143, 3_600_000, { healthStatus: 'unhealthy' }),
+      NOW
+    );
+    expect(died.code).toBe('crashed');
+  });
+
   test('healthy health check → running', () => {
     const v = evaluateHealth(
       { state: 'running' },

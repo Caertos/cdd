@@ -146,7 +146,11 @@ export function evaluateHealth(container, details, now) {
     healthStatus: details.healthStatus ?? null,
   };
 
-  if (details.healthStatus === 'unhealthy') {
+  // Docker keeps Health.Status as it was when the container stopped, so a
+  // stopped container can still say "unhealthy" with every probe having
+  // passed. The health check only speaks for a container that is running.
+  const currentState = details.state ?? container?.state;
+  if (details.healthStatus === 'unhealthy' && currentState === 'running') {
     return verdict('unhealthy', 'warn', STRINGS.health.unhealthy, facts);
   }
 
@@ -164,7 +168,7 @@ export function evaluateHealth(container, details, now) {
     );
   }
 
-  const state = details.state ?? container?.state;
+  const state = currentState;
 
   if (state === 'paused') {
     return verdict('paused', 'warn', STRINGS.health.paused, facts);
