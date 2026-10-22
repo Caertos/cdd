@@ -11,7 +11,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **The log viewer scrolls** with `↑`/`↓` and `PgUp`/`PgDn`, and pauses following when you scroll up. These keys were declared but had no handler (D21).
 
 ### Fixed
-- **The stats bars no longer touch the row above and below.** The bars use seven-eighths blocks instead of full cells, which leaves a thin gap between rows, and there is more room between the CPU and the MEM group.
+- **The stats bars no longer touch the row above and below.** The bars use seven-eighths blocks instead of full cells, which leaves a thin gap between rows, there is more room between the CPU and the MEM group, and the gauge is six cells wide so the published ports still fit on the row.
 - **A stopped container is no longer reported as unhealthy.** Docker keeps the last health status of a stopped container, so one that had been stopped (with every probe passing) showed as `unhealthy` and got a diagnosis panel. The health check now only counts while the container runs.
 - **Log lines no longer start with stray bytes.** The 8-byte header of Docker's multiplexed log stream is now stripped, including when a frame is split across chunks.
 - **Opening the logs or the help no longer stacks copies of the screen.** Ink repaints the whole terminal once a frame is as tall as the terminal; the logs, the help and the diagnosis panel now reserve their rows, and give way on short terminals.

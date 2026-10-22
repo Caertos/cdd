@@ -3,7 +3,10 @@ import { Text } from 'ink';
 import chalk from 'chalk';
 import PropTypes from 'prop-types';
 
-const BAR_WIDTH = 8;
+// Six cells because the row has to fit in the app's 100 columns: the fixed
+// columns and the labels leave the ports 14 cells, and a wider gauge truncates
+// the published ports off the row.
+const BAR_WIDTH = 6;
 
 // Seven eighths of a cell tall, not the whole cell: the missing eighth leaves a
 // thin gap between the bars of two consecutive rows, which a terminal cannot do

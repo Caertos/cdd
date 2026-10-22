@@ -24,8 +24,8 @@ describe('StatsBar', () => {
     const text = container.textContent;
     expect(text).toContain(' 100%');
     expect(text).toContain(' 0%');
-    expect(text).toContain('▇▇▇▇▇▇▇▇');
-    expect(text).toContain('▁▁▁▁▁▁▁▁');
+    expect(text).toContain('▇▇▇▇▇▇');
+    expect(text).toContain('▁▁▁▁▁▁');
   });
 
   test('NaN renders as 0', () => {
@@ -55,6 +55,6 @@ describe('StatsBar', () => {
     const { container } = render(<StatsBar cpu={100} mem={100} />);
     // chalk is on (level 1), so strip the ANSI codes before comparing.
     const plain = container.textContent.replace(/\u001b\[\d+m/g, '');
-    expect(plain).toContain('CPU: ▇▇▇▇▇▇▇▇ 100%   MEM: ▇▇▇▇▇▇▇▇ 100%');
+    expect(plain).toContain('CPU: ▇▇▇▇▇▇ 100%   MEM: ▇▇▇▇▇▇ 100%');
   });
 });
