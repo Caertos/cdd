@@ -9,7 +9,8 @@ export const CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000;
 export const FETCH_TIMEOUT_MS = 3000;
 
 // MAJOR.MINOR.PATCH with an optional -prerelease and ignored +build.
-const SEMVER = /^(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?(?:\+[0-9A-Za-z.-]+)?$/;
+const SEMVER =
+  /^(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?(?:\+[0-9A-Za-z.-]+)?$/;
 
 /**
  * True when `value` is a plain semver string. Anything that comes from the
@@ -57,10 +58,10 @@ export function compareVersions(a, b) {
 export function shouldSkipCheck(env, isTTY) {
   return Boolean(
     env.CDD_NO_UPDATE_CHECK ||
-      env.NO_UPDATE_NOTIFIER ||
-      env.CI ||
-      env.NODE_ENV === 'test' ||
-      !isTTY
+    env.NO_UPDATE_NOTIFIER ||
+    env.CI ||
+    env.NODE_ENV === 'test' ||
+    !isTTY
   );
 }
 
