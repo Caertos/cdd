@@ -10,6 +10,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **The minimum supported Node is now 22.** The manifest said `>=18` while the dependency tree had required Node 22 for a while — `ink` (7 and now 8), `chalk` 6, `cli-truncate` 6 and `slice-ansi` 9 all declare `engines: node >=22`. The supported range is now stated honestly, and CI runs on Node 22 and 24 instead of 18, 20 and 22.
 - **`ink` 7 → 8.** The TUI dependency moves to the major release. No behaviour change for users; the rendered output is the same.
 
+## [4.11.1] - 2026-10-22
+
+### Fixed
+- **D9** — closing the logs viewer now closes the log stream for real. `getLogsStream` returns a `{ stop() }` handle that is stored, stopped on close (including on quit and on unmount) and replaced on reopen, so opening and closing the viewer no longer leaks one live stream per round.
+
 ## [4.11.0] - 2026-10-08
 
 Make the list scale — search it, order it, and fit it to the terminal.
