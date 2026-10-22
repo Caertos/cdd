@@ -44,6 +44,16 @@ const NOOP_LAUNCHER = {
   reset: () => {},
 };
 
+// Module-level so its identity is stable: every test and caller that does not
+// pass an updater gets the same inert object and the keymap stays closed.
+const NO_UPDATER = {
+  status: 'idle',
+  openConfirm() {},
+  confirm() {},
+  cancel() {},
+  acknowledge() {},
+};
+
 /**
  * Docker states on which `stop` has nothing left to do: the container is not
  * running, so the call can only come back with a message. Docker reports these
@@ -73,11 +83,14 @@ function startHint(replacement) {
  * @param {Map<string, import('../helpers/dockerService/serviceComponents/containerInspect.js').ContainerDetails>} [overrides.details]
  *   - The inspect data useContainerHealth already fetched, for the rules that
  *   need Config.Env.
+ * @param {Object} [overrides.updater] - Update flow from useUpdateCheck; a
+ *   silent idle stub when absent, so U stays hidden.
  * @returns {Object} controls - API for the App component
  */
 export function useControls(containers = [], overrides = {}) {
   const connection = overrides.connection ?? null;
   const launcher = overrides.launcher ?? NOOP_LAUNCHER;
+  const updater = overrides.updater ?? NO_UPDATER;
   const health = overrides.health ?? new Map();
   // Inspect data that useContainerHealth already fetched. Kept because the
   // profile-based diagnostic rules need Config.Env, and re-inspecting here
@@ -347,6 +360,8 @@ export function useControls(containers = [], overrides = {}) {
       canFix,
       canStop,
       confirmCleanup: pendingCleanup !== null,
+      updateStatus: updater.status,
+      updateConfirming: updater.status === 'confirming',
     }),
     [
       eraseConfirmation.confirmErase,
@@ -370,6 +385,7 @@ export function useControls(containers = [], overrides = {}) {
       canFix,
       canStop,
       pendingCleanup,
+      updater.status,
     ]
   );
 
@@ -682,6 +698,29 @@ export function useControls(containers = [], overrides = {}) {
       'confirm-quit.yes': () => quitConfirmation.processKey('y'),
       'confirm-quit.no': () => quitConfirmation.processKey('n'),
 
+      // Update context. A failed attempt goes back to the banner first, so U
+      // stays the one key that retries. Without a self-update command (npx or
+      // a source checkout) nothing runs: the exact command is shown instead.
+      'app.update': () => {
+        if (updater.status === 'failed') updater.acknowledge();
+        if (!updater.canSelfUpdate) {
+          const text =
+            updater.method?.kind === 'npx'
+              ? STRINGS.update.npx(updater.method.display)
+              : STRINGS.update.manual(updater.latest, updater.method?.display ?? '');
+          actions.setMessage(text);
+          actions.setMessageColor('yellow');
+          return;
+        }
+        updater.openConfirm();
+      },
+      'confirm-update.yes': () => updater.confirm(),
+      'confirm-update.no': () => {
+        updater.cancel();
+        actions.setMessage('');
+        actions.setMessageColor('');
+      },
+
       // Help context
       'help.close': () => setShowHelp(false),
 
@@ -722,8 +761,27 @@ export function useControls(containers = [], overrides = {}) {
       launcher,
       diagnostics,
       pendingCleanup,
+      updater,
     ]
   );
+
+  // The message line follows the update flow. Keyed on status alone on
+  // purpose: `actions` is a fresh object every render (see dispatch), and the
+  // text only changes when the flow moves between states.
+  React.useEffect(() => {
+    const { status, current, latest, method, exitCode } = updater;
+    const text = {
+      confirming: () => STRINGS.update.confirm(current, latest, method.display),
+      updating: () => STRINGS.update.updating,
+      updated: () => STRINGS.update.updated(latest),
+      failed: () => STRINGS.update.failed(exitCode, method.display),
+    }[status];
+    if (!text) return;
+    actions.setMessage(text());
+    actions.setMessageColor(
+      status === 'updated' ? 'green' : status === 'failed' ? 'red' : 'yellow'
+    );
+  }, [updater.status]);
 
   /**
    * The one way a binding takes effect.

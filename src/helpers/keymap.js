@@ -7,7 +7,7 @@
 
 /**
  * Context identifiers. In each instant CDD is in exactly one context.
- * @typedef {'list'|'filter'|'wizard'|'wizard-list'|'wizard-discard'|'wizard-review'|'logs'|'logs-search'|'confirm'|'help'|'debug'} ContextId
+ * @typedef {'list'|'filter'|'wizard'|'wizard-list'|'wizard-discard'|'wizard-review'|'logs'|'logs-search'|'confirm'|'help'|'debug'|'confirm-quit'|'confirm-update'|'disconnected'} ContextId
  */
 
 /**
@@ -167,6 +167,17 @@ export const KEYMAP = {
       help: 'Keep the container that failed',
       priority: 94,
       when: (s) => s.confirmCleanup,
+    },
+    {
+      id: 'app.update',
+      // keyNameOf() reports Shift+U as 'shift+U' and a plain capital as 'U',
+      // so all three spellings are listed — the same reason F is declared
+      // twice on container.fix. Lowercase 'u' is unbound elsewhere in list.
+      keys: ['u', 'U', 'shift+U'],
+      label: 'Update',
+      help: 'Update CDD to the newest version on npm',
+      priority: 15,
+      when: (s) => s.updateStatus === 'available' || s.updateStatus === 'failed',
     },
   ],
   // The filter field. Almost every character is text and is resolved before
@@ -546,6 +557,22 @@ export const KEYMAP = {
       priority: 80,
     },
   ],
+  'confirm-update': [
+    {
+      id: 'confirm-update.yes',
+      keys: ['y', 'Y', 'enter'],
+      label: 'Update',
+      help: 'Run the update now',
+      priority: 90,
+    },
+    {
+      id: 'confirm-update.no',
+      keys: ['n', 'N', 'escape'],
+      label: 'Cancel',
+      help: 'Not now',
+      priority: 80,
+    },
+  ],
   disconnected: [
     {
       id: 'connection.retry',
@@ -637,6 +664,7 @@ export const KEYMAP = {
  * @param {boolean} [state.disconnected] - Docker unreachable with empty list
  * @param {boolean} [state.canLaunch] - A Docker launch method was detected
  * @param {string} [state.launchStatus] - Launcher state: 'idle'|'confirming'|'launching'|'waiting'|'ready'|'failed'|'timeout'
+ * @param {boolean} [state.updateConfirming] - The "update CDD" yes/no is on screen
  * @returns {ContextId}
  */
 export function getActiveContext(state) {
@@ -650,6 +678,7 @@ export function getActiveContext(state) {
   if (state.creatingContainer) return 'wizard';
   if (state.showDebugLogs) return 'debug';
   if (state.confirmQuit) return 'confirm-quit';
+  if (state.updateConfirming) return 'confirm-update';
   if (state.disconnected) return 'disconnected';
   return 'list';
 }

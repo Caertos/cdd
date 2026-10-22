@@ -118,3 +118,51 @@ describe('Header — the filter query reaches the screen sanitised', () => {
     expectNoControlBytes(summary.textContent);
   });
 });
+
+describe('Header — the update badge', () => {
+  test('shows the update badge when a newer version exists', async () => {
+    const Header = await loadHeader(() => '4.7.1');
+    const { container } = render(
+      <Header update={{ status: 'available', latest: '9.0.0' }} />
+    );
+    expect(container.textContent).toContain('↑ v9.0.0 [U]');
+  });
+
+  test('the badge text comes from STRINGS', async () => {
+    const Header = await loadHeader(() => '4.7.1');
+    const { container } = render(
+      <Header update={{ status: 'available', latest: '9.0.0' }} />
+    );
+    expect(container.textContent).toContain(STRINGS.update.badge('9.0.0'));
+  });
+
+  test('no badge when up to date', async () => {
+    const Header = await loadHeader(() => '4.7.1');
+    const { container } = render(
+      <Header update={{ status: 'idle', latest: null }} />
+    );
+    expect(container.textContent).not.toContain('[U]');
+  });
+
+  test('no badge while the update is confirming or running', async () => {
+    const Header = await loadHeader(() => '4.7.1');
+    for (const status of ['confirming', 'updating', 'updated']) {
+      const { container } = render(
+        <Header update={{ status, latest: '9.0.0' }} />
+      );
+      expect(container.textContent).not.toContain('[U]');
+    }
+  });
+
+  test('the badge stays on the version line (no extra row)', async () => {
+    const Header = await loadHeader(() => '4.7.1');
+    const without = render(<Header sortMode="state" />);
+    const withBadge = render(
+      <Header sortMode="state" update={{ status: 'available', latest: '9.0.0' }} />
+    );
+    // The right-hand column is the second child of the outer Box; the badge
+    // nests inside the version Text, so the column's row count is unchanged.
+    const rowsOf = (r) => r.container.firstChild.children[1].children.length;
+    expect(rowsOf(withBadge)).toBe(rowsOf(without));
+  });
+});

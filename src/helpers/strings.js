@@ -205,6 +205,23 @@ export const STRINGS = {
     launchFailed: 'Failed to start Docker.',
   },
 
+  // ── Update check ──
+  // The npm update notice, its confirmation and the outcome messages. The
+  // badge sits next to the version in the header; everything else lives on
+  // the message line.
+  update: {
+    badge: (latest) => `↑ v${latest} [U]`,
+    confirm: (current, latest, command) =>
+      `Update CDD v${current} → v${latest} with \`${command}\`? [y] Yes · [n] No`,
+    npx: (command) => `Running through npx: next time use \`${command}\`.`,
+    manual: (latest, command) => `CDD v${latest} is available. Update with \`${command}\`.`,
+    updating: 'Updating CDD...',
+    updated: (latest) => `Updated to v${latest}. Quit and run cdd again to use it.`,
+    failed: (code, command) =>
+      `Update failed${code === null ? '' : ` (exit ${code})`}. Try \`${command}\` yourself` +
+      (command.startsWith('npm ') ? `, or \`sudo ${command}\` on a system Node.` : '.'),
+  },
+
   // ── HelpPanel ──
   helpTitle: 'Help',
   helpClose: 'Press ? or Esc to close',
@@ -219,6 +236,7 @@ export const STRINGS = {
     'logs-search': 'Log Search',
     confirm: 'Confirmation',
     'confirm-quit': 'Quit Confirmation',
+    'confirm-update': 'Update CDD',
     help: 'Help',
     debug: 'Debug Panel',
     disconnected: 'Disconnected',

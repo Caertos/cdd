@@ -2312,3 +2312,109 @@ describe('D9 — closing the viewer actually closes the log stream', () => {
     expect(stop).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('useControls — the update key (TASK-20)', () => {
+  const NPM_METHOD = {
+    kind: 'npm',
+    command: 'npm',
+    args: ['install', '-g', 'cdd-cli@latest'],
+    display: 'npm install -g cdd-cli@latest',
+  };
+  const NPX_METHOD = { kind: 'npx', command: null, args: [], display: 'npx cdd-cli@latest' };
+
+  function makeUpdater(overrides = {}) {
+    return {
+      status: 'available',
+      current: '4.11.1',
+      latest: '4.12.0',
+      method: NPM_METHOD,
+      exitCode: null,
+      canSelfUpdate: true,
+      openConfirm: jest.fn(),
+      confirm: jest.fn(),
+      cancel: jest.fn(),
+      acknowledge: jest.fn(),
+      ...overrides,
+    };
+  }
+
+  function renderWithUpdater(updater, containers = []) {
+    const expose = { current: null };
+    render(
+      <HookTester containers={containers} expose={expose} overrides={{ updater }} />
+    );
+    return expose;
+  }
+
+  beforeEach(() => {
+    _inputHandler = null;
+  });
+
+  test('U with an update available asks for confirmation', async () => {
+    const updater = makeUpdater();
+    const expose = renderWithUpdater(updater);
+    await act(async () => {});
+    act(() => {
+      triggerInput('u', {});
+    });
+    expect(updater.openConfirm).toHaveBeenCalledTimes(1);
+    expect(expose.current.context).toBe('list');
+  });
+
+  test('y in the confirmation runs the update, Esc cancels and clears the message', async () => {
+    const updater = makeUpdater({ status: 'confirming' });
+    const expose = renderWithUpdater(updater);
+    await act(async () => {});
+    expect(expose.current.message).toContain(NPM_METHOD.display);
+
+    act(() => {
+      triggerInput('y', {});
+    });
+    expect(updater.confirm).toHaveBeenCalledTimes(1);
+
+    act(() => {
+      triggerInput('', { escape: true });
+    });
+    expect(updater.cancel).toHaveBeenCalledTimes(1);
+    expect(expose.current.message).toBe('');
+  });
+
+  test('npx: U never opens the confirmation and explains the command', async () => {
+    const updater = makeUpdater({ method: NPX_METHOD, canSelfUpdate: false });
+    const expose = renderWithUpdater(updater);
+    await act(async () => {});
+    act(() => {
+      triggerInput('u', {});
+    });
+    expect(updater.openConfirm).not.toHaveBeenCalled();
+    expect(expose.current.message).toContain(NPX_METHOD.display);
+  });
+
+  test('U with the check idle does nothing', async () => {
+    const updater = makeUpdater({ status: 'idle', latest: null, canSelfUpdate: false });
+    const expose = renderWithUpdater(updater);
+    await act(async () => {});
+    act(() => {
+      triggerInput('u', {});
+    });
+    expect(updater.openConfirm).not.toHaveBeenCalled();
+    expect(expose.current.message).toBe('');
+  });
+
+  test('a failed update offers the npm command and sudo hint', async () => {
+    const updater = makeUpdater({ status: 'failed', exitCode: 243 });
+    const expose = renderWithUpdater(updater);
+    await act(async () => {});
+    expect(expose.current.message).toContain(NPM_METHOD.display);
+    expect(expose.current.message).toContain('sudo');
+    expect(expose.current.messageColor).toBe('red');
+  });
+
+  test('an updated run says so in green', async () => {
+    const updater = makeUpdater({ status: 'updated' });
+    const expose = renderWithUpdater(updater);
+    await act(async () => {});
+    expect(expose.current.message).toContain('Quit and run cdd again');
+    expect(expose.current.messageColor).toBe('green');
+  });
+});
