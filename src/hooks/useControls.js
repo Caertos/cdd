@@ -330,6 +330,7 @@ export function useControls(containers = [], overrides = {}) {
       confirmQuit: quitConfirmation.active,
       showHelp,
       showLogs: logsViewer.showLogs,
+      logSearchOpen: logsViewer.search.open,
       isFiltering: view.isFiltering,
       creatingContainer,
       hasActiveList:
@@ -353,6 +354,7 @@ export function useControls(containers = [], overrides = {}) {
       quitConfirmation.active,
       showHelp,
       logsViewer.showLogs,
+      logsViewer.search.open,
       view.isFiltering,
       creatingContainer,
       creation.suggestions,
@@ -656,13 +658,17 @@ export function useControls(containers = [], overrides = {}) {
       'logs.close': () => logsViewer.closeLogs(),
       'logs.up': () => logsViewer.scrollLogs(1),
       'logs.down': () => logsViewer.scrollLogs(-1),
-      'logs.pageup': () =>
-        logsViewer.scrollLogs(logsViewer.viewHeightRef.current - 1),
-      'logs.pagedown': () =>
-        logsViewer.scrollLogs(-(logsViewer.viewHeightRef.current - 1)),
+      'logs.pageup': () => logsViewer.scrollLogs(logsViewer.viewHeightRef.current - 1),
+      'logs.pagedown': () => logsViewer.scrollLogs(-(logsViewer.viewHeightRef.current - 1)),
       'logs.follow': () => logsViewer.toggleFollow(),
       'logs.top': () => logsViewer.scrollToTop(),
       'logs.bottom': () => logsViewer.scrollToBottom(),
+      'logs.search': () => logsViewer.openSearch(),
+      'logs.next': () => logsViewer.jumpToMatch(1),
+      'logs.prev': () => logsViewer.jumpToMatch(-1),
+      'logs.filter': () => logsViewer.toggleFilter(),
+      'logs-search.apply': () => logsViewer.closeSearch(),
+      'logs-search.clear': () => logsViewer.clearSearch(),
 
       // Confirm context
       'confirm.yes': () => eraseConfirmation.processEraseConfirmation('y', {}),
@@ -776,10 +782,14 @@ export function useControls(containers = [], overrides = {}) {
       return;
     }
 
+    // The log search field, same priority as the list filter above.
+    if (ctx === 'logs-search' && logsViewer.handleSearchKey(input, normalizedKey)) {
+      return;
+    }
+
     const binding = resolveKey(ctx, input, key, uiState);
     if (binding) {
       dispatch(binding.id);
-      return;
     }
   });
 
@@ -795,10 +805,11 @@ export function useControls(containers = [], overrides = {}) {
       ? creation.messageColor
       : actions.messageColor,
     showLogs: logsViewer.showLogs,
-    logs: logsViewer.logs,
+    logs: logsViewer.shownLogs,
     logsScrollOffset: logsViewer.scrollOffset,
     logsFollowing: logsViewer.following,
     logsPending: logsViewer.pendingCount,
+    logsSearch: logsViewer.search,
     setLogsViewHeight: logsViewer.setViewHeight,
     exitLogs: logsViewer.closeLogs,
     creatingContainer,

@@ -7,6 +7,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## [Unreleased]
 
 ### Added
+- **The log viewer can be searched and navigated.** `/` searches (matches are highlighted and counted, `n`/`N` jump between them, `Ctrl+F` shows only the matching lines), `Home`/`End` go to the first and the newest line, and a paused view says how many lines arrived while it was paused. The search is literal text and ignores case. (TASK-10)
 - **The log viewer scrolls** with `↑`/`↓` and `PgUp`/`PgDn`, and pauses following when you scroll up. These keys were declared but had no handler (D21).
 
 ### Fixed
