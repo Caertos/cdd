@@ -11,6 +11,7 @@ import {
   waitForGone,
   waitForState,
 } from './support/docker.js';
+import { selectContainer } from './support/selection.js';
 
 const hasDocker = await dockerAvailable();
 const describeE2E = hasDocker ? describe : describe.skip;
@@ -44,27 +45,10 @@ describeE2E('E2E — container actions', () => {
 
   /**
    * Renders the app and leaves the test container selected.
-   *
-   * The app sorts the list (problems first) while docker.listContainers does
-   * not, and the daemon may hold other containers, so counting indexes lands
-   * on the wrong row. Arrow down instead, until the '➤' marker sits on the
-   * same row as the 17-char name prefix the row shows.
    */
   async function renderWithSelection() {
     ui = renderApp(<App />);
-    const prefix = target.name.slice(0, 17);
-    await ui.waitForText(prefix);
-
-    const marked = () =>
-      ui
-        .frame()
-        .split('\n')
-        .some((line) => line.includes('➤') && line.includes(prefix));
-    const list = await docker.listContainers({ all: true });
-    for (let i = 0; i <= list.length && !marked(); i++) {
-      await ui.press(KEY.down);
-    }
-    if (!marked()) throw new Error(`Selection never reached ${target.name}`);
+    await selectContainer(ui, target.name);
     return ui;
   }
 
