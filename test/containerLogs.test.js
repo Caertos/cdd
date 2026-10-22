@@ -289,6 +289,58 @@ describe('demultiplexLogStream', () => {
   });
 });
 
+describe('createLogFrameReader', () => {
+  const frame = (channel, text) => {
+    const payload = Buffer.from(text);
+    const header = Buffer.alloc(8);
+    header[0] = channel;
+    header.writeUInt32BE(payload.length, 4);
+    return Buffer.concat([header, payload]);
+  };
+
+  test('strips the header of a multiplexed frame', async () => {
+    const { createLogFrameReader } = await loadLogs(jest.fn());
+    const read = createLogFrameReader();
+    expect(read(frame(1, 'hello\n'))).toBe('hello\n');
+  });
+
+  test('joins a frame split across chunks', async () => {
+    const { createLogFrameReader } = await loadLogs(jest.fn());
+    const read = createLogFrameReader();
+    const whole = frame(1, 'split line\n');
+    expect(read(whole.subarray(0, 5))).toBe('');
+    expect(read(whole.subarray(5, 12))).toBe('');
+    expect(read(whole.subarray(12))).toBe('split line\n');
+  });
+
+  test('reads several frames in one chunk, both channels', async () => {
+    const { createLogFrameReader } = await loadLogs(jest.fn());
+    const read = createLogFrameReader();
+    expect(read(Buffer.concat([frame(1, 'out\n'), frame(2, 'err\n')]))).toBe(
+      'out\nerr\n'
+    );
+  });
+
+  test('passes a TTY stream through untouched', async () => {
+    const { createLogFrameReader } = await loadLogs(jest.fn());
+    const read = createLogFrameReader();
+    expect(read(Buffer.from('plain text\n'))).toBe('plain text\n');
+    expect(read('more\n')).toBe('more\n');
+  });
+});
+
+describe('getLogsStream — frames', () => {
+  test('onData receives the text without the frame header', async () => {
+    const stream = new EventEmitter();
+    const { getLogsStream } = await loadLogs(jest.fn((opts, cb) => cb(null, stream)));
+    const onData = jest.fn();
+    getLogsStream('cid', onData, jest.fn(), jest.fn());
+    const header = Buffer.from([1, 0, 0, 0, 0, 0, 0, 3]);
+    stream.emit('data', Buffer.concat([header, Buffer.from('hey')]));
+    expect(onData).toHaveBeenCalledWith('hey');
+  });
+});
+
 describe('getLogsTail', () => {
   /** Load containerLogs with a container whose logs() yields `chunks`. */
   async function withTail(chunks, onRequested) {
