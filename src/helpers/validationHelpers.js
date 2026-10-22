@@ -4,7 +4,7 @@ import { parseEnvPairs } from './envInput.js';
 
 /**
  * Validates that a value looks like a Docker container/image ID (hex, 64 chars)
- * or a valid container name (alphanumeric, hyphens, underscores, dots, slashes).
+ * or a valid container name (alphanumeric, hyphens, underscores, dots).
  * @param {string} id
  * @returns {boolean}
  */
@@ -14,8 +14,10 @@ export function isValidContainerId(id) {
   if (/^[a-f0-9]{64}$/.test(id)) return true;
   // Docker also allows short IDs (12+ chars)
   if (/^[a-f0-9]{12,63}$/.test(id)) return true;
-  // Container names: alphanumeric, hyphens, underscores, dots, slashes
-  if (/^[a-zA-Z0-9][a-zA-Z0-9_.\-/]{0,127}$/.test(id)) return true;
+  // Container names: alphanumeric, hyphens, underscores, dots. No slashes:
+  // Docker names/IDs never contain one, and this guard runs before spawning
+  // the docker CLI, where '/' could smuggle extra path arguments.
+  if (/^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,127}$/.test(id)) return true;
   return false;
 }
 
@@ -45,7 +47,8 @@ export function validateContainerName(name) {
 /**
  * Validates a Docker image name format.
  * Allows: [registry/]name[:tag]
- * Rejects shell metacharacters and injection patterns.
+ * Rejects shell metacharacters, injection patterns and '-prefixed names
+ * (docker CLI flags disguised as image names).
  * @param {string} name
  * @returns {{ valid: boolean, error?: string }}
  */
@@ -68,9 +71,19 @@ export function validateImageName(name) {
       error: 'Image name cannot start with --',
     };
   }
-  // Basic format: name[:tag] or registry/name[:tag]
+  // A single leading hyphen is also a CLI flag in disguise
+  if (/^-/.test(trimmed)) {
+    return {
+      valid: false,
+      error: 'Image name cannot start with a hyphen',
+    };
+  }
+  // Basic format: name[:tag] or registry/name[:tag]. The first character must
+  // be alphanumeric: Docker rejects names starting with '-' or '_'.
   if (
-    !/^[a-zA-Z0-9_-]+([.:/][a-zA-Z0-9_-]+)*(:[a-zA-Z0-9._-]+)?$/.test(trimmed)
+    !/^[a-zA-Z0-9][a-zA-Z0-9_-]*([.:/][a-zA-Z0-9_-]+)*(:[a-zA-Z0-9._-]+)?$/.test(
+      trimmed
+    )
   ) {
     return {
       valid: false,
