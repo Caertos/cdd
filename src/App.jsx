@@ -64,6 +64,10 @@ export default function App() {
   // Rows left for the container list once the fixed and variable chrome has
   // been subtracted. Never below 1 so the list always has a row to show.
   const logLines = logViewLines(terminalRows);
+  const setLogsViewHeight = controls.setLogsViewHeight;
+  useEffect(() => {
+    setLogsViewHeight?.(logLines);
+  }, [setLogsViewHeight, logLines]);
 
   // The diagnosis gives way to the logs panel while it is open: both answer
   // "why is this container failing", and together they would not fit. It also
@@ -252,6 +256,9 @@ export default function App() {
             onExit={controls.exitLogs}
             container={controls.selectedContainer}
             height={logLines}
+            scrollOffset={controls.logsScrollOffset}
+            following={controls.logsFollowing}
+            pending={controls.logsPending}
           />
         )}
         <Spacer />

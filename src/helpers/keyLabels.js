@@ -20,6 +20,8 @@ const NAMES = {
   space: 'Space',
   pageup: 'PgUp',
   pagedown: 'PgDn',
+  home: 'Home',
+  end: 'End',
   ctrl: 'Ctrl',
   shift: 'Shift',
 };

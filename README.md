@@ -140,13 +140,16 @@ After starting, CDD waits for the daemon to respond, then reloads your container
 
 ### Logs Viewer
 
-| Key       | Action                    |
-| --------- | ------------------------- |
-| `↑` / `↓` | Scroll up/down            |
-| `PgUp` / `PgDn` | Page up/down        |
-| `f`       | Toggle auto-follow        |
-| `Esc` / `Q` | Close logs viewer      |
-| `?`       | Show help panel           |
+The log opens in a panel under the list. Scrolling up pauses following (the header says so and counts the lines that arrive meanwhile); `End` goes back to the newest line and follows again.
+
+| Key             | Action                                              |
+| --------------- | --------------------------------------------------- |
+| `↑` / `↓`       | Scroll one line                                     |
+| `PgUp` / `PgDn` | Scroll one page                                     |
+| `Home` / `End`  | First line / newest line (and follow again)         |
+| `f`             | Toggle auto-follow                                  |
+| `Esc` / `Q`     | Close logs viewer                                   |
+| `?`             | Show help panel                                     |
 
 ### Confirmation
 

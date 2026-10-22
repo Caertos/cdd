@@ -399,6 +399,20 @@ export const KEYMAP = {
       priority: 80,
     },
     {
+      id: 'logs.top',
+      keys: ['home'],
+      label: 'Top',
+      help: 'Go to the start of the log',
+      priority: 78,
+    },
+    {
+      id: 'logs.bottom',
+      keys: ['end'],
+      label: 'Latest',
+      help: 'Go to the newest line and follow again',
+      priority: 78,
+    },
+    {
       id: 'logs.follow',
       keys: ['f'],
       label: 'Follow',
@@ -621,6 +635,8 @@ export function keyNameOf(input, key) {
   if (key.rightArrow) return 'right';
   if (key.pageUp) return 'pageup';
   if (key.pageDown) return 'pagedown';
+  if (key.home) return 'home';
+  if (key.end) return 'end';
   if (key.tab) return 'tab';
   if (key.escape) return 'escape';
   if (key.return) return 'enter';
