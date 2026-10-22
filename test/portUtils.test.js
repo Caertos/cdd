@@ -31,20 +31,30 @@ describe('findAvailablePort — numeric base', () => {
     expect(findAvailablePort('0', new Set())).toBe('0');
   });
 
-  test('"80abc" parses as 80 (permissive parseInt)', () => {
-    expect(findAvailablePort('80abc', new Set())).toBe('80');
+  test('"80abc" is not a plain number → null', () => {
+    expect(findAvailablePort('80abc', new Set())).toBeNull();
+  });
+
+  test('a Number base is tolerated via String()', () => {
+    expect(findAvailablePort(8080, new Set())).toBe('8080');
   });
 });
 
 describe('findAvailablePort — non-numeric base', () => {
-  test('free → returned as-is', () => {
-    expect(findAvailablePort('http', new Set())).toBe('http');
+  test('"http" with a free set → null (no HostPort is fabricated)', () => {
+    expect(findAvailablePort('http', new Set())).toBeNull();
   });
 
-  test('occupied → suffix -1, -2, …', () => {
-    const used = new Set(['http']);
-    expect(findAvailablePort('http', used)).toBe('http-1');
-    expect(findAvailablePort('http', used)).toBe('http-2');
+  test('"http" already used → null (no "http-1" suffix)', () => {
+    expect(findAvailablePort('http', new Set(['http']))).toBeNull();
+  });
+
+  test('"80/tcp" (protocol suffix) → null', () => {
+    expect(findAvailablePort('80/tcp', new Set())).toBeNull();
+  });
+
+  test('empty string → null', () => {
+    expect(findAvailablePort('', new Set())).toBeNull();
   });
 });
 

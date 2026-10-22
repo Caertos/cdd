@@ -34,29 +34,20 @@ export function hostPortsOf(container) {
  * Find the next available host port starting from a numeric base.
  * Mutates usedPorts by adding the chosen port.
  *
- * Returns null when the numeric range is exhausted — a port above 65535 is
- * never handed out. Callers decide what to do with that; we never invent one.
+ * Returns null when the base is not a plain number: a non-numeric HostPort
+ * like "abc-1" is something Docker rejects at create time, so we never
+ * fabricate one. Also returns null when the numeric range is exhausted —
+ * a port above 65535 is never handed out. Callers decide what to do with
+ * null; we never invent a port.
  *
- * @param {string} base - Base port string (e.g. '5432')
+ * @param {string} base - Base port string (e.g. '5432'); numbers are tolerated
  * @param {Set<string>} usedPorts - Set of already-used host ports (mutated)
  * @returns {string|null} The next available port, or null when there is none
  */
 export function findAvailablePort(base, usedPorts) {
-  const numericBase = Number.parseInt(base, 10);
-  if (Number.isNaN(numericBase)) {
-    if (!usedPorts.has(base)) {
-      usedPorts.add(base);
-      return base;
-    }
-    let counter = 1;
-    let candidate = `${base}-${counter}`;
-    while (usedPorts.has(candidate)) {
-      counter += 1;
-      candidate = `${base}-${counter}`;
-    }
-    usedPorts.add(candidate);
-    return candidate;
-  }
+  const text = String(base);
+  if (!/^\d+$/.test(text)) return null;
+  const numericBase = Number.parseInt(text, 10);
   let candidate = numericBase;
   while (candidate <= MAX_PORT && usedPorts.has(String(candidate))) {
     candidate += 1;
