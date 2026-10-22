@@ -63,6 +63,50 @@ export function demultiplexLogStream(buffer) {
 }
 
 /**
+ * Stateful reader for a live Docker log stream. A non-TTY container's stream
+ * is multiplexed in frames that can split across chunks, so the header bytes
+ * are stripped and a partial frame is held until the rest arrives. A TTY
+ * container's stream is plain text: the first bytes that do not look like a
+ * frame header switch the reader to pass-through for good.
+ *
+ * @returns {(chunk: Buffer|string) => string} Text carried by the chunk
+ */
+export function createLogFrameReader() {
+  let raw = false;
+  let pending = Buffer.alloc(0);
+
+  const looksLikeHeader = (buf) =>
+    (buf[0] === STDOUT || buf[0] === STDERR) &&
+    (buf.length < 2 || buf[1] === 0) &&
+    (buf.length < 3 || buf[2] === 0) &&
+    (buf.length < 4 || buf[3] === 0);
+
+  return (chunk) => {
+    const incoming = toBuffer(chunk);
+    if (raw) return incoming.toString('utf8');
+
+    pending = Buffer.concat([pending, incoming]);
+    let out = '';
+    while (pending.length > 0) {
+      if (!looksLikeHeader(pending)) {
+        raw = true;
+        out += pending.toString('utf8');
+        pending = Buffer.alloc(0);
+        break;
+      }
+      if (pending.length < FRAME_HEADER_BYTES) break;
+      const size = pending.readUInt32BE(4);
+      if (pending.length < FRAME_HEADER_BYTES + size) break;
+      out += pending
+        .subarray(FRAME_HEADER_BYTES, FRAME_HEADER_BYTES + size)
+        .toString('utf8');
+      pending = pending.subarray(FRAME_HEADER_BYTES + size);
+    }
+    return out;
+  };
+}
+
+/**
  * @typedef {Object} LogStreamHandle
  * @property {() => void} stop - Cierra el stream y desconecta los callbacks.
  *                               Idempotente: llamarlo dos veces no falla.
@@ -113,8 +157,11 @@ export function getLogsStream(containerId, onData, onEnd, onError) {
       (err, currentStream) => {
         if (stopped) {
           // stop() ran before the daemon handed the stream over. Destroy it
-          // now so it never becomes a zombie nobody can reach (D9).
+          // now so it never becomes a zombie nobody can reach (D9). The
+          // parked no-op error listener keeps a late socket error from
+          // throwing: emitting 'error' with zero listeners does.
           if (currentStream) {
+            currentStream.on?.('error', () => {});
             safeCall(currentStream.destroy?.bind(currentStream));
           }
           return;
@@ -133,8 +180,11 @@ export function getLogsStream(containerId, onData, onEnd, onError) {
         // The guard inside each listener is belt and braces on top of
         // removeListener: a chunk already in flight when stop() ran must not
         // reach setState on a viewer that is gone.
+        const readFrames = createLogFrameReader();
         const onDataChunk = (chunk) => {
-          if (!stopped) safeCall(onData, chunk.toString());
+          if (stopped) return;
+          const text = readFrames(chunk);
+          if (text) safeCall(onData, text);
         };
         const onStreamEnd = () => {
           if (stopped) return;
@@ -157,6 +207,10 @@ export function getLogsStream(containerId, onData, onEnd, onError) {
           currentStream.removeListener?.('data', onDataChunk);
           currentStream.removeListener?.('end', onStreamEnd);
           currentStream.removeListener?.('error', onStreamError);
+          // A stream being torn down can still emit 'error', and emitting it
+          // with zero listeners throws. Park a no-op so the shutdown cannot
+          // take the process down.
+          currentStream.on?.('error', () => {});
         };
       }
     );
