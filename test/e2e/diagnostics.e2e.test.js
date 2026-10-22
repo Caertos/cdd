@@ -14,6 +14,11 @@ import {
 const hasDocker = await dockerAvailable();
 const describeE2E = hasDocker ? describe : describe.skip;
 
+// The panel only appears with 12 chrome rows + 20 panel rows + 4 list rows to
+// spare, i.e. on a terminal of at least 36. ink-testing-library reports no
+// height, so without this the app falls back to 24 and hides the panel.
+const TALL_ROWS = 40;
+
 if (!hasDocker) {
   console.warn('Docker not available — skipping the E2E suite');
 }
@@ -24,18 +29,25 @@ if (!hasDocker) {
  * Navigating is a harness concern, not part of the feature: the panel
  * appears on its own for whichever failing container is selected. Detection
  * by eye is unreliable here because ContainerRow truncates long names with an
- * ellipsis, so the index is read from the same list the app uses.
+ * ellipsis, so the marker is matched against the same 17-char prefix the row
+ * shows.
  */
 async function renderWithSelection(ui, target) {
-  await ui.waitForText(target.name.slice(0, 17));
+  const prefix = target.name.slice(0, 17);
+  await ui.waitForText(prefix);
+  // The app sorts the list (problems first) while docker.listContainers does
+  // not, and this daemon may hold other containers: counting indexes would
+  // land on the wrong row. Arrow down until the marker sits on the target.
+  const marked = () =>
+    ui
+      .frame()
+      .split('\n')
+      .some((line) => line.includes('➤') && line.includes(prefix));
   const list = await docker.listContainers({ all: true });
-  const index = list.findIndex((c) =>
-    (c.Names || []).some((n) => n.replace(/^\//, '') === target.name)
-  );
-  if (index === -1) throw new Error(`Container ${target.name} not listed`);
-  for (let i = 0; i < index; i++) {
+  for (let i = 0; i <= list.length && !marked(); i++) {
     await ui.press(KEY.down);
   }
+  if (!marked()) throw new Error(`Selection never reached ${target.name}`);
 }
 
 describeE2E('E2E — diagnosis panel', () => {
@@ -55,7 +67,7 @@ describeE2E('E2E — diagnosis panel', () => {
   test('a container that died is explained, with no key pressed afterwards', async () => {
     const { id, name } = await createExitedContainer('diag-dead');
     try {
-      ui = renderApp(<App />);
+      ui = renderApp(<App rows={TALL_ROWS} />);
       await renderWithSelection(ui, { name });
 
       // No diagnosis is requested: selecting a failing container is enough.
@@ -84,7 +96,7 @@ describeE2E('E2E — diagnosis panel', () => {
   test('the panel offers the full log, which is the L key', async () => {
     const { id, name } = await createExitedContainer('diag-hint');
     try {
-      ui = renderApp(<App />);
+      ui = renderApp(<App rows={TALL_ROWS} />);
       await renderWithSelection(ui, { name });
       await ui.waitForText('Diagnosis:', { label: 'the diagnosis panel' });
 
@@ -100,7 +112,7 @@ describeE2E('E2E — diagnosis panel', () => {
       withOutput: true,
     });
     try {
-      ui = renderApp(<App />);
+      ui = renderApp(<App rows={TALL_ROWS} />);
       await renderWithSelection(ui, { name });
       await ui.waitForText('Diagnosis:', { label: 'the diagnosis panel' });
       // The log read is async, exactly as in the first case above: the panel
@@ -130,7 +142,7 @@ describeE2E('E2E — diagnosis panel', () => {
       create: { Cmd: ['sh', '-c', 'sleep 60'] },
     });
     try {
-      ui = renderApp(<App />);
+      ui = renderApp(<App rows={TALL_ROWS} />);
       await renderWithSelection(ui, { name });
       await ui.waitForText('RUNNING'); // STRINGS.health.running
 
@@ -182,7 +194,7 @@ describeE2E('E2E — recreate with the fix', () => {
   test('the panel offers F and the review shows what CDD changed', async () => {
     const { id, name } = await createUnconfiguredPostgres('fix-review');
     try {
-      ui = renderApp(<App />);
+      ui = renderApp(<App rows={TALL_ROWS} />);
       await renderWithSelection(ui, { name });
 
       // The panel names the cause and advertises the key.
@@ -206,7 +218,7 @@ describeE2E('E2E — recreate with the fix', () => {
   test('creating from the fix asks about the container that failed', async () => {
     const { id, name } = await createUnconfiguredPostgres('fix-create');
     try {
-      ui = renderApp(<App />);
+      ui = renderApp(<App rows={TALL_ROWS} />);
       await renderWithSelection(ui, { name });
       await ui.waitForText('[F]', { label: 'the fix key' });
 

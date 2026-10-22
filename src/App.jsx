@@ -40,13 +40,18 @@ import { ConnectionNotice } from './components/ConnectionNotice.jsx';
 import Footer from './components/Footer.jsx';
 import { STRINGS } from './helpers/strings.js';
 
-export default function App() {
+/**
+ * @param {Object} [props]
+ * @param {number} [props.rows] - Fixed terminal height; tests use it because a
+ *   non-TTY run reports no height and would fall back to 24 rows.
+ */
+export default function App({ rows }) {
   const { suspendTerminal } = useApp();
   const { containers, connection } = useContainers();
   const { health, details } = useContainerHealth(containers);
   const launcher = useDockerLauncher();
   // Terminal height feeds the container list's visible-window budget below.
-  const terminalRows = useTerminalHeight();
+  const terminalRows = useTerminalHeight(rows);
   // health goes in so useControls owns the one diagnosis the panel renders and
   // the F key acts on. Two hooks would mean reading the log twice.
   const controls = useControls(containers, {
