@@ -19,8 +19,8 @@ export default function StatsBar({ cpu, mem }) {
 
   return (
     <Text>
-      CPU:{cpuBar}
-      {colorize(cpu, ` ${formatPercent(cpu)}%`)} MEM:{memBar}
+      CPU: {cpuBar}
+      {colorize(cpu, ` ${formatPercent(cpu)}%`)}  MEM: {memBar}
       {colorize(mem, ` ${formatPercent(mem)}%`)}
     </Text>
   );
