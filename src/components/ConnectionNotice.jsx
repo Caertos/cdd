@@ -1,4 +1,5 @@
 import React from 'react';
+import { withKeys } from '../helpers/listKeys.js';
 import { Box, Text } from 'ink';
 import PropTypes from 'prop-types';
 import { DockerLauncher } from './DockerLauncher.jsx';
@@ -29,8 +30,8 @@ export function ConnectionNotice({ error, nextRetryIn, launcher }) {
       <Text>{sanitizeTerminalText(error.detail)}</Text>
       <Text> </Text>
       <Text bold>Try this:</Text>
-      {error.hints.map((hint, i) => (
-        <Text key={i}>
+      {withKeys(error.hints).map(({ item: hint, key }) => (
+        <Text key={key}>
           {'  · '}
           {sanitizeTerminalText(hint)}
         </Text>

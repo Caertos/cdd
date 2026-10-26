@@ -2,8 +2,8 @@
  * @jest-environment jsdom
  */
 import React from 'react';
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
 import { render } from '@testing-library/react';
 import { jest } from '@jest/globals';
 import { STRINGS } from '../src/helpers/strings.js';

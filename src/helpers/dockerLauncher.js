@@ -320,7 +320,7 @@ export async function waitForDocker(options = {}) {
     const tick = async () => {
       const elapsedMs = Date.now() - start;
 
-      if (signal && signal.aborted) {
+      if (signal?.aborted) {
         finish({ ready: false, elapsedMs, reason: 'aborted' });
         return;
       }

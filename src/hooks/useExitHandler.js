@@ -42,12 +42,12 @@ export function useExitHandler({ onBeforeExit } = {}) {
 
       const clearTerminal = () => {
         try {
-          if (process.stdout && process.stdout.isTTY) {
+          if (process.stdout?.isTTY) {
             process.stdout.write('\x1B[2J\x1B[0;0H');
           } else {
             console.clear();
           }
-        } catch (err) {
+        } catch (_err) {
           // Ignore clear errors to avoid blocking exit.
         }
       };

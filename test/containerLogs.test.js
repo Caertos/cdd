@@ -2,7 +2,8 @@
  * @jest-environment node
  */
 import { jest } from '@jest/globals';
-import { EventEmitter } from 'events';
+import { C0_BEFORE_TAB, controlCharsIn } from './support/controlChars.js';
+import { EventEmitter } from 'node:events';
 
 afterEach(() => jest.resetModules());
 
@@ -19,7 +20,7 @@ async function loadLogs(logsImpl) {
 describe('getLogsStream', () => {
   test('data event → onData with chunk as string', async () => {
     const stream = new EventEmitter();
-    const { getLogsStream } = await loadLogs((opts, cb) => cb(null, stream));
+    const { getLogsStream } = await loadLogs((_opts, cb) => cb(null, stream));
     const onData = jest.fn();
 
     getLogsStream('cid', onData, jest.fn(), jest.fn());
@@ -30,7 +31,7 @@ describe('getLogsStream', () => {
 
   test('end event → onEnd', async () => {
     const stream = new EventEmitter();
-    const { getLogsStream } = await loadLogs((opts, cb) => cb(null, stream));
+    const { getLogsStream } = await loadLogs((_opts, cb) => cb(null, stream));
     const onEnd = jest.fn();
 
     getLogsStream('cid', jest.fn(), onEnd, jest.fn());
@@ -41,7 +42,7 @@ describe('getLogsStream', () => {
 
   test('stream error event → onError', async () => {
     const stream = new EventEmitter();
-    const { getLogsStream } = await loadLogs((opts, cb) => cb(null, stream));
+    const { getLogsStream } = await loadLogs((_opts, cb) => cb(null, stream));
     const onError = jest.fn();
     const boom = new Error('broken pipe');
 
@@ -52,7 +53,7 @@ describe('getLogsStream', () => {
   });
 
   test('error in logs callback → onError and no stream subscription', async () => {
-    const { getLogsStream } = await loadLogs((opts, cb) =>
+    const { getLogsStream } = await loadLogs((_opts, cb) =>
       cb(new Error('404'))
     );
     const onError = jest.fn();
@@ -86,7 +87,7 @@ describe('getLogsStream', () => {
 
   test('omitted callbacks → does not throw (safeCall)', async () => {
     const stream = new EventEmitter();
-    const { getLogsStream } = await loadLogs((opts, cb) => cb(null, stream));
+    const { getLogsStream } = await loadLogs((_opts, cb) => cb(null, stream));
 
     expect(() => {
       getLogsStream('cid');
@@ -97,7 +98,7 @@ describe('getLogsStream', () => {
   });
 
   test('requests follow, stdout, stderr and tail=100', async () => {
-    const logs = jest.fn((opts, cb) => cb(null, new EventEmitter()));
+    const logs = jest.fn((_opts, cb) => cb(null, new EventEmitter()));
     const { getLogsStream } = await loadLogs(logs);
 
     getLogsStream('cid', jest.fn());
@@ -118,7 +119,7 @@ describe('getLogsStream — D9: the handle closes the stream', () => {
 
   test('the handle exposes stop() and it destroys the stream', async () => {
     const stream = spyStream();
-    const { getLogsStream } = await loadLogs((opts, cb) => cb(null, stream));
+    const { getLogsStream } = await loadLogs((_opts, cb) => cb(null, stream));
     const handle = getLogsStream('cid', jest.fn(), jest.fn(), jest.fn());
 
     expect(typeof handle.stop).toBe('function');
@@ -128,7 +129,7 @@ describe('getLogsStream — D9: the handle closes the stream', () => {
 
   test('after stop() a late chunk never reaches onData', async () => {
     const stream = spyStream();
-    const { getLogsStream } = await loadLogs((opts, cb) => cb(null, stream));
+    const { getLogsStream } = await loadLogs((_opts, cb) => cb(null, stream));
     const onData = jest.fn();
     const onEnd = jest.fn();
     const handle = getLogsStream('cid', onData, onEnd, jest.fn());
@@ -143,7 +144,7 @@ describe('getLogsStream — D9: the handle closes the stream', () => {
 
   test('stop() is idempotent and destroys only once', async () => {
     const stream = spyStream();
-    const { getLogsStream } = await loadLogs((opts, cb) => cb(null, stream));
+    const { getLogsStream } = await loadLogs((_opts, cb) => cb(null, stream));
     const handle = getLogsStream('cid');
 
     handle.stop();
@@ -153,7 +154,7 @@ describe('getLogsStream — D9: the handle closes the stream', () => {
 
   test('stop() detaches the listeners and a late error cannot crash', async () => {
     const stream = spyStream();
-    const { getLogsStream } = await loadLogs((opts, cb) => cb(null, stream));
+    const { getLogsStream } = await loadLogs((_opts, cb) => cb(null, stream));
     const onError = jest.fn();
     const handle = getLogsStream('cid', jest.fn(), jest.fn(), onError);
     expect(stream.listenerCount('data')).toBe(1);
@@ -169,7 +170,7 @@ describe('getLogsStream — D9: the handle closes the stream', () => {
 
   test('a stream handed over after stop() is destroyed on arrival', async () => {
     let handOver = null;
-    const { getLogsStream } = await loadLogs((opts, cb) => {
+    const { getLogsStream } = await loadLogs((_opts, cb) => {
       handOver = cb;
     });
     const onData = jest.fn();
@@ -186,7 +187,7 @@ describe('getLogsStream — D9: the handle closes the stream', () => {
 
   test('stop() before the daemon reports an error stays silent', async () => {
     let handOver = null;
-    const { getLogsStream } = await loadLogs((opts, cb) => {
+    const { getLogsStream } = await loadLogs((_opts, cb) => {
       handOver = cb;
     });
     const onError = jest.fn();
@@ -332,7 +333,7 @@ describe('createLogFrameReader', () => {
 describe('getLogsStream — frames', () => {
   test('onData receives the text without the frame header', async () => {
     const stream = new EventEmitter();
-    const { getLogsStream } = await loadLogs(jest.fn((opts, cb) => cb(null, stream)));
+    const { getLogsStream } = await loadLogs(jest.fn((_opts, cb) => cb(null, stream)));
     const onData = jest.fn();
     getLogsStream('cid', onData, jest.fn(), jest.fn());
     const header = Buffer.from([1, 0, 0, 0, 0, 0, 0, 3]);
@@ -403,7 +404,7 @@ describe('getLogsTail', () => {
       'superuser password is not specified.',
     ]);
     for (const line of lines) {
-      expect(line).not.toMatch(/[\u0000-\u0008]/);
+      expect(controlCharsIn(line, C0_BEFORE_TAB)).toEqual([]);
     }
   });
 
@@ -437,7 +438,7 @@ describe('getLogsTail', () => {
   });
 
   test('a docker error resolves empty instead of rejecting', async () => {
-    const { getLogsTail } = await loadLogs((opts, cb) => cb(new Error('404')));
+    const { getLogsTail } = await loadLogs((_opts, cb) => cb(new Error('404')));
     await expect(getLogsTail('cid')).resolves.toEqual([]);
   });
 
@@ -459,7 +460,7 @@ describe('getLogsTail', () => {
 
   test('a stream that breaks keeps what already arrived', async () => {
     const stream = new EventEmitter();
-    const { getLogsTail } = await loadLogs((opts, cb) => cb(null, stream));
+    const { getLogsTail } = await loadLogs((_opts, cb) => cb(null, stream));
     setImmediate(() => {
       stream.emit('data', Buffer.from('partial\n'));
       stream.emit('error', new Error('ECONNRESET'));
@@ -471,7 +472,7 @@ describe('getLogsTail', () => {
     // follow:false makes docker-modem collect the whole response and pass a
     // Buffer. Reading it as a stream threw "stream.on is not a function",
     // which only a real Docker daemon could have told us.
-    const { getLogsTail } = await loadLogs((opts, cb) =>
+    const { getLogsTail } = await loadLogs((_opts, cb) =>
       cb(null, Buffer.from('from a buffer\n'))
     );
     await expect(getLogsTail('cid')).resolves.toEqual(['from a buffer']);
@@ -480,7 +481,7 @@ describe('getLogsTail', () => {
   test('a payload that docker-modem parsed as JSON is stringified back', async () => {
     // docker-modem sniffs the body for JSON before deciding what to pass on,
     // so a single JSON log line arrives as an object.
-    const { getLogsTail } = await loadLogs((opts, cb) =>
+    const { getLogsTail } = await loadLogs((_opts, cb) =>
       cb(null, { level: 'info', msg: 'started' })
     );
     const lines = await getLogsTail('cid');
@@ -489,12 +490,12 @@ describe('getLogsTail', () => {
   });
 
   test('a null payload is an empty log, not a crash', async () => {
-    const { getLogsTail } = await loadLogs((opts, cb) => cb(null, null));
+    const { getLogsTail } = await loadLogs((_opts, cb) => cb(null, null));
     await expect(getLogsTail('cid')).resolves.toEqual([]);
   });
 
   test('a payload that is already a string is read as text', async () => {
-    const { getLogsTail } = await loadLogs((opts, cb) =>
+    const { getLogsTail } = await loadLogs((_opts, cb) =>
       cb(null, 'plain string payload\n')
     );
     await expect(getLogsTail('cid')).resolves.toEqual(['plain string payload']);

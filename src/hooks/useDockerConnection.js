@@ -33,6 +33,8 @@ export function useDockerConnection(options = {}) {
   // Automatic retry while in error state, with a live countdown.
   // retryToken in deps: every auto or manual retry restarts the cycle.
   useEffect(() => {
+    // Read only so the effect re-runs on every retry: a new token restarts it.
+    void retryToken;
     if (status !== 'error') {
       setNextRetryIn(0);
       return undefined;

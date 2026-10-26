@@ -1,4 +1,4 @@
-import net from 'net';
+import net from 'node:net';
 
 /** Asks the OS for a free TCP port. Avoids collisions between tests and the host. */
 export function freePort() {

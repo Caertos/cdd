@@ -98,13 +98,13 @@ describe('validateEnvVars — contextual validation with IMAGE_PROFILES', () => 
   test('TOKEN=a=b is preserved (split on first = only)', () => {
     const result = validateEnvVars('TOKEN=a=b', 'nginx', IMAGE_PROFILES);
     expect(result.valid).toBe(true);
-    expect(result.parsedEnv['TOKEN']).toBe('a=b');
+    expect(result.parsedEnv.TOKEN).toBe('a=b');
   });
 
   test('image not in profiles — only syntactic validation applies', () => {
     const result = validateEnvVars('FOO=bar', 'nginx', IMAGE_PROFILES);
     expect(result.valid).toBe(true);
-    expect(result.parsedEnv['FOO']).toBe('bar');
+    expect(result.parsedEnv.FOO).toBe('bar');
   });
 
   test('empty input for image not in profiles — valid', () => {

@@ -10,10 +10,14 @@ let _inputHandler = null;
 const triggerInput = (input, key = {}) => {
   if (_inputHandler) _inputHandler(input, key);
 };
+const MockBox = ({ children, ...props }) =>
+  React.createElement('div', props, children);
+const MockText = ({ children }) => React.createElement('span', null, children);
+const MockSpacer = () => React.createElement('div', null);
 await jest.unstable_mockModule('ink', () => ({
-  Box: ({ children, ...props }) => React.createElement('div', props, children),
-  Text: ({ children }) => React.createElement('span', null, children),
-  Spacer: () => React.createElement('div', null),
+  Box: MockBox,
+  Text: MockText,
+  Spacer: MockSpacer,
   useInput: (fn) => {
     _inputHandler = fn;
   },
@@ -683,7 +687,7 @@ describe('useControls — pressing C calls resetCreation BEFORE onStartCreate', 
   });
 
   test('pressing C resets creation state before entering creation mode', () => {
-    const callOrder = [];
+    const _callOrder = [];
     const expose = { current: null };
 
     // We render with no overrides, but we can spy on the internal calls
@@ -754,7 +758,7 @@ describe('useControls — D3 fix: hubResults navigation', () => {
     });
 
     // Simulate hubResults being set (normally from triggerHubSearch)
-    const mockHubResults = ['nginx', 'nginx-alpine', 'nginx-unstable'];
+    const _mockHubResults = ['nginx', 'nginx-alpine', 'nginx-unstable'];
     act(() => {
       expose.current.creation.updateImageInput('ng');
       // Directly set hubResults via the hook's internal state

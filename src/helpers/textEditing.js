@@ -113,76 +113,14 @@ export function deleteForward(state) {
  */
 export function applyKeyToText(state, input, key) {
   // No key combinations from this function
-  if (key.ctrl) {
-    if (input === 'a') {
-      // Ctrl+A → move to start
-      return { state: { ...state, cursor: 0 }, handled: true };
-    }
-    if (input === 'e') {
-      // Ctrl+E → move to end
-      return {
-        state: { ...state, cursor: chars(state.value).length },
-        handled: true,
-      };
-    }
-    if (input === 'w') {
-      // Ctrl+W → delete word before cursor
-      const newCursor = wordStartBefore(state.value, state.cursor);
-      const arr = chars(state.value);
-      const before = arr.slice(0, newCursor);
-      const after = arr.slice(state.cursor);
-      return {
-        state: { value: before.concat(after).join(''), cursor: newCursor },
-        handled: true,
-      };
-    }
-    if (input === 'u') {
-      // Ctrl+U → delete from start to cursor
-      const arr = chars(state.value);
-      const after = arr.slice(state.cursor);
-      return {
-        state: { value: after.join(''), cursor: 0 },
-        handled: true,
-      };
-    }
-    if (input === 'k') {
-      // Ctrl+K → delete from cursor to end
-      const arr = chars(state.value);
-      const before = arr.slice(0, state.cursor);
-      return {
-        state: { value: before.join(''), cursor: state.cursor },
-        handled: true,
-      };
-    }
-    // Other ctrl combos: not handled
-    return { state, handled: false };
-  }
+  if (key.ctrl) return applyCtrlKey(state, input);
 
   if (key.meta) {
     return { state, handled: false };
   }
 
-  if (key.leftArrow) {
-    const newCursor = Math.max(0, state.cursor - 1);
-    return { state: { ...state, cursor: newCursor }, handled: true };
-  }
-
-  if (key.rightArrow) {
-    const len = chars(state.value).length;
-    const newCursor = Math.min(len, state.cursor + 1);
-    return { state: { ...state, cursor: newCursor }, handled: true };
-  }
-
-  if (key.home) {
-    return { state: { ...state, cursor: 0 }, handled: true };
-  }
-
-  if (key.end) {
-    return {
-      state: { ...state, cursor: chars(state.value).length },
-      handled: true,
-    };
-  }
+  const navigated = applyNavigationKey(state, key);
+  if (navigated) return { state: navigated, handled: true };
 
   if (key.backspace) {
     const newState = deleteBackward(state);
@@ -211,6 +149,79 @@ export function applyKeyToText(state, input, key) {
   }
 
   return { state, handled: false };
+}
+
+/**
+ * Handles Ctrl+key combinations.
+ *
+ * @param {TextState} state
+ * @param {string} input
+ * @returns {EditResult}
+ */
+function applyCtrlKey(state, input) {
+  if (input === 'a') {
+    // Ctrl+A → move to start
+    return { state: { ...state, cursor: 0 }, handled: true };
+  }
+  if (input === 'e') {
+    // Ctrl+E → move to end
+    return {
+      state: { ...state, cursor: chars(state.value).length },
+      handled: true,
+    };
+  }
+  if (input === 'w') {
+    // Ctrl+W → delete word before cursor
+    const newCursor = wordStartBefore(state.value, state.cursor);
+    const arr = chars(state.value);
+    const before = arr.slice(0, newCursor);
+    const after = arr.slice(state.cursor);
+    return {
+      state: { value: before.concat(after).join(''), cursor: newCursor },
+      handled: true,
+    };
+  }
+  if (input === 'u') {
+    // Ctrl+U → delete from start to cursor
+    const arr = chars(state.value);
+    const after = arr.slice(state.cursor);
+    return {
+      state: { value: after.join(''), cursor: 0 },
+      handled: true,
+    };
+  }
+  if (input === 'k') {
+    // Ctrl+K → delete from cursor to end
+    const arr = chars(state.value);
+    const before = arr.slice(0, state.cursor);
+    return {
+      state: { value: before.join(''), cursor: state.cursor },
+      handled: true,
+    };
+  }
+  // Other ctrl combos: not handled
+  return { state, handled: false };
+}
+
+/**
+ * Cursor movement keys (arrows, Home, End). Returns the new state, or null
+ * when the key is not a navigation key.
+ *
+ * @param {TextState} state
+ * @param {import('ink').Key} key
+ * @returns {TextState|null}
+ */
+function applyNavigationKey(state, key) {
+  if (key.leftArrow) {
+    return { ...state, cursor: Math.max(0, state.cursor - 1) };
+  }
+  if (key.rightArrow) {
+    const len = chars(state.value).length;
+    return { ...state, cursor: Math.min(len, state.cursor + 1) };
+  }
+  if (key.home) return { ...state, cursor: 0 };
+  if (key.end) return { ...state, cursor: chars(state.value).length };
+  return null;
 }
 
 /**

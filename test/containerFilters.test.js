@@ -609,7 +609,7 @@ describe('normalizeForSearch folds letters that do not decompose', () => {
     expect(normalizeForSearch('İ')).toBe('i');
     expect(normalizeForSearch('I')).toBe('i');
     expect(Object.keys(FOLD_LETTERS)).not.toContain('İ');
-    expect(FOLD_LETTERS['ı']).toBe('i');
+    expect(FOLD_LETTERS.ı).toBe('i');
   });
 
   test('finds a container named brøtal-service when the user types o', () => {

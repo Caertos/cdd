@@ -29,7 +29,7 @@ export function isValidContainerId(id) {
  * @returns {{ valid: boolean, error?: string }}
  */
 export function validateContainerName(name) {
-  if (!name || !name.trim()) return { valid: true }; // Optional
+  if (!name?.trim()) return { valid: true }; // Optional
   const trimmed = name.trim();
   if (trimmed.length > 128) {
     return { valid: false, error: 'Container name too long (max 128 chars)' };
@@ -53,7 +53,7 @@ export function validateContainerName(name) {
  * @returns {{ valid: boolean, error?: string }}
  */
 export function validateImageName(name) {
-  if (!name || !name.trim()) {
+  if (!name?.trim()) {
     return { valid: false, error: 'Image name is required' };
   }
   const trimmed = name.trim();
@@ -123,7 +123,7 @@ function isPort(value) {
  */
 export function validatePorts(portInput) {
   // Empty or whitespace-only input is considered valid (ports are optional)
-  if (!portInput || !portInput.trim()) return true;
+  if (!portInput?.trim()) return true;
   const ports = portInput
     .split(',')
     .map((p) => p.trim())
@@ -154,23 +154,7 @@ export function validatePorts(portInput) {
 export function validateEnvVars(envInput, imageName, imageProfiles) {
   const contextual = imageName !== undefined && imageProfiles !== undefined;
 
-  // Parse: split on FIRST '=' only
-  const parsedEnv = {};
-  const syntaxErrors = [];
-
-  if (envInput && envInput.trim()) {
-    for (const { key, value } of parseEnvPairs(envInput)) {
-      if (value === null) {
-        syntaxErrors.push(`"${key}" is missing an '=' sign`);
-        continue;
-      }
-      if (!/^[A-Z_][A-Z0-9_]*$/i.test(key)) {
-        syntaxErrors.push(`"${key}" is not a valid variable name`);
-        continue;
-      }
-      parsedEnv[key] = value;
-    }
-  }
+  const { parsedEnv, syntaxErrors } = parseEnvForValidation(envInput);
 
   if (!contextual) {
     // Legacy: return boolean
@@ -178,17 +162,39 @@ export function validateEnvVars(envInput, imageName, imageProfiles) {
   }
 
   // Contextual: also check required env vars from the profile
-  const errors = [...syntaxErrors];
-  const baseName = normalizeImageName(imageName);
-  const profile = imageProfiles[baseName];
-
-  if (profile && profile.requiredEnv && profile.requiredEnv.length) {
-    for (const required of profile.requiredEnv) {
-      if (!parsedEnv[required] || parsedEnv[required].trim() === '') {
-        errors.push(`Missing required env var: ${required}`);
-      }
-    }
-  }
+  const profile = imageProfiles[normalizeImageName(imageName)];
+  const errors = [
+    ...syntaxErrors,
+    ...missingRequiredErrors(profile, parsedEnv),
+  ];
 
   return { valid: errors.length === 0, errors, parsedEnv };
+}
+
+/** Parse: split on FIRST '=' only, collecting syntax errors. */
+function parseEnvForValidation(envInput) {
+  const parsedEnv = {};
+  const syntaxErrors = [];
+
+  if (!envInput?.trim()) return { parsedEnv, syntaxErrors };
+
+  for (const { key, value } of parseEnvPairs(envInput)) {
+    if (value === null) {
+      syntaxErrors.push(`"${key}" is missing an '=' sign`);
+    } else if (!/^[A-Z_][A-Z0-9_]*$/i.test(key)) {
+      syntaxErrors.push(`"${key}" is not a valid variable name`);
+    } else {
+      parsedEnv[key] = value;
+    }
+  }
+  return { parsedEnv, syntaxErrors };
+}
+
+function missingRequiredErrors(profile, parsedEnv) {
+  if (!profile?.requiredEnv?.length) return [];
+  return profile.requiredEnv
+    .filter(
+      (required) => !parsedEnv[required] || parsedEnv[required].trim() === ''
+    )
+    .map((required) => `Missing required env var: ${required}`);
 }

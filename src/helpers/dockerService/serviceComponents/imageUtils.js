@@ -47,9 +47,9 @@ export async function imageExists(imageName) {
 export async function pullImage(imageName) {
   await new Promise((resolve, reject) => {
     docker.pull(imageName, (err, stream) => {
-      if (err) return reject(new Error('Error pulling image: ' + err.message));
+      if (err) return reject(new Error(`Error pulling image: ${err.message}`));
       docker.modem.followProgress(stream, (pullErr) => {
-        if (pullErr) reject(new Error('Error during pull: ' + pullErr.message));
+        if (pullErr) reject(new Error(`Error during pull: ${pullErr.message}`));
         else resolve();
       });
     });

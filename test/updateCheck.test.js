@@ -63,10 +63,10 @@ describe('isValidVersion', () => {
     'v1.2.3',
     '1.2',
     'unknown',
-    '1.2.3' + String.fromCharCode(27) + '[31m',
+    `1.2.3${String.fromCharCode(27)}[31m`,
     42,
     null,
-    '9'.repeat(70) + '.0.0',
+    `${'9'.repeat(70)}.0.0`,
   ])('rejects %p', (v) => expect(isValidVersion(v)).toBe(false));
 });
 
@@ -147,7 +147,7 @@ describe('fetchLatestVersion', () => {
     await expect(fetchLatestVersion({ fetchFn })).resolves.toBeNull();
   });
   test('times out', async () => {
-    const fetchFn = (url, { signal }) =>
+    const fetchFn = (_url, { signal }) =>
       new Promise((_, reject) =>
         signal.addEventListener('abort', () => reject(signal.reason))
       );

@@ -1,4 +1,5 @@
 import React from 'react';
+import { withKeys } from '../helpers/listKeys.js';
 import { Box, Text } from 'ink';
 import PropTypes from 'prop-types';
 import { STRINGS } from '../helpers/strings.js';
@@ -61,8 +62,8 @@ export default function LogViewer({
         // sequences are sanitised away before Ink writes them to the screen.
         // wrap="truncate" keeps one log line on one row, so the panel never
         // grows past the rows reserved for it.
-        visibleLogs.map((line, idx) => (
-          <Text key={start + idx} wrap="truncate">
+        withKeys(visibleLogs).map(({ item: line, key }) => (
+          <Text key={key} wrap="truncate">
             {highlighted(sanitizeTerminalText(line), query)}
           </Text>
         ))
@@ -75,9 +76,12 @@ export default function LogViewer({
 /** The line, with the matches of the query inverted. */
 function highlighted(line, query) {
   if (!query) return line;
-  return splitHighlight(line, query).map((part, i) =>
+  return withKeys(
+    splitHighlight(line, query),
+    (part) => `${part.match}:${part.text}`
+  ).map(({ item: part, key }) =>
     part.match ? (
-      <Text key={i} inverse>
+      <Text key={key} inverse>
         {part.text}
       </Text>
     ) : (

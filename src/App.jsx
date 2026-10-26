@@ -42,6 +42,85 @@ import Footer from './components/Footer.jsx';
 import { STRINGS } from './helpers/strings.js';
 
 /**
+ * Pairs each log line with a key built from its content plus how many times
+ * the same line appeared before it, so duplicates stay unique and stable.
+ *
+ * @param {string[]} lines
+ * @returns {Array<{line: string, key: string}>}
+ */
+function keyedLines(lines) {
+  const seen = new Map();
+  return lines.map((line) => {
+    const count = seen.get(line) ?? 0;
+    seen.set(line, count + 1);
+    return { line, key: `${line}#${count}` };
+  });
+}
+
+/** Filter prompt shown under the header while the user is filtering. */
+function FilterBar({ view }) {
+  if (!view.isFiltering) return null;
+  return (
+    <Box paddingLeft={1}>
+      <PromptField
+        label={STRINGS.filter.label}
+        value={sanitizeTerminalText(view.query)}
+        cursor={sanitizedCursorIndex(view.query, view.cursor)}
+      />
+    </Box>
+  );
+}
+
+/**
+ * Live debug log panel: the last 15 lines, or a placeholder when empty.
+ *
+ * @param {Object} props
+ * @param {string[]} props.logs
+ */
+function DebugPanel({ logs }) {
+  return (
+    <Box
+      marginTop={1}
+      flexDirection="column"
+      borderStyle="round"
+      borderColor="gray"
+      padding={1}
+    >
+      <Text color="cyan">{STRINGS.debugTitle}</Text>
+      {logs.length === 0 ? (
+        <Text dimColor>{STRINGS.debugEmpty}</Text>
+      ) : (
+        keyedLines(logs.slice(-15)).map(({ line, key }) => (
+          <Text key={key} color="gray">
+            {sanitizeTerminalText(line)}
+          </Text>
+        ))
+      )}
+    </Box>
+  );
+}
+
+/**
+ * Whether the diagnosis panel fits: it needs a failing container to talk
+ * about, gives way to the logs and help panels, and leaves the list a few rows.
+ */
+function shouldShowDiagnosis(controls, connection, terminalRows) {
+  const wantsDiagnosis = Boolean(controls.diagnosis || controls.isDiagnosing);
+  if (!wantsDiagnosis || controls.showLogs || controls.showHelp) return false;
+  return (
+    terminalRows -
+      reservedRows({
+        hasDiagnosis: true,
+        showDebug: controls.showDebugLogs,
+        isFiltering: controls.view.isFiltering,
+        isStale: connection.isStale,
+        hasMessage: Boolean(controls.message),
+      }) >=
+    MIN_LIST_ROWS_WITH_DIAGNOSIS
+  );
+}
+
+/**
  * @param {Object} [props]
  * @param {number} [props.rows] - Fixed terminal height; tests use it because a
  *   non-TTY run reports no height and would fall back to 24 rows.
@@ -83,20 +162,7 @@ export default function App({ rows }) {
   // "why is this container failing", and together they would not fit. It also
   // stays out when the terminal is too short to leave the list a few rows:
   // a frame as tall as the terminal makes Ink stack a copy of it per redraw.
-  const wantsDiagnosis = Boolean(controls.diagnosis || controls.isDiagnosing);
-  const showDiagnosis =
-    wantsDiagnosis &&
-    !controls.showLogs &&
-    !controls.showHelp &&
-    terminalRows -
-      reservedRows({
-        hasDiagnosis: true,
-        showDebug: controls.showDebugLogs,
-        isFiltering: controls.view.isFiltering,
-        isStale: connection.isStale,
-        hasMessage: Boolean(controls.message),
-      }) >=
-      MIN_LIST_ROWS_WITH_DIAGNOSIS;
+  const showDiagnosis = shouldShowDiagnosis(controls, connection, terminalRows);
 
   // Help opens under the list, like the logs panel, and takes the logs
   // panel's place while it is open: both cannot fit, and the list is what the
@@ -157,30 +223,28 @@ export default function App({ rows }) {
 
   if (controls.creatingContainer) {
     return (
-      <>
-        <ContainerCreationPrompt
-          step={controls.creationStep}
-          imageName={controls.imageNameInput}
-          containerName={controls.containerNameInput}
-          portInput={controls.portInput}
-          envInput={controls.envInput}
-          cursors={controls.creation.cursors}
-          message={controls.message}
-          messageColor={controls.messageColor}
-          suggestions={controls.creation.activeItems}
-          selectedSuggestionIndex={controls.creation.selectedSuggestionIndex}
-          visibleOffset={controls.creation.visibleOffset}
-          isSearchingHub={controls.creation.isSearchingHub}
-          hubResults={controls.creation.hubResults}
-          hasSuggestedEnv={controls.creation.hasSuggestedEnv}
-          confirmDiscard={controls.confirmDiscard}
-          reviewRows={controls.creation.reviewRows}
-          reviewWarnings={controls.creation.reviewWarnings}
-          focusedReviewRow={controls.creation.focusedReviewRow}
-          isLoadingPreview={controls.creation.isLoadingPreview}
-          revealSecrets={controls.creation.revealSecrets}
-        />
-      </>
+      <ContainerCreationPrompt
+        step={controls.creationStep}
+        imageName={controls.imageNameInput}
+        containerName={controls.containerNameInput}
+        portInput={controls.portInput}
+        envInput={controls.envInput}
+        cursors={controls.creation.cursors}
+        message={controls.message}
+        messageColor={controls.messageColor}
+        suggestions={controls.creation.activeItems}
+        selectedSuggestionIndex={controls.creation.selectedSuggestionIndex}
+        visibleOffset={controls.creation.visibleOffset}
+        isSearchingHub={controls.creation.isSearchingHub}
+        hubResults={controls.creation.hubResults}
+        hasSuggestedEnv={controls.creation.hasSuggestedEnv}
+        confirmDiscard={controls.confirmDiscard}
+        reviewRows={controls.creation.reviewRows}
+        reviewWarnings={controls.creation.reviewWarnings}
+        focusedReviewRow={controls.creation.focusedReviewRow}
+        isLoadingPreview={controls.creation.isLoadingPreview}
+        revealSecrets={controls.creation.revealSecrets}
+      />
     );
   }
 
@@ -196,111 +260,79 @@ export default function App({ rows }) {
   }
 
   return (
-    <>
-      <Box
-        flexDirection="column"
-        borderStyle="round"
-        borderColor="cyan"
-        padding={1}
-      >
-        <Header
-          visibleCount={controls.view.visible.length}
-          totalCount={controls.view.totalCount}
-          query={controls.view.query}
-          sortMode={controls.view.sortMode}
-          update={{ status: updater.status, latest: updater.latest }}
-        />
-        <Text> </Text>
-        {connection.isStale && (
-          <Text color="yellow">
-            {'⚠ '}
-            {STRINGS.connection.staleWarning}
-          </Text>
-        )}
-        {controls.view.isFiltering && (
-          <Box paddingLeft={1}>
-            <PromptField
-              label={STRINGS.filter.label}
-              value={sanitizeTerminalText(controls.view.query)}
-              cursor={sanitizedCursorIndex(
-                controls.view.query,
-                controls.view.cursor
-              )}
-            />
-          </Box>
-        )}
-        <ContainerSection
-          containers={controls.view.visible}
-          // Still a position: ContainerList highlights with `i === selected`,
-          // so this prop cannot become the id until those components change.
-          // Derived from the same selection as the rest of the panel, not a
-          // second source of truth.
-          selected={controls.selected}
-          health={health}
-          connectionStatus={connection.status}
-          isStale={connection.isStale}
-          query={controls.view.query}
-          totalCount={controls.view.totalCount}
-          availableRows={availableRows}
-          onCreate={() => controls.startCreation()}
-        />
-        {/* The panel takes room only when a container is failing and we have
+    <Box
+      flexDirection="column"
+      borderStyle="round"
+      borderColor="cyan"
+      padding={1}
+    >
+      <Header
+        visibleCount={controls.view.visible.length}
+        totalCount={controls.view.totalCount}
+        query={controls.view.query}
+        sortMode={controls.view.sortMode}
+        update={{ status: updater.status, latest: updater.latest }}
+      />
+      <Text> </Text>
+      {connection.isStale && (
+        <Text color="yellow">
+          {'⚠ '}
+          {STRINGS.connection.staleWarning}
+        </Text>
+      )}
+      <FilterBar view={controls.view} />
+      <ContainerSection
+        containers={controls.view.visible}
+        // Still a position: ContainerList highlights with `i === selected`,
+        // so this prop cannot become the id until those components change.
+        // Derived from the same selection as the rest of the panel, not a
+        // second source of truth.
+        selected={controls.selected}
+        health={health}
+        connectionStatus={connection.status}
+        isStale={connection.isStale}
+        query={controls.view.query}
+        totalCount={controls.view.totalCount}
+        availableRows={availableRows}
+        onCreate={() => controls.startCreation()}
+      />
+      {/* The panel takes room only when a container is failing and we have
             something to say about it — a deliberate stop gets nothing. */}
-        {showDiagnosis && (
-          <DiagnosticPanel
-            diagnosis={controls.diagnosis}
-            containerName={selectedContainer?.name ?? ''}
-            isLoading={controls.isDiagnosing}
-            fixLabel={controls.diagnosis?.fix?.label ?? null}
-          />
-        )}
-        {showHelpPanel && (
-          <HelpPanel
-            context={controls.helpContext}
-            bindings={controls.helpBindings}
-            maxRows={helpRows}
-          />
-        )}
-        {showLogsPanel && (
-          <LogViewer
-            logs={controls.logs}
-            onExit={controls.exitLogs}
-            container={controls.selectedContainer}
-            height={logLines}
-            scrollOffset={controls.logsScrollOffset}
-            following={controls.logsFollowing}
-            pending={controls.logsPending}
-            search={controls.logsSearch}
-          />
-        )}
-        <Spacer />
-        <MessageFeedback
-          message={controls.message}
-          color={controls.messageColor}
+      {showDiagnosis && (
+        <DiagnosticPanel
+          diagnosis={controls.diagnosis}
+          containerName={selectedContainer?.name ?? ''}
+          isLoading={controls.isDiagnosing}
+          fixLabel={controls.diagnosis?.fix?.label ?? null}
         />
-        <KeyHUD bindings={controls.keymapBindings} />
-        {controls.showDebugLogs && (
-          <Box
-            marginTop={1}
-            flexDirection="column"
-            borderStyle="round"
-            borderColor="gray"
-            padding={1}
-          >
-            <Text color="cyan">{STRINGS.debugTitle}</Text>
-            {controls.debugLogs.length === 0 ? (
-              <Text dimColor>{STRINGS.debugEmpty}</Text>
-            ) : (
-              controls.debugLogs.slice(-15).map((line, idx) => (
-                <Text key={idx} color="gray">
-                  {sanitizeTerminalText(line)}
-                </Text>
-              ))
-            )}
-          </Box>
-        )}
-        <Footer />
-      </Box>
-    </>
+      )}
+      {showHelpPanel && (
+        <HelpPanel
+          context={controls.helpContext}
+          bindings={controls.helpBindings}
+          maxRows={helpRows}
+        />
+      )}
+      {showLogsPanel && (
+        <LogViewer
+          logs={controls.logs}
+          onExit={controls.exitLogs}
+          container={controls.selectedContainer}
+          height={logLines}
+          scrollOffset={controls.logsScrollOffset}
+          following={controls.logsFollowing}
+          pending={controls.logsPending}
+          search={controls.logsSearch}
+        />
+      )}
+      <Spacer />
+      <MessageFeedback
+        message={controls.message}
+        color={controls.messageColor}
+      />
+      <KeyHUD bindings={controls.keymapBindings} />
+      {controls.showDebugLogs && <DebugPanel logs={controls.debugLogs} />}
+      <Footer />
+    </Box>
   );
 }

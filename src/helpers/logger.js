@@ -72,7 +72,7 @@ function log(level, message, ...args) {
   listeners.forEach((listener) => {
     try {
       listener(entry);
-    } catch (err) {
+    } catch (_err) {
       // Ignore listener errors so logging remains resilient.
     }
   });

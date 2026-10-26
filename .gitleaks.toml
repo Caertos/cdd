@@ -1,0 +1,6 @@
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "ruta/ holds personal local notes; it is gitignored and never leaves this machine"
+paths = ['''^ruta/''']

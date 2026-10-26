@@ -2,6 +2,7 @@
  * @jest-environment jsdom
  */
 import React from 'react';
+import { C0_EXCEPT_TAB_AND_DEL, controlCharsIn } from './support/controlChars.js';
 import { render } from '@testing-library/react';
 import { ContainerCreationPrompt } from '../src/components/ContainerCreationPrompt.jsx';
 
@@ -30,7 +31,7 @@ function expectNoControlBytes(text) {
   // escaped bytes are visible there instead of invisible control characters.
   expect(JSON.stringify(text)).not.toMatch(/\\u001b|\\u009b|\\u009d/);
   // No C0 control (but TAB and LF) and no DEL.
-  expect(text).not.toMatch(/[\u0000-\u0008\u000a-\u001f\u007f]/);
+  expect(controlCharsIn(text, C0_EXCEPT_TAB_AND_DEL)).toEqual([]);
 }
 
 /**

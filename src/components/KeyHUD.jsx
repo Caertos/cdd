@@ -50,5 +50,3 @@ export function KeyHUD({ bindings, maxWidth = 80 }) {
     </Box>
   );
 }
-
-export default KeyHUD;

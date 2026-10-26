@@ -79,7 +79,7 @@ describe('IMAGE_PROFILES', () => {
   });
 
   test('every entry has requiredEnv (array), defaultPort (string), and suggestedEnv (array)', () => {
-    for (const [key, profile] of Object.entries(IMAGE_PROFILES)) {
+    for (const [_key, profile] of Object.entries(IMAGE_PROFILES)) {
       expect(Array.isArray(profile.requiredEnv)).toBe(true);
       expect(typeof profile.defaultPort).toBe('string');
       expect(Array.isArray(profile.suggestedEnv)).toBe(true);
@@ -102,15 +102,15 @@ describe('IMAGE_PROFILES', () => {
   });
 
   test('every entry has defaultTag as a non-empty string', () => {
-    for (const [key, profile] of Object.entries(IMAGE_PROFILES)) {
+    for (const [_key, profile] of Object.entries(IMAGE_PROFILES)) {
       expect(typeof profile.defaultTag).toBe('string');
       expect(profile.defaultTag.length).toBeGreaterThan(0);
     }
   });
 
   test('inherited keys do not answer as profiles', () => {
-    expect(IMAGE_PROFILES['constructor']).toBeUndefined();
-    expect(IMAGE_PROFILES['__proto__']).toBeUndefined();
-    expect(IMAGE_PROFILES['toString']).toBeUndefined();
+    expect(IMAGE_PROFILES.constructor).toBeUndefined();
+    expect(Object.getPrototypeOf(IMAGE_PROFILES)).toBeNull();
+    expect(IMAGE_PROFILES.toString).toBeUndefined();
   });
 });

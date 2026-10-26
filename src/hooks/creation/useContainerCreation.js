@@ -79,51 +79,114 @@ function formReducer(state, action) {
  * @returns {{ ok: boolean, error?: string }}
  */
 export function validateStep(step, values, ctx) {
-  const { imageName, containerName, portInput, envInput } = values;
-  const { imageProfiles, dbImages } = ctx;
+  const validator = STEP_VALIDATORS[step];
+  return validator ? validator(values, ctx) : { ok: true };
+}
 
-  if (step === 0) {
-    if (!imageName.trim()) {
-      return { ok: false, error: 'Image name cannot be empty.' };
-    }
-    const imgValidation = validateImageName(imageName);
-    if (!imgValidation.valid) {
-      return { ok: false, error: imgValidation.error };
-    }
-    return { ok: true };
+const OK = { ok: true };
+
+function validateImageStep({ imageName }) {
+  if (!imageName.trim()) {
+    return { ok: false, error: 'Image name cannot be empty.' };
   }
+  const imgValidation = validateImageName(imageName);
+  return imgValidation.valid ? OK : { ok: false, error: imgValidation.error };
+}
 
-  if (step === 1) {
-    if (containerName?.trim()) {
-      const nameValidation = validateContainerName(containerName);
-      if (!nameValidation.valid) {
-        return { ok: false, error: nameValidation.error };
-      }
-    }
-    return { ok: true };
+function validateNameStep({ containerName }) {
+  if (!containerName?.trim()) return OK;
+  const nameValidation = validateContainerName(containerName);
+  return nameValidation.valid ? OK : { ok: false, error: nameValidation.error };
+}
+
+function validatePortStep({ portInput }) {
+  if (portInput.trim() && !validatePorts(portInput)) {
+    return {
+      ok: false,
+      error:
+        'Port format must be host:container and both must be numbers (e.g. 8080:80)',
+    };
   }
+  return OK;
+}
 
-  if (step === 2) {
-    if (portInput.trim() && !validatePorts(portInput)) {
-      return {
-        ok: false,
-        error:
-          'Port format must be host:container and both must be numbers (e.g. 8080:80)',
-      };
-    }
-    return { ok: true };
+function validateEnvStep({ envInput, imageName }, { imageProfiles }) {
+  const result = validateEnvVars(envInput, imageName, imageProfiles);
+  return result.valid ? OK : { ok: false, error: result.errors.join(' | ') };
+}
+
+// Steps without an entry (future steps) always pass
+const STEP_VALIDATORS = {
+  0: validateImageStep,
+  1: validateNameStep,
+  2: validatePortStep,
+  3: validateEnvStep,
+};
+
+/** Normalized container list; [] when Docker is not available. */
+async function loadContainersSafe() {
+  try {
+    const { getContainers } =
+      await import('../../helpers/dockerService/serviceComponents/containerList.js');
+    return await getContainers();
+  } catch {
+    // Docker not available — warnings will be partial
+    return [];
   }
+}
 
-  if (step === 3) {
-    const result = validateEnvVars(envInput, imageName, imageProfiles);
-    if (!result.valid) {
-      return { ok: false, error: result.errors.join(' | ') };
-    }
-    return { ok: true };
+/** Auto-port preview; null when it fails. */
+async function previewPortsSafe(imageName, containers, imageProfiles) {
+  try {
+    return await previewAutoPorts(imageName, containers, imageProfiles);
+  } catch {
+    return null;
   }
+}
 
-  // Steps without validation (1, future steps) always pass
-  return { ok: true };
+/** Whether the image exists locally; null when Docker is not available. */
+async function imageIsLocalSafe(imageName) {
+  try {
+    const { imageExists } =
+      await import('../../helpers/dockerService/serviceComponents/imageUtils.js');
+    return await imageExists(imageName);
+  } catch {
+    // Docker not available — warnings will be partial
+    return null;
+  }
+}
+
+/** Form values read from the form state object. */
+function pickFormValues(f) {
+  return {
+    imageName: f.imageName,
+    containerName: f.containerName,
+    portInput: f.portInput,
+    envInput: f.envInput,
+  };
+}
+
+/**
+ * Validates every step that the prefill/recreate flow skips.
+ * Returns the first error message, or null when all pass.
+ */
+function firstReviewError(values, ctx) {
+  for (const step of [0, 1, 2]) {
+    const result = validateStep(step, values, ctx);
+    if (!result.ok) return result.error;
+  }
+  // Step 3 only checks syntax here (legacy 1-arg form, no required-env) so
+  // a legitimate recreation of a container missing a required var — the
+  // very situation the diagnosis is fixing — is not blocked.
+  if (!validateEnvVars(values.envInput)) {
+    const { errors } = validateEnvVars(
+      values.envInput,
+      values.imageName,
+      ctx.imageProfiles
+    );
+    return errors[0] ?? 'Environment variables contain a syntax error.';
+  }
+  return null;
 }
 
 /**
@@ -252,9 +315,9 @@ export function useContainerCreation({
   const setMessage = (v) => dispatch({ type: 'SET', payload: { message: v } });
   const setMessageColor = (v) =>
     dispatch({ type: 'SET', payload: { messageColor: v } });
-  const setSuggestions = (v) =>
+  const _setSuggestions = (v) =>
     dispatch({ type: 'SET', payload: { suggestions: v } });
-  const setSelectedSuggestionIndex = (fn) => {
+  const _setSelectedSuggestionIndex = (fn) => {
     // Support both direct value and updater function
     if (typeof fn === 'function') {
       dispatch({
@@ -265,7 +328,7 @@ export function useContainerCreation({
       dispatch({ type: 'SET', payload: { selectedSuggestionIndex: fn } });
     }
   };
-  const setVisibleOffset = (fn) => {
+  const _setVisibleOffset = (fn) => {
     if (typeof fn === 'function') {
       dispatch({
         type: 'SET',
@@ -469,7 +532,7 @@ export function useContainerCreation({
       // Ignore stale responses
       if (activeHubRequestRef.current.requestId !== requestId) return;
       setHubResults(results.map(formatHubResult));
-    } catch (err) {
+    } catch (_err) {
       if (activeHubRequestRef.current.requestId !== requestId) return;
       // Silence AbortError; for all other errors fall back to static suggestions
       setHubResults(null);
@@ -574,12 +637,7 @@ export function useContainerCreation({
     const isRecreating = overrideRecreating ?? recreating;
     // A prefill dispatches its values and then calls this; reading formRef
     // instead would get the previous render's values.
-    const currentValues = overrideValues ?? {
-      imageName: f.imageName,
-      containerName: f.containerName,
-      portInput: f.portInput,
-      envInput: f.envInput,
-    };
+    const currentValues = overrideValues ?? pickFormValues(f);
 
     // Advance to step 4 immediately
     dispatch({ type: 'SET', payload: { step: 4 } });
@@ -603,27 +661,18 @@ export function useContainerCreation({
     // One read of the container list, already normalized. buildCreationWarnings
     // and detectPortConflicts both need `name`/`id`/`ports`, which the raw
     // docker.listContainers() shape does not carry — so it could never fire.
-    let containers = [];
-    try {
-      const { getContainers } =
-        await import('../../helpers/dockerService/serviceComponents/containerList.js');
-      containers = await getContainers();
-    } catch {
-      // Docker not available — warnings will be partial
-    }
+    const containers = await loadContainersSafe();
 
     // Preview auto-ports if user left ports empty
     let previewedPorts = null;
     if (!currentValues.portInput.trim()) {
       setIsLoadingPreview(true);
       try {
-        previewedPorts = await previewAutoPorts(
+        previewedPorts = await previewPortsSafe(
           currentValues.imageName,
           containers,
           imageProfiles
         );
-      } catch {
-        previewedPorts = null;
       } finally {
         setIsLoadingPreview(false);
       }
@@ -641,14 +690,7 @@ export function useContainerCreation({
     }
 
     // Build warnings (pure, needs container list + image check)
-    let imageIsLocal = null;
-    try {
-      const { imageExists } =
-        await import('../../helpers/dockerService/serviceComponents/imageUtils.js');
-      imageIsLocal = await imageExists(currentValues.imageName);
-    } catch {
-      // Docker not available — warnings will be partial
-    }
+    const imageIsLocal = await imageIsLocalSafe(currentValues.imageName);
     const warnings = buildCreationWarnings(currentValues, {
       containers,
       imageIsLocal,
@@ -686,12 +728,7 @@ export function useContainerCreation({
   function nextStep() {
     // Read current values from ref (closure values may be stale in batched updates)
     const f = formRef.current;
-    const currentValues = {
-      imageName: f.imageName,
-      containerName: f.containerName,
-      portInput: f.portInput,
-      envInput: f.envInput,
-    };
+    const currentValues = pickFormValues(f);
     const validation = validateStep(f.step, currentValues, stepCtx);
     if (!validation.ok) {
       setTimedMessage(validation.error, 'red');
@@ -713,26 +750,9 @@ export function useContainerCreation({
     // The prefill/recreate flow jumps straight here, so the step checks that
     // the wizard ran on the way in were never applied.
     if (f.step === 4) {
-      for (const step of [0, 1, 2]) {
-        const result = validateStep(step, currentValues, stepCtx);
-        if (!result.ok) {
-          setTimedMessage(result.error, 'red');
-          return;
-        }
-      }
-      // Step 3 only checks syntax here (legacy 1-arg form, no required-env) so
-      // a legitimate recreation of a container missing a required var — the
-      // very situation the diagnosis is fixing — is not blocked.
-      if (!validateEnvVars(currentValues.envInput)) {
-        const { errors } = validateEnvVars(
-          currentValues.envInput,
-          currentValues.imageName,
-          imageProfiles
-        );
-        setTimedMessage(
-          errors[0] ?? 'Environment variables contain a syntax error.',
-          'red'
-        );
+      const reviewError = firstReviewError(currentValues, stepCtx);
+      if (reviewError) {
+        setTimedMessage(reviewError, 'red');
         return;
       }
       safeCall(onCreate, currentValues);
@@ -759,12 +779,7 @@ export function useContainerCreation({
     const f = formRef.current;
     if (f.step <= 0) return;
     dispatch({ type: 'SET', payload: { step: f.step - 1 } });
-    const currentValues = {
-      imageName: f.imageName,
-      containerName: f.containerName,
-      portInput: f.portInput,
-      envInput: f.envInput,
-    };
+    const currentValues = pickFormValues(f);
     const msg = stepMessageFor(f.step - 1, currentValues, stepCtx);
     setStepMessage(msg.text, msg.color);
   }
@@ -778,12 +793,7 @@ export function useContainerCreation({
     if (targetStep < 0 || targetStep >= STEP_COUNT) return;
     dispatch({ type: 'SET', payload: { step: targetStep } });
     const f = formRef.current;
-    const currentValues = {
-      imageName: f.imageName,
-      containerName: f.containerName,
-      portInput: f.portInput,
-      envInput: f.envInput,
-    };
+    const currentValues = pickFormValues(f);
     const msg = stepMessageFor(targetStep, currentValues, stepCtx);
     setStepMessage(msg.text, msg.color);
   }

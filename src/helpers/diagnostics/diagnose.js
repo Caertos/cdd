@@ -47,8 +47,8 @@ const DIAGNOSABLE_CODES = new Set([
  * @param {import('../health.js').HealthVerdict|null} verdict
  * @returns {boolean}
  */
-export function isCleanQuickExit(verdict) {
-  if (!verdict || verdict.code !== 'stopped') return false;
+function isCleanQuickExit(verdict) {
+  if (verdict?.code !== 'stopped') return false;
   const { exitCode, uptimeMs } = verdict.facts ?? {};
   return (
     exitCode === 0 &&
@@ -67,55 +67,49 @@ export function describeWhat(verdict) {
   const facts = verdict?.facts ?? {};
   const code = verdict?.code;
 
-  // A quick death is classed as a crash-loop even when the container has a
-  // restart policy of "no" and has only died once, so "Docker restarts it" is
-  // only true once the restart count says so.
-  const restarted = (facts.restartCount ?? 0) > 0;
-
-  if (code === 'crash-loop' && restarted) {
-    return `It keeps dying${facts.uptimeMs ? ` after ${Math.max(1, Math.round(facts.uptimeMs / 1000))}s` : ''} and Docker restarts it.`;
-  }
-
   if (code === 'crashed' || code === 'crash-loop') {
-    const uptime = facts.uptimeMs;
-    const when =
-      typeof uptime === 'number'
-        ? ` after ${Math.max(1, Math.round(uptime / 1000))}s`
-        : '';
-    return `It died${when} with exit code ${facts.exitCode ?? 'unknown'}.`;
+    return describeDeath(code, facts);
   }
 
   if (code === 'restarting') {
     return `Docker has restarted it ${facts.restartCount ?? 0} times.`;
   }
 
-  if (code === 'unhealthy') {
-    return 'Its own health check reports it as unhealthy.';
-  }
-
-  if (isCleanQuickExit(verdict)) {
+  if (code === 'stopped' && isCleanQuickExit(verdict)) {
     return 'It finished and exited on its own, almost immediately.';
   }
 
-  if (code === 'stopped') {
-    return 'It is stopped.';
-  }
+  return (
+    STATIC_WHAT[code] ??
+    (verdict?.headline
+      ? `Its state is ${verdict.headline}.`
+      : 'Nothing is known about this container.')
+  );
+}
 
-  if (code === 'paused') {
-    return 'It is paused.';
+function describeDeath(code, facts) {
+  // A quick death is classed as a crash-loop even when the container has a
+  // restart policy of "no" and has only died once, so "Docker restarts it" is
+  // only true once the restart count says so.
+  if (code === 'crash-loop' && (facts.restartCount ?? 0) > 0) {
+    return `It keeps dying${facts.uptimeMs ? ` after ${secondsText(facts.uptimeMs)}` : ''} and Docker restarts it.`;
   }
+  const uptime = facts.uptimeMs;
+  const when =
+    typeof uptime === 'number' ? ` after ${secondsText(uptime)}` : '';
+  return `It died${when} with exit code ${facts.exitCode ?? 'unknown'}.`;
+}
 
-  if (code === 'starting') {
-    return 'It is still starting up.';
-  }
+const STATIC_WHAT = {
+  unhealthy: 'Its own health check reports it as unhealthy.',
+  stopped: 'It is stopped.',
+  paused: 'It is paused.',
+  starting: 'It is still starting up.',
+  running: 'It is running.',
+};
 
-  if (code === 'running') {
-    return 'It is running.';
-  }
-
-  return verdict?.headline
-    ? `Its state is ${verdict.headline}.`
-    : 'Nothing is known about this container.';
+function secondsText(ms) {
+  return `${Math.max(1, Math.round(ms / 1000))}s`;
 }
 
 /**

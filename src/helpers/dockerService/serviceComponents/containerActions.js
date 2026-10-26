@@ -42,8 +42,212 @@ export async function removeContainer(containerId) {
     logger.info('Removed container %s', containerId);
   } catch (err) {
     logger.error('Failed to remove container %s', containerId, err);
-    throw new Error('Error removing container: ' + err.message);
+    throw new Error(`Error removing container: ${err.message}`);
   }
+}
+
+/**
+ * @typedef {{containerPort: string, hostPort: string, protocol: string, source: string}} AssignedPort
+ */
+
+/**
+ * Validate the image name and the optional container name.
+ * @param {string} imageName
+ * @param {Object} options
+ * @throws {Error} If either name is invalid
+ */
+function validateCreateInput(imageName, options) {
+  const imgValidation = validateImageName(imageName);
+  if (!imgValidation.valid) {
+    throw new Error(`Invalid image name: ${imgValidation.error}`);
+  }
+  if (options.name) {
+    const nameValidation = validateContainerName(options.name);
+    if (!nameValidation.valid) {
+      throw new Error(`Invalid container name: ${nameValidation.error}`);
+    }
+  }
+}
+
+/**
+ * Make sure the image is available locally, pulling it when missing.
+ * @param {string} imageName
+ * @throws {Error} If the check or the pull fails
+ */
+async function ensureImageAvailable(imageName) {
+  let exists;
+  try {
+    exists = await withTimeout(imageExists(imageName), 10000);
+  } catch (err) {
+    logger.error('Could not check local images for %s', imageName, err);
+    throw new Error(`Error checking local images: ${err.message}`);
+  }
+  if (exists) return;
+  logger.info('Image %s not found locally, pulling', imageName);
+  try {
+    await withTimeout(pullImage(imageName), TIMEOUTS.PULL_IMAGE);
+    logger.info('Pulled image %s', imageName);
+  } catch (err) {
+    logger.error('Failed to pull image %s', imageName, err);
+    throw new Error(`Could not pull image: ${err.message}`);
+  }
+}
+
+/**
+ * Collect the host ports already published by existing containers.
+ * @returns {Promise<Set<*>>}
+ */
+async function collectUsedHostPorts() {
+  const usedHostPorts = new Set();
+  if (typeof docker.listContainers !== 'function') return usedHostPorts;
+  try {
+    const containers = await withTimeout(
+      docker.listContainers({ all: true }),
+      TIMEOUTS.CONTAINER_OP
+    );
+    containers.forEach((container) => {
+      hostPortsOf(container).forEach((port) => {
+        usedHostPorts.add(port);
+      });
+    });
+  } catch (err) {
+    logger.warn('Could not inspect existing containers to auto-map ports', err);
+  }
+  return usedHostPorts;
+}
+
+/**
+ * Ports the image exposes, falling back to the IMAGE_PROFILES defaultPort.
+ * @param {Object} image - Docker image handle
+ * @param {string} imageName
+ * @param {Object} imageProfiles
+ * @returns {Promise<{exposed: Object, exposedKeys: string[]}>}
+ */
+async function resolveExposedPorts(image, imageName, imageProfiles) {
+  const inspectData = await withTimeout(image.inspect(), TIMEOUTS.CONTAINER_OP);
+  let exposed =
+    inspectData?.Config?.ExposedPorts ||
+    inspectData?.ContainerConfig?.ExposedPorts ||
+    {};
+  let exposedKeys = Object.keys(exposed || {});
+
+  // If no ExposedPorts in image, fall back to IMAGE_PROFILES defaultPort
+  if (!exposedKeys.length) {
+    const baseName = normalizeImageName(imageName);
+    const profile = imageProfiles[baseName];
+    if (profile?.defaultPort) {
+      const fallbackKey = `${profile.defaultPort}/tcp`;
+      exposed = { [fallbackKey]: {} };
+      exposedKeys = [fallbackKey];
+    }
+  }
+  return { exposed, exposedKeys };
+}
+
+/**
+ * Publish one exposed port on the next free host port, when it has no binding.
+ * @param {Object} createOpts - Mutated with the new binding
+ * @param {string} portKey - e.g. '80/tcp'
+ * @param {Object} exposed
+ * @param {Set<*>} usedHostPorts
+ * @param {AssignedPort[]} assignedPorts - Receives the auto-assigned port
+ */
+function bindExposedPort(
+  createOpts,
+  portKey,
+  exposed,
+  usedHostPorts,
+  assignedPorts
+) {
+  if (!createOpts.ExposedPorts[portKey]) {
+    createOpts.ExposedPorts[portKey] = exposed[portKey] || {};
+  }
+  if (createOpts.HostConfig.PortBindings[portKey]?.length) return;
+  const parts = portKey.split('/');
+  const containerPort = parts[0];
+  const protocol = parts[1] || 'tcp';
+  const hostPort = findAvailablePort(containerPort, usedHostPorts);
+  if (hostPort === null) {
+    // No free host port left. Leave the port unpublished rather
+    // than binding something Docker would reject.
+    logger.warn(
+      'No free host port at or above %s for %s',
+      containerPort,
+      portKey
+    );
+    return;
+  }
+  createOpts.HostConfig.PortBindings[portKey] = [{ HostPort: hostPort }];
+  assignedPorts.push({
+    containerPort,
+    hostPort,
+    protocol,
+    source: 'auto',
+  });
+}
+
+/**
+ * Auto-map the ports the image exposes. Failures only log a warning.
+ * @param {string} imageName
+ * @param {Object} createOpts - Mutated with ExposedPorts and HostConfig
+ * @param {Object} imageProfiles
+ * @param {AssignedPort[]} assignedPorts - Receives the auto-assigned ports
+ */
+async function autoMapPorts(
+  imageName,
+  createOpts,
+  imageProfiles,
+  assignedPorts
+) {
+  try {
+    const image = docker.getImage(imageName);
+    if (!image || typeof image.inspect !== 'function') return;
+    const usedHostPorts = await collectUsedHostPorts();
+    const { exposed, exposedKeys } = await resolveExposedPorts(
+      image,
+      imageName,
+      imageProfiles
+    );
+    if (!exposedKeys.length) return;
+    createOpts.ExposedPorts = createOpts.ExposedPorts || {};
+    createOpts.HostConfig = { ...(createOpts.HostConfig || {}) };
+    createOpts.HostConfig.PortBindings = {
+      ...(createOpts.HostConfig.PortBindings || {}),
+    };
+    exposedKeys.forEach((portKey) => {
+      bindExposedPort(
+        createOpts,
+        portKey,
+        exposed,
+        usedHostPorts,
+        assignedPorts
+      );
+    });
+  } catch (err) {
+    logger.warn('Could not inspect image %s for default ports', imageName, err);
+  }
+}
+
+/**
+ * Collect the ports the user defined, with source: "user".
+ * @param {Object} createOpts
+ * @param {AssignedPort[]} assignedPorts - Receives the user ports
+ */
+function collectUserPorts(createOpts, assignedPorts) {
+  const portBindings = createOpts.HostConfig?.PortBindings || {};
+  Object.entries(portBindings).forEach(([portKey, bindings]) => {
+    const parts = portKey.split('/');
+    const containerPort = parts[0];
+    const protocol = parts[1] || 'tcp';
+    (bindings || []).forEach((b) => {
+      assignedPorts.push({
+        containerPort,
+        hostPort: b.HostPort,
+        protocol,
+        source: 'user',
+      });
+    });
+  });
 }
 
 /**
@@ -60,38 +264,13 @@ export async function createContainer(
   options = {},
   imageProfiles = IMAGE_PROFILES
 ) {
-  const imgValidation = validateImageName(imageName);
-  if (!imgValidation.valid) {
-    throw new Error(`Invalid image name: ${imgValidation.error}`);
-  }
-  if (options.name) {
-    const nameValidation = validateContainerName(options.name);
-    if (!nameValidation.valid) {
-      throw new Error(`Invalid container name: ${nameValidation.error}`);
-    }
-  }
+  validateCreateInput(imageName, options);
 
   logger.info('Creating container from image %s', imageName);
   if (options.Env?.length) {
     logger.debug('Env vars: %s', redactForLog(options.Env));
   }
-  let exists;
-  try {
-    exists = await withTimeout(imageExists(imageName), 10000);
-  } catch (err) {
-    logger.error('Could not check local images for %s', imageName, err);
-    throw new Error('Error checking local images: ' + err.message);
-  }
-  if (!exists) {
-    logger.info('Image %s not found locally, pulling', imageName);
-    try {
-      await withTimeout(pullImage(imageName), TIMEOUTS.PULL_IMAGE);
-      logger.info('Pulled image %s', imageName);
-    } catch (err) {
-      logger.error('Failed to pull image %s', imageName, err);
-      throw new Error('Could not pull image: ' + err.message);
-    }
-  }
+  await ensureImageAvailable(imageName);
   const createOpts = {
     Image: imageName,
     Tty: true,
@@ -102,120 +281,13 @@ export async function createContainer(
     createOpts.ExposedPorts && Object.keys(createOpts.ExposedPorts).length
   );
 
-  /** @type {Array<{containerPort: string, hostPort: string, protocol: string, source: string}>} */
+  /** @type {AssignedPort[]} */
   const assignedPorts = [];
 
-  if (!hasUserDefinedPorts) {
-    try {
-      const image = docker.getImage(imageName);
-      if (image && typeof image.inspect === 'function') {
-        let usedHostPorts = new Set();
-        if (typeof docker.listContainers === 'function') {
-          try {
-            const containers = await withTimeout(
-              docker.listContainers({ all: true }),
-              TIMEOUTS.CONTAINER_OP
-            );
-            containers.forEach((container) => {
-              hostPortsOf(container).forEach((port) => {
-                usedHostPorts.add(port);
-              });
-            });
-          } catch (err) {
-            logger.warn(
-              'Could not inspect existing containers to auto-map ports',
-              err
-            );
-          }
-        }
-        const pickNextAvailablePort = (base) =>
-          findAvailablePort(base, usedHostPorts);
-
-        const inspectData = await withTimeout(
-          image.inspect(),
-          TIMEOUTS.CONTAINER_OP
-        );
-        let exposed =
-          inspectData?.Config?.ExposedPorts ||
-          inspectData?.ContainerConfig?.ExposedPorts ||
-          {};
-        let exposedKeys = Object.keys(exposed || {});
-
-        // If no ExposedPorts in image, fall back to IMAGE_PROFILES defaultPort
-        if (!exposedKeys.length) {
-          const baseName = normalizeImageName(imageName);
-          const profile = imageProfiles[baseName];
-          if (profile && profile.defaultPort) {
-            const fallbackKey = `${profile.defaultPort}/tcp`;
-            exposed = { [fallbackKey]: {} };
-            exposedKeys = [fallbackKey];
-          }
-        }
-
-        if (exposedKeys.length) {
-          createOpts.ExposedPorts = createOpts.ExposedPorts || {};
-          createOpts.HostConfig = { ...(createOpts.HostConfig || {}) };
-          createOpts.HostConfig.PortBindings = {
-            ...(createOpts.HostConfig.PortBindings || {}),
-          };
-          exposedKeys.forEach((portKey) => {
-            if (!createOpts.ExposedPorts[portKey]) {
-              createOpts.ExposedPorts[portKey] = exposed[portKey] || {};
-            }
-            if (
-              !createOpts.HostConfig.PortBindings[portKey] ||
-              !createOpts.HostConfig.PortBindings[portKey].length
-            ) {
-              const parts = portKey.split('/');
-              const containerPort = parts[0];
-              const protocol = parts[1] || 'tcp';
-              const hostPort = pickNextAvailablePort(containerPort);
-              if (hostPort === null) {
-                // No free host port left. Leave the port unpublished rather
-                // than binding something Docker would reject.
-                logger.warn(
-                  'No free host port at or above %s for %s',
-                  containerPort,
-                  portKey
-                );
-                return;
-              }
-              createOpts.HostConfig.PortBindings[portKey] = [
-                { HostPort: hostPort },
-              ];
-              assignedPorts.push({
-                containerPort,
-                hostPort,
-                protocol,
-                source: 'auto',
-              });
-            }
-          });
-        }
-      }
-    } catch (err) {
-      logger.warn(
-        'Could not inspect image %s for default ports',
-        imageName,
-        err
-      );
-    }
+  if (hasUserDefinedPorts) {
+    collectUserPorts(createOpts, assignedPorts);
   } else {
-    // User-defined ports: collect them with source: "user"
-    const portBindings = createOpts.HostConfig?.PortBindings || {};
-    Object.entries(portBindings).forEach(([portKey, bindings]) => {
-      const parts = portKey.split('/');
-      const containerPort = parts[0];
-      const protocol = parts[1] || 'tcp';
-      (bindings || []).forEach((b) => {
-        assignedPorts.push({
-          containerPort,
-          hostPort: b.HostPort,
-          protocol,
-          source: 'user',
-        });
-      });
-    });
+    await autoMapPorts(imageName, createOpts, imageProfiles, assignedPorts);
   }
 
   try {
@@ -228,7 +300,7 @@ export async function createContainer(
     return { id: containerId, ports: assignedPorts };
   } catch (err) {
     logger.error('Failed to create container from image %s', imageName, err);
-    throw new Error('Error creating container: ' + err.message);
+    throw new Error(`Error creating container: ${err.message}`);
   }
 }
 

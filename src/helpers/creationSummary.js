@@ -52,7 +52,6 @@ export function buildCreationSummary(values, ctx) {
   const { imageName, containerName, portInput, envInput } = values;
   const {
     rawImageInput,
-    imageProfiles,
     previewedPorts,
     changedFields = [],
     recreating = false,
@@ -70,7 +69,7 @@ export function buildCreationSummary(values, ctx) {
   const rows = [];
 
   // — Image —
-  const baseName = normalizeImageName(imageName);
+  const _baseName = normalizeImageName(imageName);
   const imageValues = [imageName];
   let imageOrigin;
   if (rawImageInput && rawImageInput !== imageName) {
@@ -193,110 +192,124 @@ export function detectPortConflicts(portInput, containers) {
 export function buildCreationWarnings(values, ctx) {
   const { imageName, containerName, portInput, envInput } = values;
   const { containers, imageIsLocal, imageProfiles } = ctx;
-  const warnings = [];
+  const profile = imageProfiles[normalizeImageName(imageName)];
 
-  // Image not local
-  if (imageIsLocal === false) {
-    warnings.push({
+  return [
+    ...imagePullWarnings(imageIsLocal),
+    ...portConflictWarnings(portInput, containers),
+    ...nameTakenWarnings(containerName, containers),
+    ...missingEnvWarnings(profile, envInput),
+    ...emptyEnvWarnings(profile, envInput),
+    ...plainSecretWarnings(envInput),
+    ...weakSecretWarnings(envInput),
+  ];
+}
+
+// Image not local
+function imagePullWarnings(imageIsLocal) {
+  if (imageIsLocal !== false) return [];
+  return [
+    {
       kind: 'image-pull',
       level: 'info',
       text: 'The image is not on your machine and will be pulled before creation.',
-    });
-  }
+    },
+  ];
+}
 
-  // Port conflicts
-  const portConflicts = detectPortConflicts(portInput, containers);
-  for (const conflict of portConflicts) {
-    warnings.push({
-      kind: 'port-taken',
+// Port conflicts
+function portConflictWarnings(portInput, containers) {
+  return detectPortConflicts(portInput, containers).map((conflict) => ({
+    kind: 'port-taken',
+    level: 'warn',
+    text: `Host port ${conflict.hostPort} is already used by "${conflict.takenBy}".`,
+  }));
+}
+
+// Name taken
+function nameTakenWarnings(containerName, containers) {
+  if (!containerName?.trim()) return [];
+  const nameTaken = containers.some(
+    (c) => c.name === containerName.trim() || c.id === containerName.trim()
+  );
+  if (!nameTaken) return [];
+  return [
+    {
+      kind: 'name-taken',
+      level: 'block',
+      text: `A container named "${containerName.trim()}" already exists.`,
+    },
+  ];
+}
+
+// Missing required env vars
+function missingEnvWarnings(profile, envInput) {
+  if (!profile?.requiredEnv?.length) return [];
+  const presentKeys = parseEnvPairs(envInput)
+    .map((p) => p.key)
+    .filter(Boolean);
+  const missing = profile.requiredEnv.filter((k) => !presentKeys.includes(k));
+  if (missing.length === 0) return [];
+  return [
+    {
+      kind: 'missing-env',
       level: 'warn',
-      text: `Host port ${conflict.hostPort} is already used by "${conflict.takenBy}".`,
-    });
-  }
+      text: `Missing required env vars: ${missing.join(', ')}.`,
+    },
+  ];
+}
 
-  // Name taken
-  if (containerName?.trim()) {
-    const nameTaken = containers.some(
-      (c) => c.name === containerName.trim() || c.id === containerName.trim()
-    );
-    if (nameTaken) {
-      warnings.push({
-        kind: 'name-taken',
-        level: 'block',
-        text: `A container named "${containerName.trim()}" already exists.`,
-      });
-    }
-  }
-
-  // Missing required env vars
-  const baseName = normalizeImageName(imageName);
-  const profile = imageProfiles[baseName];
-  if (profile?.requiredEnv?.length) {
-    const presentKeys = parseEnvPairs(envInput)
-      .map((p) => p.key)
-      .filter(Boolean);
-    const missing = profile.requiredEnv.filter((k) => !presentKeys.includes(k));
-    if (missing.length > 0) {
-      warnings.push({
-        kind: 'missing-env',
-        level: 'warn',
-        text: `Missing required env vars: ${missing.join(', ')}.`,
-      });
-    }
-  }
-
-  // Required vars that are present but carry no value. Distinct from "missing":
-  // the key is there, and the container will start, fail, and say the very
-  // thing CDD just diagnosed. TASK-8's password fix lands here on purpose —
-  // CDD cannot invent a password — so the review has to say so out loud.
-  if (profile?.requiredEnv?.length) {
-    // Named given, not values: `values` is the wizard-values parameter and
-    // shadowing it here made the two impossible to tell apart.
-    const given = new Map(
-      parseEnvPairs(envInput).map(({ key, value }) => [key, value])
-    );
-    const empty = profile.requiredEnv.filter((k) => {
-      if (!given.has(k)) return false;
-      const v = given.get(k);
-      return v !== null && v.trim() === '';
-    });
-    if (empty.length > 0) {
-      warnings.push({
-        kind: 'missing-env',
-        level: 'warn',
-        text: `Required env var${empty.length === 1 ? '' : 's'} set but empty: ${empty.join(', ')}. Fill ${empty.length === 1 ? 'it' : 'them'} in before creating — the container will fail without ${empty.length === 1 ? 'a value' : 'values'}.`,
-      });
-    }
-  }
-
-  // Secrets in plain text
-  for (const { key, value } of parseEnvPairs(envInput)) {
-    if (value === null) continue;
-    // No value, nothing in plain text: the empty-value warning covers it.
-    if (isSecretKey(key) && value.trim()) {
-      warnings.push({
-        kind: 'secret-plain',
-        level: 'warn',
-        text: `"${key}" contains a secret in plain text.`,
-      });
-    }
-  }
-
-  // Weak secrets
-  const weakSecrets = findWeakSecrets(envInput);
-  for (const { key, reason } of weakSecrets) {
-    const reasonText =
-      reason === 'example'
-        ? 'uses an example value'
-        : reason === 'short'
-          ? 'is too short'
-          : 'uses a common password';
-    warnings.push({
-      kind: 'secret-weak',
+// Required vars that are present but carry no value. Distinct from "missing":
+// the key is there, and the container will start, fail, and say the very
+// thing CDD just diagnosed. TASK-8's password fix lands here on purpose —
+// CDD cannot invent a password — so the review has to say so out loud.
+function emptyEnvWarnings(profile, envInput) {
+  if (!profile?.requiredEnv?.length) return [];
+  // Named given, not values: `values` is the wizard-values parameter and
+  // shadowing it there made the two impossible to tell apart.
+  const given = new Map(
+    parseEnvPairs(envInput).map(({ key, value }) => [key, value])
+  );
+  const empty = profile.requiredEnv.filter((k) => {
+    if (!given.has(k)) return false;
+    const v = given.get(k);
+    return v !== null && v.trim() === '';
+  });
+  if (empty.length === 0) return [];
+  const plural = empty.length !== 1;
+  return [
+    {
+      kind: 'missing-env',
       level: 'warn',
-      text: `"${key}" ${reasonText}. Consider using [Ctrl+G] to generate a strong password.`,
-    });
-  }
+      text: `Required env var${plural ? 's' : ''} set but empty: ${empty.join(', ')}. Fill ${plural ? 'them' : 'it'} in before creating — the container will fail without ${plural ? 'values' : 'a value'}.`,
+    },
+  ];
+}
 
-  return warnings;
+// Secrets in plain text. No value, nothing in plain text: the empty-value
+// warning covers it.
+function plainSecretWarnings(envInput) {
+  return parseEnvPairs(envInput)
+    .filter(
+      ({ key, value }) => value !== null && isSecretKey(key) && value.trim()
+    )
+    .map(({ key }) => ({
+      kind: 'secret-plain',
+      level: 'warn',
+      text: `"${key}" contains a secret in plain text.`,
+    }));
+}
+
+const WEAK_REASON_TEXT = {
+  example: 'uses an example value',
+  short: 'is too short',
+};
+
+// Weak secrets
+function weakSecretWarnings(envInput) {
+  return findWeakSecrets(envInput).map(({ key, reason }) => ({
+    kind: 'secret-weak',
+    level: 'warn',
+    text: `"${key}" ${WEAK_REASON_TEXT[reason] ?? 'uses a common password'}. Consider using [Ctrl+G] to generate a strong password.`,
+  }));
 }

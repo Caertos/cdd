@@ -57,7 +57,7 @@ export default function ContainerRow({
     // Counted in code points: cutting by UTF-16 units would split an emoji
     // in half and leave a lone surrogate on the screen.
     const chars = Array.from(s);
-    return chars.length > max ? chars.slice(0, max - 1).join('') + '…' : s;
+    return chars.length > max ? `${chars.slice(0, max - 1).join('')}…` : s;
   };
 
   const stateInfo = verdict ? verdictText(verdict) : stateText(state);

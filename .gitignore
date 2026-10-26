@@ -39,3 +39,4 @@ ruta/
 
 # CodeGraph local index (per-machine, never committed)
 .codegraph/
+.audit/

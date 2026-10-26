@@ -6,6 +6,9 @@ import { render } from '@testing-library/react';
 import chalk from 'chalk';
 import StatsBar from '../src/components/StatsBar.jsx';
 
+// Built from the ESC code point so the source holds no raw control character.
+const SGR = new RegExp(`${String.fromCharCode(0x1b)}\\[\\d+m`, 'g');
+
 // jsdom has no TTY, so chalk disables colors; force them on for the
 // threshold assertions and restore the level afterwards (tests run in band).
 const previousLevel = chalk.level;
@@ -54,7 +57,7 @@ describe('StatsBar', () => {
   test('every bar is separated from its label and from the next cluster', () => {
     const { container } = render(<StatsBar cpu={100} mem={100} />);
     // chalk is on (level 1), so strip the ANSI codes before comparing.
-    const plain = container.textContent.replace(/\u001b\[\d+m/g, '');
+    const plain = container.textContent.replace(SGR, '');
     expect(plain).toContain('CPU: ▇▇▇▇▇▇ 100%   MEM: ▇▇▇▇▇▇ 100%');
   });
 });

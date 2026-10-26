@@ -48,5 +48,3 @@ export function HelpPanel({ context, bindings, maxRows }) {
     </Box>
   );
 }
-
-export default HelpPanel;

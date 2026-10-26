@@ -1,4 +1,4 @@
-import { randomInt } from 'crypto';
+import { randomInt } from 'node:crypto';
 import { parseEnvPairs, envEntrySpans, formatEnvEntries } from './envInput.js';
 
 /**
@@ -45,7 +45,7 @@ export function timingSafeEqual(a, b) {
  * unambiguous fragments belong here ('OAUTH', 'AUTHORIZATION'); ambiguous
  * ones like 'AUTH' are handled by the whole-word rule below.
  */
-export const SECRET_KEY_PATTERNS = [
+const SECRET_KEY_PATTERNS = [
   'PASSWORD',
   'PASSWD',
   'SECRET',

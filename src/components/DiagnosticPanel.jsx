@@ -1,4 +1,5 @@
 import React from 'react';
+import { withKeys } from '../helpers/listKeys.js';
 import { Box, Text } from 'ink';
 import PropTypes from 'prop-types';
 import { STRINGS } from '../helpers/strings.js';
@@ -73,8 +74,8 @@ export function DiagnosticPanel({
                 <Text> </Text>
                 <Box paddingLeft={2} flexDirection="column">
                   <Text bold>{lastLines}</Text>
-                  {diagnosis.tail.map((line, i) => (
-                    <Text key={i} dimColor>
+                  {withKeys(diagnosis.tail).map(({ item: line, key }) => (
+                    <Text key={key} dimColor>
                       {sanitizeTerminalText(line)}
                     </Text>
                   ))}
@@ -111,5 +112,3 @@ DiagnosticPanel.propTypes = {
   containerName: PropTypes.string,
   isLoading: PropTypes.bool,
 };
-
-export default DiagnosticPanel;

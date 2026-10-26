@@ -5,7 +5,7 @@
  */
 
 /** Highest valid TCP port. */
-export const MAX_PORT = 65535;
+const MAX_PORT = 65535;
 
 /**
  * Host ports published by a container, as strings.

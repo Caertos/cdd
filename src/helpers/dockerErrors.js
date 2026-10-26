@@ -50,6 +50,6 @@ export function classifyDockerError(err, platform = process.platform) {
     title: template.title,
     detail: template.detail,
     hints: template.hints[platform] ?? template.hints.linux,
-    technical: `${code ? code + ': ' : ''}${msg}`,
+    technical: `${code ? `${code}: ` : ''}${msg}`,
   };
 }

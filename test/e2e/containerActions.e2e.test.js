@@ -1,6 +1,6 @@
 import React from 'react';
 import App from '../../src/App.jsx';
-import { renderApp, KEY } from './support/ink.js';
+import { renderApp, } from './support/ink.js';
 import {
   cleanupAll,
   createTestContainer,

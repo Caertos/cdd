@@ -154,12 +154,7 @@ export function evaluateHealth(container, details, now) {
     return verdict('unhealthy', 'warn', STRINGS.health.unhealthy, facts);
   }
 
-  const restarting =
-    details.restarting === true ||
-    (facts.restartCount > HEALTH_THRESHOLDS.RESTART_COUNT_ALERT &&
-      uptime !== null &&
-      uptime < HEALTH_THRESHOLDS.RESTART_WINDOW);
-  if (restarting) {
+  if (isRestarting(details, facts, uptime)) {
     return verdict(
       'restarting',
       'warn',
@@ -181,6 +176,20 @@ export function evaluateHealth(container, details, now) {
     return verdict('running', 'ok', STRINGS.health.running, facts);
   }
 
+  return stoppedVerdict(container, facts, uptime);
+}
+
+function isRestarting(details, facts, uptime) {
+  return (
+    details.restarting === true ||
+    (facts.restartCount > HEALTH_THRESHOLDS.RESTART_COUNT_ALERT &&
+      uptime !== null &&
+      uptime < HEALTH_THRESHOLDS.RESTART_WINDOW)
+  );
+}
+
+/** Verdict for a container that is neither running nor paused. */
+function stoppedVerdict(container, facts, uptime) {
   if (facts.exitCode !== null && facts.exitCode !== 0) {
     if (uptime !== null && uptime < HEALTH_THRESHOLDS.CRASH_LOOP_MAX_UPTIME) {
       return verdict(

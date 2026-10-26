@@ -5,6 +5,7 @@ import {
   sanitizeTerminalText,
   sanitizedCursorIndex,
 } from '../src/helpers/sanitizeTerminalText.js';
+import { C0_AND_C1, controlCharsIn } from './support/controlChars.js';
 
 const ESC = '\u001b';
 const BEL = '\u0007';
@@ -216,9 +217,8 @@ describe('sanitizeTerminalText — properties', () => {
       expect(out).not.toContain(BEL);
       // Only LF, CR and TAB may remain: the controls that mean something
       // inside a line of text.
-      // eslint-disable-next-line no-control-regex
-      expect(out.replace(/[\n\r\t]/g, '')).not.toMatch(
-        /[\u0000-\u001f\u007f-\u009f]/
+      expect(controlCharsIn(out.replace(/[\n\r\t]/g, ''), C0_AND_C1)).toEqual(
+        []
       );
     }
   });

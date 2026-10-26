@@ -1,8 +1,8 @@
 /**
  * @jest-environment node
  */
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
 
 const SRC = path.resolve('src');
 
@@ -24,7 +24,9 @@ function collectInkImports(dir, found = new Set()) {
         .split(',')
         .map((s) => s.trim().split(/\s+as\s+/)[0])
         .filter(Boolean)
-        .forEach((name) => found.add(name));
+        .forEach((name) => {
+          found.add(name);
+        });
     }
   }
   return found;

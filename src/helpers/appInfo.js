@@ -1,6 +1,6 @@
-import { readFileSync } from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 let cachedVersion;
 
@@ -16,7 +16,7 @@ export function getAppVersion() {
     const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf8'));
     cachedVersion = packageJson.version ?? 'unknown';
     return cachedVersion;
-  } catch (error) {
+  } catch (_error) {
     cachedVersion = 'unknown';
     return cachedVersion;
   }
