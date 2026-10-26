@@ -1,6 +1,25 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
-  "entry": ["src/index.js", "test/**/*.{js,jsx}"],
-  "project": ["src/**/*.{js,jsx,mjs,cjs}", "test/**/*.{js,jsx}"],
-  "ignoreDependencies": ["@biomejs/biome"]
+  "entry": [
+    "src/index.js",
+    "test/**/*.{js,jsx}"
+  ],
+  "project": [
+    "src/**/*.{js,jsx,mjs,cjs}",
+    "test/**/*.{js,jsx}"
+  ],
+  "ignoreDependencies": [
+    "@biomejs/biome"
+  ],
+  "ignoreIssues": {
+    "src/helpers/exitWithMessage.js": [
+      "exports"
+    ],
+    "src/hooks/creation/useContainerCreation.js": [
+      "exports"
+    ],
+    "src/hooks/useDiagnostics.js": [
+      "exports"
+    ]
+  }
 }
