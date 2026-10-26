@@ -27,7 +27,7 @@ function setup(onAction = jest.fn()) {
 
 describe('useContainerActions — handleAction', () => {
   beforeEach(() => {
-    Object.values(svc).forEach((fn) => fn.mockReset());
+    for (const fn of Object.values(svc)) fn.mockReset();
   });
 
   test('success: runs the action on the selected id, reports green and calls onAction', async () => {

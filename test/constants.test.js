@@ -110,7 +110,7 @@ describe('IMAGE_PROFILES', () => {
 
   test('inherited keys do not answer as profiles', () => {
     expect(IMAGE_PROFILES.constructor).toBeUndefined();
-    expect(IMAGE_PROFILES.__proto__).toBeUndefined();
+    expect(Object.getPrototypeOf(IMAGE_PROFILES)).toBeNull();
     expect(IMAGE_PROFILES.toString).toBeUndefined();
   });
 });
