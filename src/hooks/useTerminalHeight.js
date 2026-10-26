@@ -52,7 +52,7 @@ export function useTerminalHeight(injectedRows) {
     return () => {
       for (const cleanup of cleanups) cleanup();
     };
-  }, [hasInjected, injectedRows, stdout]);
+  }, [hasInjected, stdout]);
 
   return hasInjected ? injectedRows : rows;
 }

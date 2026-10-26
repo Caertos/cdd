@@ -70,6 +70,72 @@ function startHint(replacement) {
     : '';
 }
 
+/** " | Ports: 80→80/tcp, ..." suffix for the success message, or ''. */
+function formatPortsMessage(ports) {
+  if (!ports?.length) return '';
+  return (
+    ' | Ports: ' +
+    ports
+      .map((p) => `${p.hostPort}→${p.containerPort}/${p.protocol}`)
+      .join(', ')
+  );
+}
+
+/** D24: true unless the container is known to be in a non-stoppable state. */
+function isStoppable(container) {
+  return (
+    !NOT_STOPPABLE_STATES.includes(container?.state) &&
+    !NOT_STOPPABLE_STATES.includes(container?.status)
+  );
+}
+
+/** True when suggestions or Hub results are open in the wizard. */
+function hasOpenList(creation) {
+  return (
+    creation.suggestions.length > 0 || (creation.hubResults ?? []).length > 0
+  );
+}
+
+/** Colour of the message line for an update-flow status. */
+function updateColorFor(status) {
+  if (status === 'updated') return 'green';
+  if (status === 'failed') return 'red';
+  return 'yellow';
+}
+
+/** Message-line text builders per update status; absent for other states. */
+function updateMessageFor(updater) {
+  const { status, current, latest, method, exitCode } = updater;
+  return {
+    confirming: () => STRINGS.update.confirm(current, latest, method.display),
+    updating: () => STRINGS.update.updating,
+    updated: () => STRINGS.update.updated(latest),
+    failed: () => STRINGS.update.failed(exitCode, method.display),
+  }[status];
+}
+
+/** Text shown by the U key when the app cannot update itself. */
+function manualUpdateText(updater) {
+  if (updater.method?.kind === 'npx') {
+    return STRINGS.update.npx(updater.method.display);
+  }
+  return STRINGS.update.manual(updater.latest, updater.method?.display ?? '');
+}
+
+/** Controls inputs that tests can override, with their defaults. */
+function resolveOverrides(overrides) {
+  return {
+    connection: overrides.connection ?? null,
+    launcher: overrides.launcher ?? NOOP_LAUNCHER,
+    updater: overrides.updater ?? NO_UPDATER,
+    health: overrides.health ?? new Map(),
+    // Inspect data that useContainerHealth already fetched. Kept because the
+    // profile-based diagnostic rules need Config.Env, and re-inspecting here
+    // would double the Docker calls for no new information.
+    details: overrides.details ?? new Map(),
+  };
+}
+
 /**
  * Main hook that wires user input, creation, actions and logs viewing.
  * It coordinates the modular hooks and exposes a compact API consumed by the App.
@@ -88,14 +154,8 @@ function startHint(replacement) {
  * @returns {Object} controls - API for the App component
  */
 export function useControls(containers = [], overrides = {}) {
-  const connection = overrides.connection ?? null;
-  const launcher = overrides.launcher ?? NOOP_LAUNCHER;
-  const updater = overrides.updater ?? NO_UPDATER;
-  const health = overrides.health ?? new Map();
-  // Inspect data that useContainerHealth already fetched. Kept because the
-  // profile-based diagnostic rules need Config.Env, and re-inspecting here
-  // would double the Docker calls for no new information.
-  const details = overrides.details ?? new Map();
+  const { connection, launcher, updater, health, details } =
+    resolveOverrides(overrides);
   const [creatingContainer, setCreatingContainer] = React.useState(false);
   const [showHelp, setShowHelp] = React.useState(false);
   // The failed container a recreation supersedes, pending a yes/no.
@@ -132,14 +192,7 @@ export function useControls(containers = [], overrides = {}) {
       actions.setTimedMessage(`Creating container ${imageName}...`, 'yellow');
       try {
         const { id, ports } = await svcCreateContainer(imageName, options);
-        let portMsg = '';
-        if (ports?.length) {
-          portMsg =
-            ' | Ports: ' +
-            ports
-              .map((p) => `${p.hostPort}→${p.containerPort}/${p.protocol}`)
-              .join(', ');
-        }
+        const portMsg = formatPortsMessage(ports);
         const superseded = supersededRef.current;
         supersededRef.current = null;
         if (superseded) {
@@ -202,9 +255,7 @@ export function useControls(containers = [], overrides = {}) {
   // D24: computed once, here, so the keymap predicate only has to read a name.
   // A missing container yields true: `hasSelection` already hides the key, and
   // guessing 'not stoppable' from absent data would take the key away.
-  const canStop =
-    !NOT_STOPPABLE_STATES.includes(selectedContainer?.state) &&
-    !NOT_STOPPABLE_STATES.includes(selectedContainer?.status);
+  const canStop = isStoppable(selectedContainer);
 
   // Allow overrides for testability (e.g. injecting a mock triggerHubSearch)
   const triggerHubSearch =
@@ -297,15 +348,14 @@ export function useControls(containers = [], overrides = {}) {
   }, [selection.lostSelection, questionOnScreen, actions]);
 
   /** Show the "Esc now goes back" hint once per wizard session. */
-  function showBackHintOnce() {
-    if (!backHintShownRef.current) {
-      backHintShownRef.current = true;
-      creation.setMessage(
-        'Esc now goes back one step — to cancel, press Esc from the first step'
-      );
-      creation.setMessageColor('cyan');
-    }
-  }
+  const showBackHintOnce = React.useCallback(() => {
+    if (backHintShownRef.current) return;
+    backHintShownRef.current = true;
+    creation.setMessage(
+      'Esc now goes back one step — to cancel, press Esc from the first step'
+    );
+    creation.setMessageColor('cyan');
+  }, [creation]);
 
   /**
    * Pipe container logs into the viewer while applying a hard limit.
@@ -335,6 +385,12 @@ export function useControls(containers = [], overrides = {}) {
     },
   });
 
+  // Computed in render so the memo below depends on their values rather than on
+  // the creation methods, which are new functions on every render.
+  const hasActiveList = hasOpenList(creation);
+  const isSecretField = creation.isCurrentFieldSecret();
+  const hasSecrets = creation.hasSecretsInEnv();
+
   // Derive UI state for the keymap context
   const uiState = React.useMemo(
     () => ({
@@ -346,14 +402,12 @@ export function useControls(containers = [], overrides = {}) {
       logSearchOpen: logsViewer.search.open,
       isFiltering: view.isFiltering,
       creatingContainer,
-      hasActiveList:
-        creation.suggestions.length > 0 ||
-        (creation.hubResults ?? []).length > 0,
+      hasActiveList,
       showDebugLogs: debugLogs.showDebugLogs,
       hasSelection: Boolean(selection.selectedContainer),
       wizardStep: creation.step,
-      isSecretField: creation.isCurrentFieldSecret(),
-      hasSecrets: creation.hasSecretsInEnv(),
+      isSecretField,
+      hasSecrets,
       disconnected: connection?.status === 'error' && containers.length === 0,
       canLaunch: launcher.canLaunch,
       launchStatus: launcher.status,
@@ -372,10 +426,10 @@ export function useControls(containers = [], overrides = {}) {
       logsViewer.search.open,
       view.isFiltering,
       creatingContainer,
-      creation.suggestions,
-      creation.hubResults,
+      hasActiveList,
       creation.step,
-      creation.envInput,
+      isSecretField,
+      hasSecrets,
       debugLogs.showDebugLogs,
       selection.selectedContainer,
       containers.length,
@@ -630,10 +684,7 @@ export function useControls(containers = [], overrides = {}) {
           creation.cancelHubSearch();
           return;
         }
-        if (
-          creation.suggestions.length > 0 ||
-          (creation.hubResults ?? []).length > 0
-        ) {
+        if (hasOpenList(creation)) {
           creation.closeSuggestions();
           return;
         }
@@ -706,14 +757,7 @@ export function useControls(containers = [], overrides = {}) {
       'app.update': () => {
         if (updater.status === 'failed') updater.acknowledge();
         if (!updater.canSelfUpdate) {
-          const text =
-            updater.method?.kind === 'npx'
-              ? STRINGS.update.npx(updater.method.display)
-              : STRINGS.update.manual(
-                  updater.latest,
-                  updater.method?.display ?? ''
-                );
-          actions.setMessage(text);
+          actions.setMessage(manualUpdateText(updater));
           actions.setMessageColor('yellow');
           return;
         }
@@ -752,6 +796,7 @@ export function useControls(containers = [], overrides = {}) {
       containers,
       view,
       selection.selectedContainer,
+      selection.move,
       actions,
       logsViewer,
       startLogsStream,
@@ -767,26 +812,31 @@ export function useControls(containers = [], overrides = {}) {
       diagnostics,
       pendingCleanup,
       updater,
+      triggerHubSearch,
+      isSearchingHub,
+      insertNextSuggestedEnv,
+      showBackHintOnce,
     ]
   );
 
   // The message line follows the update flow. Keyed on status alone on
-  // purpose: `actions` is a fresh object every render (see dispatch), and the
-  // text only changes when the flow moves between states.
+  // purpose: `updater` is not guaranteed to keep its identity between renders
+  // (nor `actions`, see dispatch), and the text only changes when the flow
+  // moves between states. The latest updater is read through a ref.
+  const updaterRef = React.useRef(updater);
+  updaterRef.current = updater;
+  const updaterStatus = updater.status;
+  const { setMessage: setActionsMessage, setMessageColor: setActionsColor } =
+    actions;
   React.useEffect(() => {
-    const { status, current, latest, method, exitCode } = updater;
-    const text = {
-      confirming: () => STRINGS.update.confirm(current, latest, method.display),
-      updating: () => STRINGS.update.updating,
-      updated: () => STRINGS.update.updated(latest),
-      failed: () => STRINGS.update.failed(exitCode, method.display),
-    }[status];
+    const text = updateMessageFor({
+      ...updaterRef.current,
+      status: updaterStatus,
+    });
     if (!text) return;
-    actions.setMessage(text());
-    actions.setMessageColor(
-      status === 'updated' ? 'green' : status === 'failed' ? 'red' : 'yellow'
-    );
-  }, [updater.status]);
+    setActionsMessage(text());
+    setActionsColor(updateColorFor(updaterStatus));
+  }, [updaterStatus, setActionsMessage, setActionsColor]);
 
   /**
    * The one way a binding takes effect.

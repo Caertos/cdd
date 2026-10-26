@@ -673,10 +673,28 @@ export function getActiveContext(state) {
   if (state.showHelp) return 'help';
   if (state.showLogs) return state.logSearchOpen ? 'logs-search' : 'logs';
   if (state.isFiltering) return 'filter';
-  if (state.creatingContainer && state.confirmDiscard) return 'wizard-discard';
-  if (state.creatingContainer && state.wizardStep === 4) return 'wizard-review';
-  if (state.creatingContainer && state.hasActiveList) return 'wizard-list';
-  if (state.creatingContainer) return 'wizard';
+  if (state.creatingContainer) return getWizardContext(state);
+  return getBaseContext(state);
+}
+
+/**
+ * Context while the container-creation wizard is open.
+ * @param {Object} state
+ * @returns {ContextId}
+ */
+function getWizardContext(state) {
+  if (state.confirmDiscard) return 'wizard-discard';
+  if (state.wizardStep === 4) return 'wizard-review';
+  if (state.hasActiveList) return 'wizard-list';
+  return 'wizard';
+}
+
+/**
+ * Context for the screens below the overlays and the wizard.
+ * @param {Object} state
+ * @returns {ContextId}
+ */
+function getBaseContext(state) {
   if (state.showDebugLogs) return 'debug';
   if (state.confirmQuit) return 'confirm-quit';
   if (state.updateConfirming) return 'confirm-update';
@@ -714,6 +732,23 @@ export function resolveKey(context, input, key, state) {
   return bindings.find((b) => b.keys.includes(name)) ?? null;
 }
 
+/** Ink key flags mapped to key names, in precedence order. */
+const KEY_FLAG_NAMES = [
+  ['upArrow', 'up'],
+  ['downArrow', 'down'],
+  ['leftArrow', 'left'],
+  ['rightArrow', 'right'],
+  ['pageUp', 'pageup'],
+  ['pageDown', 'pagedown'],
+  ['home', 'home'],
+  ['end', 'end'],
+  ['tab', 'tab'],
+  ['escape', 'escape'],
+  ['return', 'enter'],
+  ['delete', 'backspace'],
+  ['backspace', 'backspace'],
+];
+
 /**
  * Normalizes Ink (input, key) to a stable key name.
  * @param {string} input
@@ -722,21 +757,11 @@ export function resolveKey(context, input, key, state) {
  * @returns {string}
  */
 export function keyNameOf(input, key) {
-  if (key.upArrow) return 'up';
-  if (key.downArrow) return 'down';
-  if (key.leftArrow) return 'left';
-  if (key.rightArrow) return 'right';
-  if (key.pageUp) return 'pageup';
-  if (key.pageDown) return 'pagedown';
-  if (key.home) return 'home';
-  if (key.end) return 'end';
-  if (key.tab) return 'tab';
-  if (key.escape) return 'escape';
-  if (key.return) return 'enter';
-  if (key.delete) return 'backspace';
-  if (key.backspace) return 'backspace';
-  if (key.ctrl && input) return `ctrl+${input.toLowerCase()}`;
-  if (key.shift && input) return `shift+${input}`;
+  for (const [flag, name] of KEY_FLAG_NAMES) {
+    if (key[flag]) return name;
+  }
+  if (input && key.ctrl) return `ctrl+${input.toLowerCase()}`;
+  if (input && key.shift) return `shift+${input}`;
   if (input === '\r' || input === '\n') return 'enter';
   return input;
 }

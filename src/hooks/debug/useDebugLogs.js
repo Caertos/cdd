@@ -1,6 +1,16 @@
 import { useState, useEffect } from 'react';
 import { logger } from '../../helpers/logger.js';
 
+function formatLogArg(arg) {
+  if (typeof arg === 'string') return arg;
+  if (typeof arg === 'number' || typeof arg === 'boolean') return String(arg);
+  try {
+    return JSON.stringify(arg);
+  } catch (_err) {
+    return '[unserializable]';
+  }
+}
+
 export function useDebugLogs() {
   const [showDebugLogs, setShowDebugLogs] = useState(false);
   const [debugLogs, setDebugLogs] = useState([]);
@@ -8,18 +18,7 @@ export function useDebugLogs() {
   useEffect(() => {
     const unsubscribe = logger.subscribe((entry) => {
       setDebugLogs((prev) => {
-        const extras = (entry.args || [])
-          .map((arg) => {
-            if (typeof arg === 'string') return arg;
-            if (typeof arg === 'number' || typeof arg === 'boolean')
-              return String(arg);
-            try {
-              return JSON.stringify(arg);
-            } catch (_err) {
-              return '[unserializable]';
-            }
-          })
-          .filter(Boolean);
+        const extras = (entry.args || []).map(formatLogArg).filter(Boolean);
         const line = extras.length
           ? `${entry.formatted} ${extras.join(' ')}`
           : entry.formatted;

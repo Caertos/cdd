@@ -90,6 +90,8 @@ export function useDiagnostics(container, verdict, details = null) {
   }, [key]);
 
   useEffect(() => {
+    // Read only so the effect re-runs when refresh() bumps the nonce.
+    void nonce;
     if (!wanted) {
       setDiagnosis(null);
       setIsLoading(false);
