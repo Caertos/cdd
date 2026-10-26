@@ -15,22 +15,22 @@ function addJsExtensionToImports(filePath) {
   let code = fs.readFileSync(filePath, 'utf8');
 
   // from '...'
-  code = code.replace(/from\s+(['"])(\.{1,2}\/[^'"\)]+?)\1/g, (_m, quote, p) => {
+  code = code.replace(/from\s+(['"])(\.{1,2}\/[^'")]+?)\1/g, (_m, quote, p) => {
     return `from ${quote}${normalizePath(p)}${quote}`;
   });
 
   // side-effect imports: import '...';
-  code = code.replace(/(^|\n)\s*import\s+(['"])(\.{1,2}\/[^'"\)]+?)\2/gm, (_m, pre, quote, p) => {
+  code = code.replace(/(^|\n)\s*import\s+(['"])(\.{1,2}\/[^'")]+?)\2/gm, (_m, pre, quote, p) => {
     return `${pre}import ${quote}${normalizePath(p)}${quote}`;
   });
 
   // export ... from '...'
-  code = code.replace(/export[\s\S]*?from\s+(['"])(\.{1,2}\/[^'"\)]+?)\1/g, (m, _quote, p) => {
+  code = code.replace(/export[\s\S]*?from\s+(['"])(\.{1,2}\/[^'")]+?)\1/g, (m, _quote, p) => {
     return m.replace(p, normalizePath(p));
   });
 
   // dynamic imports import('...')
-  code = code.replace(/import\(\s*(['"])(\.{1,2}\/[^'"\)]+?)\1\s*\)/g, (_m, quote, p) => {
+  code = code.replace(/import\(\s*(['"])(\.{1,2}\/[^'")]+?)\1\s*\)/g, (_m, quote, p) => {
     return `import(${quote}${normalizePath(p)}${quote})`;
   });
 

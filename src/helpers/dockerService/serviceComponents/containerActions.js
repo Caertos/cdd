@@ -109,7 +109,7 @@ export async function createContainer(
     try {
       const image = docker.getImage(imageName);
       if (image && typeof image.inspect === 'function') {
-        let usedHostPorts = new Set();
+        const usedHostPorts = new Set();
         if (typeof docker.listContainers === 'function') {
           try {
             const containers = await withTimeout(

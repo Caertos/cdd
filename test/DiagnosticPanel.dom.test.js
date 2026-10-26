@@ -2,6 +2,7 @@
  * @jest-environment jsdom
  */
 import React from 'react';
+import { C0_EXCEPT_TAB_AND_DEL, controlCharsIn } from './support/controlChars.js';
 import { render } from '@testing-library/react';
 import { DiagnosticPanel } from '../src/components/DiagnosticPanel.jsx';
 
@@ -29,7 +30,7 @@ function expectNoControlBytes(text) {
   expect(JSON.stringify(text)).not.toMatch(/\\u001b|\\u009b|\\u009d/);
   // No C0 control (but TAB) and no DEL: a line feed would break the line of
   // the panel and let the text that follows draw itself as another line.
-  expect(text).not.toMatch(/[\u0000-\u0008\u000a-\u001f\u007f]/);
+  expect(controlCharsIn(text, C0_EXCEPT_TAB_AND_DEL)).toEqual([]);
 }
 
 function diagnosis(overrides = {}) {

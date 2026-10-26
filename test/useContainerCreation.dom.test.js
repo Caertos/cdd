@@ -401,7 +401,7 @@ describe('useContainerCreation — insertNextSuggestedEnv() & hasSuggestedEnv', 
     act(() => { expose.current.nextStep(); });
 
     // manually set all suggested envs
-    const profile = IMAGE_PROFILES['postgres'];
+    const profile = IMAGE_PROFILES.postgres;
     act(() => { expose.current.setEnvInput(profile.suggestedEnv.join(',')); });
 
     act(() => { expose.current.insertNextSuggestedEnv(); });
@@ -581,7 +581,7 @@ describe('useContainerCreation — message auto-clear after timeout', () => {
     act(() => { expose.current.nextStep(); }); // step 2 → 3
 
     // Exhaust all suggested envs then call insertNextSuggestedEnv once more to get 'All suggested' message
-    const profile = IMAGE_PROFILES['postgres'];
+    const profile = IMAGE_PROFILES.postgres;
     act(() => { expose.current.setEnvInput(profile.suggestedEnv.join(',')); });
     act(() => { expose.current.insertNextSuggestedEnv(); });
 

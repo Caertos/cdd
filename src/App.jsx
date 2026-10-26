@@ -157,8 +157,7 @@ export default function App({ rows }) {
 
   if (controls.creatingContainer) {
     return (
-      <>
-        <ContainerCreationPrompt
+      <ContainerCreationPrompt
           step={controls.creationStep}
           imageName={controls.imageNameInput}
           containerName={controls.containerNameInput}
@@ -180,7 +179,6 @@ export default function App({ rows }) {
           isLoadingPreview={controls.creation.isLoadingPreview}
           revealSecrets={controls.creation.revealSecrets}
         />
-      </>
     );
   }
 
@@ -196,8 +194,7 @@ export default function App({ rows }) {
   }
 
   return (
-    <>
-      <Box
+    <Box
         flexDirection="column"
         borderStyle="round"
         borderColor="cyan"
@@ -301,6 +298,5 @@ export default function App({ rows }) {
         )}
         <Footer />
       </Box>
-    </>
   );
 }
