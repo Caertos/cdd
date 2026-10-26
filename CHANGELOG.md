@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [4.12.1] - 2026-10-25
+
+A maintenance release: no change in what CDD does, but a cleaner, audited codebase and patched development dependencies.
+
+### Security
+- **Patched 19 known advisories in development dependencies** (denial of service in `brace-expansion`, `js-yaml`, `markdown-it`, `linkify-it` and `browserslist`, all pulled in by the build and test tooling). They were never part of the published package; `pnpm audit` is now clean.
+
+### Changed
+- **Static audit in the project.** Biome and Knip are now devDependencies with their own configuration, and the codebase passes both with no findings.
+- **Internal cleanups with no behaviour change.** Unused imports, parameters, variables and exports were removed, the 19 functions over the complexity limit were split into smaller helpers, list keys no longer use the array index, hook dependencies are now exhaustive, and the unused `useContainerCommandRouter` hook and `babel-plugin-module-resolver` were dropped. The unit suite (1907 tests) and the end-to-end suite (36 tests, real Docker daemon) pass.
+
 ## [4.12.0] - 2026-10-22
 
 The log viewer becomes scrollable and searchable, and CDD can tell you — and help you — when there is a newer release on npm.
