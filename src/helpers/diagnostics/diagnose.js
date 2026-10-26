@@ -47,7 +47,7 @@ const DIAGNOSABLE_CODES = new Set([
  * @param {import('../health.js').HealthVerdict|null} verdict
  * @returns {boolean}
  */
-export function isCleanQuickExit(verdict) {
+function isCleanQuickExit(verdict) {
   if (verdict?.code !== 'stopped') return false;
   const { exitCode, uptimeMs } = verdict.facts ?? {};
   return (

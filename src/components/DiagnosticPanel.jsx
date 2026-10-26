@@ -112,4 +112,3 @@ DiagnosticPanel.propTypes = {
   isLoading: PropTypes.bool,
 };
 
-export default DiagnosticPanel;

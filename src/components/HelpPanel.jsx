@@ -49,4 +49,3 @@ export function HelpPanel({ context, bindings, maxRows }) {
   );
 }
 
-export default HelpPanel;

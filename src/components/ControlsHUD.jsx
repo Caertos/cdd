@@ -91,5 +91,4 @@ function ControlsHUD({
   );
 }
 
-export default ControlsHUD;
 export { getHints, ControlsHUD };

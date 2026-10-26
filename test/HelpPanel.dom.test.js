@@ -3,7 +3,7 @@
  */
 import React from 'react';
 import { render } from '@testing-library/react';
-import HelpPanel from '../src/components/HelpPanel.jsx';
+import { HelpPanel } from '../src/components/HelpPanel.jsx';
 import { KEYMAP } from '../src/helpers/keymap.js';
 import { STRINGS } from '../src/helpers/strings.js';
 

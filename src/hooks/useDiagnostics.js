@@ -6,7 +6,7 @@ import { normalizeImageName } from '../helpers/imageNameUtils.js';
 import { logger } from '../helpers/logger.js';
 
 /** How many log lines the rules get to read. */
-export const DIAGNOSTIC_LOG_LINES = 50;
+const DIAGNOSTIC_LOG_LINES = 50;
 
 /**
  * Cache key for one failure.

@@ -6,7 +6,7 @@ import path from 'node:path';
 export const PACKAGE_NAME = 'cdd-cli';
 export const REGISTRY_URL = `https://registry.npmjs.org/${PACKAGE_NAME}/latest`;
 export const CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000;
-export const FETCH_TIMEOUT_MS = 3000;
+const FETCH_TIMEOUT_MS = 3000;
 
 // MAJOR.MINOR.PATCH with an optional -prerelease and ignored +build.
 const SEMVER =
