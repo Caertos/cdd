@@ -80,7 +80,7 @@ function formReducer(state, action) {
  */
 export function validateStep(step, values, ctx) {
   const { imageName, containerName, portInput, envInput } = values;
-  const { imageProfiles, dbImages } = ctx;
+  const { imageProfiles } = ctx;
 
   if (step === 0) {
     if (!imageName.trim()) {
@@ -252,9 +252,9 @@ export function useContainerCreation({
   const setMessage = (v) => dispatch({ type: 'SET', payload: { message: v } });
   const setMessageColor = (v) =>
     dispatch({ type: 'SET', payload: { messageColor: v } });
-  const setSuggestions = (v) =>
+  const _setSuggestions = (v) =>
     dispatch({ type: 'SET', payload: { suggestions: v } });
-  const setSelectedSuggestionIndex = (fn) => {
+  const _setSelectedSuggestionIndex = (fn) => {
     // Support both direct value and updater function
     if (typeof fn === 'function') {
       dispatch({
@@ -265,7 +265,7 @@ export function useContainerCreation({
       dispatch({ type: 'SET', payload: { selectedSuggestionIndex: fn } });
     }
   };
-  const setVisibleOffset = (fn) => {
+  const _setVisibleOffset = (fn) => {
     if (typeof fn === 'function') {
       dispatch({
         type: 'SET',
@@ -469,7 +469,7 @@ export function useContainerCreation({
       // Ignore stale responses
       if (activeHubRequestRef.current.requestId !== requestId) return;
       setHubResults(results.map(formatHubResult));
-    } catch (err) {
+    } catch (_err) {
       if (activeHubRequestRef.current.requestId !== requestId) return;
       // Silence AbortError; for all other errors fall back to static suggestions
       setHubResults(null);

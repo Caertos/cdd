@@ -1,4 +1,4 @@
-import { spawn } from 'child_process';
+import { spawn } from 'node:child_process';
 import { docker } from '../dockerService.js';
 import { logger } from '../../logger.js';
 import { TIMEOUTS } from '../../constants.js';
@@ -182,7 +182,7 @@ export function execCommand(containerId, cmd, options = {}) {
           });
 
           stream.on('end', () => {
-            exec.inspect((inspectErr, info) => {
+            exec.inspect((_inspectErr, info) => {
               ok({
                 stdout: stdout.trim(),
                 stderr: stderr.trim(),

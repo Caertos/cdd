@@ -1,7 +1,7 @@
 'use strict';
-const path = require('path');
-const fs = require('fs');
-const { createRequire } = require('module');
+const path = require('node:path');
+const fs = require('node:fs');
+const { createRequire } = require('node:module');
 const pnpmDir = path.join(__dirname, '../node_modules/.pnpm');
 const entry = fs.readdirSync(pnpmDir).find((d) => d.startsWith('@socketregistry+indent-string@'));
 if (!entry) {

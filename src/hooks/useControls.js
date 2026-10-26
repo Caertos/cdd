@@ -133,7 +133,7 @@ export function useControls(containers = [], overrides = {}) {
       try {
         const { id, ports } = await svcCreateContainer(imageName, options);
         let portMsg = '';
-        if (ports && ports.length) {
+        if (ports?.length) {
           portMsg =
             ' | Ports: ' +
             ports

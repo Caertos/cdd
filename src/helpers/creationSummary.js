@@ -52,7 +52,6 @@ export function buildCreationSummary(values, ctx) {
   const { imageName, containerName, portInput, envInput } = values;
   const {
     rawImageInput,
-    imageProfiles,
     previewedPorts,
     changedFields = [],
     recreating = false,
@@ -70,7 +69,7 @@ export function buildCreationSummary(values, ctx) {
   const rows = [];
 
   // — Image —
-  const baseName = normalizeImageName(imageName);
+  const _baseName = normalizeImageName(imageName);
   const imageValues = [imageName];
   let imageOrigin;
   if (rawImageInput && rawImageInput !== imageName) {

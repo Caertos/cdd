@@ -2,7 +2,7 @@
  * @jest-environment node
  */
 import { jest } from '@jest/globals';
-import { EventEmitter } from 'events';
+import { EventEmitter } from 'node:events';
 
 afterEach(() => {
   jest.resetModules();
@@ -51,31 +51,31 @@ describe('detectShell', () => {
   });
 
   test('`which bash` returns a path → "bash"', async () => {
-    const exec = jest.fn((opts, cb) =>
-      cb(null, { start: (o, sc) => sc(null, fakeStream('/bin/bash\n')) })
+    const exec = jest.fn((_opts, cb) =>
+      cb(null, { start: (_o, sc) => sc(null, fakeStream('/bin/bash\n')) })
     );
     const { detectShell } = await loadExec(exec);
     await expect(detectShell('a'.repeat(64))).resolves.toBe('bash');
   });
 
   test('`which bash` empty → falls back to "sh"', async () => {
-    const exec = jest.fn((opts, cb) =>
-      cb(null, { start: (o, sc) => sc(null, fakeStream('')) })
+    const exec = jest.fn((_opts, cb) =>
+      cb(null, { start: (_o, sc) => sc(null, fakeStream('')) })
     );
     const { detectShell } = await loadExec(exec);
     await expect(detectShell('a'.repeat(64))).resolves.toBe('sh');
   });
 
   test('exec fails → falls back to "sh" without propagating', async () => {
-    const exec = jest.fn((opts, cb) => cb(new Error('no such container')));
+    const exec = jest.fn((_opts, cb) => cb(new Error('no such container')));
     const { detectShell } = await loadExec(exec);
     await expect(detectShell('a'.repeat(64))).resolves.toBe('sh');
   });
 
   // §5.1-residual (D14)
   test('leaves no pending timers after resolving', async () => {
-    const exec = jest.fn((opts, cb) =>
-      cb(null, { start: (o, sc) => sc(null, fakeStream('/bin/bash\n')) })
+    const exec = jest.fn((_opts, cb) =>
+      cb(null, { start: (_o, sc) => sc(null, fakeStream('/bin/bash\n')) })
     );
     const { detectShell } = await loadExec(exec);
     await detectShell('a'.repeat(64));
@@ -139,9 +139,9 @@ describe('execInteractive', () => {
 
 describe('execCommand', () => {
   test('successful command → stdout and exitCode', async () => {
-    const exec = jest.fn((opts, cb) =>
+    const exec = jest.fn((_opts, cb) =>
       cb(null, {
-        start: (o, sc) => sc(null, fakeStream('hola\n')),
+        start: (_o, sc) => sc(null, fakeStream('hola\n')),
         inspect: (icb) => icb(null, { ExitCode: 0 }),
       })
     );
@@ -154,9 +154,9 @@ describe('execCommand', () => {
   });
 
   test('inspect without info → exitCode -1', async () => {
-    const exec = jest.fn((opts, cb) =>
+    const exec = jest.fn((_opts, cb) =>
       cb(null, {
-        start: (o, sc) => sc(null, fakeStream('x')),
+        start: (_o, sc) => sc(null, fakeStream('x')),
         inspect: (icb) => icb(new Error('gone')),
       })
     );
@@ -165,14 +165,14 @@ describe('execCommand', () => {
   });
 
   test('error creating exec → "Exec create failed"', async () => {
-    const exec = jest.fn((opts, cb) => cb(new Error('boom')));
+    const exec = jest.fn((_opts, cb) => cb(new Error('boom')));
     const { execCommand } = await loadExec(exec);
     await expect(execCommand('cid', ['x'])).rejects.toThrow('Exec create failed: boom');
   });
 
   test('error starting exec → "Exec start failed"', async () => {
-    const exec = jest.fn((opts, cb) =>
-      cb(null, { start: (o, sc) => sc(new Error('nope')) })
+    const exec = jest.fn((_opts, cb) =>
+      cb(null, { start: (_o, sc) => sc(new Error('nope')) })
     );
     const { execCommand } = await loadExec(exec);
     await expect(execCommand('cid', ['x'])).rejects.toThrow('Exec start failed: nope');
@@ -180,8 +180,8 @@ describe('execCommand', () => {
 
   test('stream error → "Stream error"', async () => {
     const s = new EventEmitter();
-    const exec = jest.fn((opts, cb) =>
-      cb(null, { start: (o, sc) => sc(null, s), inspect: jest.fn() })
+    const exec = jest.fn((_opts, cb) =>
+      cb(null, { start: (_o, sc) => sc(null, s), inspect: jest.fn() })
     );
     const { execCommand } = await loadExec(exec);
     const p = execCommand('cid', ['x']);
@@ -192,9 +192,9 @@ describe('execCommand', () => {
   // Control for the D14 case below: same harness, resolves normally.
   test('command with timeout option still resolves', async () => {
     jest.useFakeTimers({ doNotFake: ['setImmediate'] });
-    const exec = jest.fn((opts, cb) =>
+    const exec = jest.fn((_opts, cb) =>
       cb(null, {
-        start: (o, sc) => sc(null, fakeStream('ok')),
+        start: (_o, sc) => sc(null, fakeStream('ok')),
         inspect: (icb) => icb(null, { ExitCode: 0 }),
       })
     );
@@ -207,9 +207,9 @@ describe('execCommand', () => {
   // §5.1-residual (D14)
   test('clears the timeout timer when the command resolves first', async () => {
     jest.useFakeTimers({ doNotFake: ['setImmediate'] });
-    const exec = jest.fn((opts, cb) =>
+    const exec = jest.fn((_opts, cb) =>
       cb(null, {
-        start: (o, sc) => sc(null, fakeStream('ok')),
+        start: (_o, sc) => sc(null, fakeStream('ok')),
         inspect: (icb) => icb(null, { ExitCode: 0 }),
       })
     );
@@ -220,9 +220,9 @@ describe('execCommand', () => {
 
   // Documents a known limitation (see §5.6 note on multiplexed streams).
   test('stderr is ALWAYS empty: multiplexed stream is not demultiplexed', async () => {
-    const exec = jest.fn((opts, cb) =>
+    const exec = jest.fn((_opts, cb) =>
       cb(null, {
-        start: (o, sc) => sc(null, fakeStream('error output')),
+        start: (_o, sc) => sc(null, fakeStream('error output')),
         inspect: (icb) => icb(null, { ExitCode: 1 }),
       })
     );
@@ -233,9 +233,9 @@ describe('execCommand', () => {
   });
 
   test('execCommand does NOT validate containerId (unlike detectShell)', async () => {
-    const exec = jest.fn((opts, cb) =>
+    const exec = jest.fn((_opts, cb) =>
       cb(null, {
-        start: (o, sc) => sc(null, fakeStream('')),
+        start: (_o, sc) => sc(null, fakeStream('')),
         inspect: (icb) => icb(null, { ExitCode: 0 }),
       })
     );

@@ -48,7 +48,7 @@ const DIAGNOSABLE_CODES = new Set([
  * @returns {boolean}
  */
 export function isCleanQuickExit(verdict) {
-  if (!verdict || verdict.code !== 'stopped') return false;
+  if (verdict?.code !== 'stopped') return false;
   const { exitCode, uptimeMs } = verdict.facts ?? {};
   return (
     exitCode === 0 &&

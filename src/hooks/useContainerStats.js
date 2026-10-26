@@ -35,7 +35,7 @@ export function useContainerStats(id, state) {
           setStats(s);
           setStatsError('');
         }
-      } catch (err) {
+      } catch (_err) {
         if (isMounted) {
           setStats(DEFAULT_STATS);
           setStatsError('Error fetching stats');

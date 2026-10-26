@@ -51,7 +51,7 @@ export function CreationSummary({
                     they are text CDD did not write. */}
                 {sanitizeTerminalText(
                   row.values
-                    .map((v, vi) => {
+                    .map((v, _vi) => {
                       // For env rows, apply reveal logic
                       if (row.key === 'env') {
                         const eqIdx = v.indexOf('=');

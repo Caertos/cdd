@@ -683,7 +683,7 @@ describe('useControls — pressing C calls resetCreation BEFORE onStartCreate', 
   });
 
   test('pressing C resets creation state before entering creation mode', () => {
-    const callOrder = [];
+    const _callOrder = [];
     const expose = { current: null };
 
     // We render with no overrides, but we can spy on the internal calls
@@ -754,7 +754,7 @@ describe('useControls — D3 fix: hubResults navigation', () => {
     });
 
     // Simulate hubResults being set (normally from triggerHubSearch)
-    const mockHubResults = ['nginx', 'nginx-alpine', 'nginx-unstable'];
+    const _mockHubResults = ['nginx', 'nginx-alpine', 'nginx-unstable'];
     act(() => {
       expose.current.creation.updateImageInput('ng');
       // Directly set hubResults via the hook's internal state

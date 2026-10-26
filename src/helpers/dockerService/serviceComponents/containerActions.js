@@ -42,7 +42,7 @@ export async function removeContainer(containerId) {
     logger.info('Removed container %s', containerId);
   } catch (err) {
     logger.error('Failed to remove container %s', containerId, err);
-    throw new Error('Error removing container: ' + err.message);
+    throw new Error(`Error removing container: ${err.message}`);
   }
 }
 
@@ -80,7 +80,7 @@ export async function createContainer(
     exists = await withTimeout(imageExists(imageName), 10000);
   } catch (err) {
     logger.error('Could not check local images for %s', imageName, err);
-    throw new Error('Error checking local images: ' + err.message);
+    throw new Error(`Error checking local images: ${err.message}`);
   }
   if (!exists) {
     logger.info('Image %s not found locally, pulling', imageName);
@@ -89,7 +89,7 @@ export async function createContainer(
       logger.info('Pulled image %s', imageName);
     } catch (err) {
       logger.error('Failed to pull image %s', imageName, err);
-      throw new Error('Could not pull image: ' + err.message);
+      throw new Error(`Could not pull image: ${err.message}`);
     }
   }
   const createOpts = {
@@ -145,7 +145,7 @@ export async function createContainer(
         if (!exposedKeys.length) {
           const baseName = normalizeImageName(imageName);
           const profile = imageProfiles[baseName];
-          if (profile && profile.defaultPort) {
+          if (profile?.defaultPort) {
             const fallbackKey = `${profile.defaultPort}/tcp`;
             exposed = { [fallbackKey]: {} };
             exposedKeys = [fallbackKey];
@@ -163,8 +163,7 @@ export async function createContainer(
               createOpts.ExposedPorts[portKey] = exposed[portKey] || {};
             }
             if (
-              !createOpts.HostConfig.PortBindings[portKey] ||
-              !createOpts.HostConfig.PortBindings[portKey].length
+              !createOpts.HostConfig.PortBindings[portKey]?.length
             ) {
               const parts = portKey.split('/');
               const containerPort = parts[0];
@@ -228,7 +227,7 @@ export async function createContainer(
     return { id: containerId, ports: assignedPorts };
   } catch (err) {
     logger.error('Failed to create container from image %s', imageName, err);
-    throw new Error('Error creating container: ' + err.message);
+    throw new Error(`Error creating container: ${err.message}`);
   }
 }
 

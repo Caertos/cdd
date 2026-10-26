@@ -15,7 +15,7 @@ export function useDebugLogs() {
               return String(arg);
             try {
               return JSON.stringify(arg);
-            } catch (err) {
+            } catch (_err) {
               return '[unserializable]';
             }
           })

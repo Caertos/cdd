@@ -1,10 +1,23 @@
 {
   "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
-  "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
-  "files": {
-    "includes": ["**", "!**/pnpm-lock.yaml", "!**/dist", "!**/build", "!**/coverage", "!**/*.min.js"]
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
   },
-  "formatter": { "enabled": true },
+  "files": {
+    "includes": [
+      "**",
+      "!**/pnpm-lock.yaml",
+      "!**/dist",
+      "!**/build",
+      "!**/coverage",
+      "!**/*.min.js"
+    ]
+  },
+  "formatter": {
+    "enabled": false
+  },
   "linter": {
     "enabled": true,
     "rules": {
@@ -12,9 +25,17 @@
       "complexity": {
         "noExcessiveCognitiveComplexity": {
           "level": "error",
-          "options": { "maxAllowedComplexity": 15 }
+          "options": {
+            "maxAllowedComplexity": 15
+          }
         }
       }
     }
+  },
+  "assist": {
+    "enabled": false
+  },
+  "javascript": {
+    "jsxRuntime": "reactClassic"
   }
 }

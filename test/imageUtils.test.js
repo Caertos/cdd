@@ -106,15 +106,15 @@ describe('imageExists', () => {
 describe('pullImage', () => {
   test('successful pull → resolves', async () => {
     const { pullImage } = await loadImageUtils({
-      pull: jest.fn((name, cb) => cb(null, 'stream')),
-      modem: { followProgress: jest.fn((stream, done) => done(null)) },
+      pull: jest.fn((_name, cb) => cb(null, 'stream')),
+      modem: { followProgress: jest.fn((_stream, done) => done(null)) },
     });
     await expect(pullImage('nginx')).resolves.toBeUndefined();
   });
 
   test('pull error → rejects with "Error pulling image"', async () => {
     const { pullImage } = await loadImageUtils({
-      pull: jest.fn((name, cb) => cb(new Error('denied'))),
+      pull: jest.fn((_name, cb) => cb(new Error('denied'))),
       modem: { followProgress: jest.fn() },
     });
     await expect(pullImage('nginx')).rejects.toThrow('Error pulling image: denied');
@@ -122,8 +122,8 @@ describe('pullImage', () => {
 
   test('error during stream → rejects with "Error during pull"', async () => {
     const { pullImage } = await loadImageUtils({
-      pull: jest.fn((name, cb) => cb(null, 'stream')),
-      modem: { followProgress: jest.fn((s, done) => done(new Error('eof'))) },
+      pull: jest.fn((_name, cb) => cb(null, 'stream')),
+      modem: { followProgress: jest.fn((_s, done) => done(new Error('eof'))) },
     });
     await expect(pullImage('nginx')).rejects.toThrow('Error during pull: eof');
   });
