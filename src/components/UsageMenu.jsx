@@ -1,5 +1,6 @@
 import React from 'react';
 import { Box, Text } from 'ink';
+import { withKeys } from '../helpers/listKeys.js';
 
 const SHORTCUTS = [
   'Use ↑/↓ for navigation',
@@ -34,19 +35,19 @@ export default function UsageMenu() {
   return (
     <Box flexDirection="column" marginTop={1}>
       <Box flexDirection="row">
-        {columns.map((column, columnIndex) => (
-          <Box
-            key={`shortcut-column-${columnIndex}`}
-            flexDirection="column"
-            marginRight={columnIndex === columns.length - 1 ? 0 : 3}
-          >
-            {column.map((shortcut, rowIndex) => (
-              <Text key={`shortcut-${columnIndex}-${rowIndex}`}>
-                {shortcut}
-              </Text>
-            ))}
-          </Box>
-        ))}
+        {withKeys(columns, (column) => column.join('\n')).map(
+          ({ item: column, key: columnKey }, columnIndex) => (
+            <Box
+              key={columnKey}
+              flexDirection="column"
+              marginRight={columnIndex === columns.length - 1 ? 0 : 3}
+            >
+              {withKeys(column).map(({ item: shortcut, key }) => (
+                <Text key={key}>{shortcut}</Text>
+              ))}
+            </Box>
+          )
+        )}
       </Box>
     </Box>
   );

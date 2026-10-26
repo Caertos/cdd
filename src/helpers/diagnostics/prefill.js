@@ -163,40 +163,11 @@ export function applyFix(values, fix, ctx = {}) {
   const changedFields = [];
 
   if (fix && fix.kind === 'add-env') {
-    const additions = Object.entries(fix.patch?.env ?? {});
-    const entries = envEntries(next.envInput);
-    const present = new Set(entries.map(envKey));
-    for (const [key, value] of additions) {
-      if (present.has(key)) continue;
-      // Always with the '=' sign. A bare "KEY" made validateEnvVars report a
-      // syntax error for something the diagnosis itself had written, and left
-      // Docker receiving a valueless variable.
-      entries.push(`${key}=${value}`);
-      present.add(key);
-      changedFields.push('envInput');
-    }
-    if (changedFields.length > 0) {
-      // Re-escape the values so a comma inside one of them stays part of that
-      // entry instead of splitting the list.
-      next.envInput = formatEnvEntries(entries);
-    }
+    applyAddEnv(next, fix, changedFields);
   }
 
   if (fix && fix.kind === 'change-port') {
-    const used = new Set(ctx.usedHostPorts ?? []);
-    for (const [hostPort] of Object.entries(fix.patch?.ports ?? {})) {
-      const replacement = findAvailablePort(hostPort, used);
-      if (replacement === null) continue;
-      const pairs = (next.portInput || '')
-        .split(',')
-        .map((s) => s.trim())
-        .filter(Boolean);
-      const at = pairs.findIndex((pair) => pair.split(':')[0] === hostPort);
-      if (at === -1) continue;
-      pairs[at] = `${replacement}:${pairs[at].split(':')[1]}`;
-      next.portInput = pairs.join(',');
-      changedFields.push('portInput');
-    }
+    applyChangePort(next, fix, ctx, changedFields);
   }
 
   // A failed container still owns its name, so recreating needs a free one.
@@ -207,4 +178,43 @@ export function applyFix(values, fix, ctx = {}) {
   }
 
   return { values: next, changedFields: [...new Set(changedFields)] };
+}
+
+/** Append the fix's missing env vars to `next.envInput` (mutates both args). */
+function applyAddEnv(next, fix, changedFields) {
+  const additions = Object.entries(fix.patch?.env ?? {});
+  const entries = envEntries(next.envInput);
+  const present = new Set(entries.map(envKey));
+  for (const [key, value] of additions) {
+    if (present.has(key)) continue;
+    // Always with the '=' sign. A bare "KEY" made validateEnvVars report a
+    // syntax error for something the diagnosis itself had written, and left
+    // Docker receiving a valueless variable.
+    entries.push(`${key}=${value}`);
+    present.add(key);
+    changedFields.push('envInput');
+  }
+  if (changedFields.length > 0) {
+    // Re-escape the values so a comma inside one of them stays part of that
+    // entry instead of splitting the list.
+    next.envInput = formatEnvEntries(entries);
+  }
+}
+
+/** Move each conflicting host port in `next.portInput` (mutates both args). */
+function applyChangePort(next, fix, ctx, changedFields) {
+  const used = new Set(ctx.usedHostPorts ?? []);
+  for (const [hostPort] of Object.entries(fix.patch?.ports ?? {})) {
+    const replacement = findAvailablePort(hostPort, used);
+    if (replacement === null) continue;
+    const pairs = (next.portInput || '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const at = pairs.findIndex((pair) => pair.split(':')[0] === hostPort);
+    if (at === -1) continue;
+    pairs[at] = `${replacement}:${pairs[at].split(':')[1]}`;
+    next.portInput = pairs.join(',');
+    changedFields.push('portInput');
+  }
 }

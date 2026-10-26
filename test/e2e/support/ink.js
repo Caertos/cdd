@@ -16,10 +16,15 @@ export const KEY = {
   ctrlR: '\u0012',
 };
 
-// ANSI escape-sequence stripper (strip-ansi equivalent).
-const ANSI =
-  // eslint-disable-next-line no-control-regex
-  /[\u001b\u009b][[\]()#;?]*(?:(?:(?:[a-zA-Z\d]*(?:;[-a-zA-Z\d/#&.:=?%@~_]*)*)?\u0007)|(?:(?:\d{1,4}(?:;\d{0,4})*)?[\dA-PR-TZcf-nq-uy=><~]))/g;
+// ANSI escape-sequence stripper (strip-ansi equivalent). Control characters
+// are interpolated from their code points so the source holds none raw.
+const ESC = String.fromCharCode(0x1b);
+const CSI = String.fromCharCode(0x9b);
+const BEL = String.fromCharCode(0x07);
+const ANSI = new RegExp(
+  `[${ESC}${CSI}][[\\]()#;?]*(?:(?:(?:[a-zA-Z\\d]*(?:;[-a-zA-Z\\d/#&.:=?%@~_]*)*)?${BEL})|(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PR-TZcf-nq-uy=><~]))`,
+  'g'
+);
 
 export const stripAnsi = (s) => String(s ?? '').replace(ANSI, '');
 

@@ -24,7 +24,9 @@ function collectInkImports(dir, found = new Set()) {
         .split(',')
         .map((s) => s.trim().split(/\s+as\s+/)[0])
         .filter(Boolean)
-        .forEach((name) => found.add(name));
+        .forEach((name) => {
+          found.add(name);
+        });
     }
   }
   return found;

@@ -49,8 +49,10 @@ export function useTerminalHeight(injectedRows) {
       cleanups.push(() => process.removeListener('SIGWINCH', update));
     }
 
-    return () => cleanups.forEach((cleanup) => cleanup());
-  }, [hasInjected, injectedRows, stdout]);
+    return () => {
+      for (const cleanup of cleanups) cleanup();
+    };
+  }, [hasInjected, stdout]);
 
   return hasInjected ? injectedRows : rows;
 }

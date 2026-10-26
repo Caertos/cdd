@@ -172,7 +172,7 @@ export function execCommand(containerId, cmd, options = {}) {
           const fail = settle(reject);
 
           let stdout = '';
-          let stderr = '';
+          const stderr = '';
 
           stream.on('data', (chunk) => {
             const str = chunk.toString();

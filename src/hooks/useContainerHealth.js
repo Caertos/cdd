@@ -31,6 +31,8 @@ export function useContainerHealth(containers) {
   const cacheRef = useRef(new Map());
 
   useEffect(() => {
+    // Read only so the effect re-runs when refresh() bumps the token.
+    void refreshToken;
     const list = Array.isArray(containers) ? containers : [];
     const now = Date.now();
 

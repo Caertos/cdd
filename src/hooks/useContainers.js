@@ -13,6 +13,8 @@ export function useContainers() {
   const [containers, setContainers] = useState([]);
 
   useEffect(() => {
+    // Read only so a retry (new token) refetches immediately.
+    void connection.retryToken;
     let alive = true;
     const fetch = async () => {
       try {
@@ -41,7 +43,7 @@ export function useContainers() {
       alive = false;
       clearInterval(timer);
     };
-  }, [connection.status, connection.retryToken]);
+  }, [connection.status, connection.retryToken, connection.reportResult]);
 
   return { containers, connection };
 }

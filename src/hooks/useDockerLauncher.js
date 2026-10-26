@@ -12,6 +12,14 @@ import { STRINGS } from '../helpers/strings.js';
 const LAUNCH_TIMEOUT_MS = 90000;
 const LAUNCH_POLL_MS = 2000;
 
+function pickLauncher(method, launchDocker, launchDockerElevated) {
+  return method.needsPrivileges ? launchDockerElevated : launchDocker;
+}
+
+function launchFailureMessage(message) {
+  return message || STRINGS.dockerLauncher.launchFailed;
+}
+
 /**
  * State machine that drives the "start Docker" flow.
  *
@@ -115,16 +123,14 @@ export function useDockerLauncher(overrides = {}) {
     abortRef.current = controller;
 
     try {
-      const launch = method.needsPrivileges
-        ? launchDockerElevated
-        : launchDocker;
+      const launch = pickLauncher(method, launchDocker, launchDockerElevated);
       const result = await launch(method);
 
       if (!mountedRef.current) return;
 
       if (!result.started) {
         abortRef.current = null;
-        setError(result.error || STRINGS.dockerLauncher.launchFailed);
+        setError(launchFailureMessage(result.error));
         setStatus('failed');
         return;
       }
@@ -134,7 +140,7 @@ export function useDockerLauncher(overrides = {}) {
     } catch (err) {
       if (!mountedRef.current) return;
       abortRef.current = null;
-      setError(err?.message || STRINGS.dockerLauncher.launchFailed);
+      setError(launchFailureMessage(err?.message));
       setStatus('failed');
     }
   }, [status, method, launchDocker, launchDockerElevated, runWait]);

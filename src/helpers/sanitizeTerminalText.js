@@ -156,38 +156,49 @@ function sanitizeString(text) {
 
     if (code === CHAR_ESC) {
       i = skipEscape(text, i);
-      continue;
-    }
-
-    if (code >= C1_FIRST && code <= C1_LAST) {
+    } else if (code >= C1_FIRST && code <= C1_LAST) {
       // The control is going away; its latin-1 shadow goes with it.
       out = dropLatin1Shadow(out);
-      if (code === C1_CSI) {
-        i = skipCsi(text, i + 1);
-        continue;
-      }
-      if (code === C1_OSC) {
-        i = skipStringSequence(text, i + 1);
-        continue;
-      }
+      i = skipC1(text, i, code);
+    } else if (isDroppedControl(text, i, code)) {
       i += 1;
-      continue;
-    }
-
-    if (
-      code === CHAR_BEL ||
-      code === CHAR_DEL ||
-      (code < 0x20 && !KEPT_C0.has(text[i]))
-    ) {
+    } else {
+      out += text[i];
       i += 1;
-      continue;
     }
-
-    out += text[i];
-    i += 1;
   }
 
   return out;
+}
+
+/**
+ * Position after a C1 control and the sequence it introduces.
+ *
+ * @param {string} text
+ * @param {number} i - Position of the C1 control
+ * @param {number} code - Code of the C1 control
+ * @returns {number}
+ */
+function skipC1(text, i, code) {
+  if (code === C1_CSI) return skipCsi(text, i + 1);
+  if (code === C1_OSC) return skipStringSequence(text, i + 1);
+  return i + 1;
+}
+
+/**
+ * Whether a single character is a control that is removed on its own.
+ *
+ * @param {string} text
+ * @param {number} i
+ * @param {number} code
+ * @returns {boolean}
+ */
+function isDroppedControl(text, i, code) {
+  return (
+    code === CHAR_BEL ||
+    code === CHAR_DEL ||
+    (code < 0x20 && !KEPT_C0.has(text[i]))
+  );
 }
 
 /**

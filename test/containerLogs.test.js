@@ -2,6 +2,7 @@
  * @jest-environment node
  */
 import { jest } from '@jest/globals';
+import { C0_BEFORE_TAB, controlCharsIn } from './support/controlChars.js';
 import { EventEmitter } from 'node:events';
 
 afterEach(() => jest.resetModules());
@@ -403,7 +404,7 @@ describe('getLogsTail', () => {
       'superuser password is not specified.',
     ]);
     for (const line of lines) {
-      expect(line).not.toMatch(/[\u0000-\u0008]/);
+      expect(controlCharsIn(line, C0_BEFORE_TAB)).toEqual([]);
     }
   });
 

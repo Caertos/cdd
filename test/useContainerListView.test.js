@@ -55,9 +55,9 @@ describe('useContainerListView', () => {
     const { result } = renderHook(() => useContainerListView([web]));
     act(() => result.current.openFilter());
     const enter = result.current.handleFilterKey('', { return: true });
-    const escape = result.current.handleFilterKey('', { escape: true });
+    const escapeKey = result.current.handleFilterKey('', { escape: true });
     expect(enter).toBe(false);
-    expect(escape).toBe(false);
+    expect(escapeKey).toBe(false);
   });
 
   test('keys are ignored while the field is closed', () => {

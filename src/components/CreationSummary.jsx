@@ -15,6 +15,45 @@ const WARNING_COLORS = {
 };
 
 /**
+ * Masks the value of a secret env entry unless the user chose to reveal it.
+ * Non-env rows and non-secret entries pass through untouched.
+ *
+ * @param {string} rowKey
+ * @param {string} v
+ * @param {boolean} revealSecrets
+ * @returns {string}
+ */
+function displayValue(rowKey, v, revealSecrets) {
+  if (rowKey !== 'env') return v;
+  const eqIdx = v.indexOf('=');
+  if (eqIdx === -1) return v;
+  const key = v.slice(0, eqIdx);
+  const value = v.slice(eqIdx + 1).trim();
+  // An empty secret has nothing to mask or reveal.
+  const hasValue = value !== '' && value !== EMPTY_VALUE;
+  if (!isSecretKey(key) || !hasValue) return v;
+  // Show masked with Ctrl+R hint
+  return revealSecrets ? v : `${key}=•••••• [^R]`;
+}
+
+/**
+ * Pairs each warning with a key built from its content plus how many times
+ * the same content appeared before it, so duplicates stay unique and stable.
+ *
+ * @param {Array<{kind: string, text: string}>} warnings
+ * @returns {Array<{warning: object, key: string}>}
+ */
+function keyedWarnings(warnings) {
+  const seen = new Map();
+  return warnings.map((warning) => {
+    const base = `${warning.kind}:${warning.text}`;
+    const count = seen.get(base) ?? 0;
+    seen.set(base, count + 1);
+    return { warning, key: `${base}#${count}` };
+  });
+}
+
+/**
  * Displays the creation summary table with rows, origins, and warnings.
  *
  * @param {Object} props
@@ -51,27 +90,7 @@ export function CreationSummary({
                     they are text CDD did not write. */}
                 {sanitizeTerminalText(
                   row.values
-                    .map((v, _vi) => {
-                      // For env rows, apply reveal logic
-                      if (row.key === 'env') {
-                        const eqIdx = v.indexOf('=');
-                        if (eqIdx !== -1) {
-                          const key = v.slice(0, eqIdx);
-                          const value = v.slice(eqIdx + 1).trim();
-                          // An empty secret has nothing to mask or reveal.
-                          const hasValue =
-                            value !== '' && value !== EMPTY_VALUE;
-                          if (isSecretKey(key) && hasValue) {
-                            if (revealSecrets) {
-                              return v; // Show full value
-                            }
-                            // Show masked with Ctrl+R hint
-                            return `${key}=•••••• [^R]`;
-                          }
-                        }
-                      }
-                      return v;
-                    })
+                    .map((v) => displayValue(row.key, v, revealSecrets))
                     .join(', ')
                 )}
               </Text>
@@ -98,8 +117,8 @@ export function CreationSummary({
       )}
       {warnings.length > 0 && (
         <Box flexDirection="column" paddingTop={1}>
-          {warnings.map((w, idx) => (
-            <Text key={idx} color={WARNING_COLORS[w.kind] || 'yellow'}>
+          {keyedWarnings(warnings).map(({ warning: w, key }) => (
+            <Text key={key} color={WARNING_COLORS[w.kind] || 'yellow'}>
               {'⚠ '} {sanitizeTerminalText(w.text)}
             </Text>
           ))}

@@ -32,7 +32,9 @@ describe('formatKeyName', () => {
   test('no multi-letter key name in the KEYMAP is shown raw', () => {
     const names = new Set();
     for (const bindings of Object.values(KEYMAP)) {
-      for (const b of bindings) b.keys.forEach((k) => names.add(k));
+      for (const b of bindings) {
+        for (const k of b.keys) names.add(k);
+      }
     }
     const raw = [...names].filter(
       (k) => k.length > 1 && /^[a-z]/.test(k) && formatKeyName(k) === k

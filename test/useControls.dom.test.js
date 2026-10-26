@@ -10,10 +10,14 @@ let _inputHandler = null;
 const triggerInput = (input, key = {}) => {
   if (_inputHandler) _inputHandler(input, key);
 };
+const MockBox = ({ children, ...props }) =>
+  React.createElement('div', props, children);
+const MockText = ({ children }) => React.createElement('span', null, children);
+const MockSpacer = () => React.createElement('div', null);
 await jest.unstable_mockModule('ink', () => ({
-  Box: ({ children, ...props }) => React.createElement('div', props, children),
-  Text: ({ children }) => React.createElement('span', null, children),
-  Spacer: () => React.createElement('div', null),
+  Box: MockBox,
+  Text: MockText,
+  Spacer: MockSpacer,
   useInput: (fn) => {
     _inputHandler = fn;
   },

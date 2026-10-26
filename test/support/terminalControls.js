@@ -11,6 +11,8 @@
  * the absence of the control bytes, so that is what these helpers check
  * first.
  */
+import { C0_EXCEPT_TAB_AND_C1, controlCharsIn } from './controlChars.js';
+
 
 /** ESC — the introducer of every escape sequence. */
 export const ESC = '\u001b';
@@ -84,8 +86,7 @@ export function expectNoControlBytes(text) {
   expect(text).not.toContain(ESC);
   expect(text).not.toContain(C1_CSI);
   expect(text).not.toContain(C1_OSC);
-  // eslint-disable-next-line no-control-regex
-  expect(text).not.toMatch(/[\u0000-\u0008\u000a-\u001f\u007f-\u009f]/);
+  expect(controlCharsIn(text, C0_EXCEPT_TAB_AND_C1)).toEqual([]);
 }
 
 /**
