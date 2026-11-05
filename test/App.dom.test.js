@@ -19,6 +19,8 @@ import {
 let view = null;
 let activeView = 'containers';
 let showLogs = false;
+let creatingContainer = false;
+let showHelp = false;
 const freshConnection = () => ({
   status: 'ok',
   error: null,
@@ -73,7 +75,7 @@ await jest.unstable_mockModule('../src/hooks/useControls.js', () => ({
     showLogs,
     logs: [],
     exitLogs: jest.fn(),
-    creatingContainer: false,
+    creatingContainer,
     startCreation: jest.fn(),
     diagnosis: null,
     isDiagnosing: false,
@@ -100,10 +102,10 @@ await jest.unstable_mockModule('../src/hooks/useControls.js', () => ({
     confirmQuit: false,
     showDebugLogs: false,
     debugLogs: [],
-    showHelp: false,
+    showHelp,
     context: 'list',
     keymapBindings: [],
-    helpContext: 'list',
+    helpContext: creatingContainer ? 'wizard' : 'list',
     helpBindings: [],
     handlers: {},
     dispatch: jest.fn(),
@@ -117,6 +119,8 @@ const { default: App } = await import('../src/App.jsx');
 beforeEach(() => {
   activeView = 'containers';
   showLogs = false;
+  creatingContainer = false;
+  showHelp = false;
   connectionState = freshConnection();
   containersList = [];
 });
@@ -315,5 +319,28 @@ describe('App — the shell (TASK-12)', () => {
     expect(getByText('1 Containers')).toBeTruthy();
     expect(getByText('2 Projects')).toBeTruthy();
     expect(getByText('3 Images')).toBeTruthy();
+  });
+
+  test('shows the wizard inside the shell, keeping the header and the tabs', () => {
+    creatingContainer = true;
+    showHelp = false;
+    const { getByText } = renderShell();
+    expect(getByText(/Step 1 of/)).toBeTruthy();
+    expect(getByText('1 Containers')).toBeTruthy();
+    expect(getByText('2 Projects')).toBeTruthy();
+    expect(getByText('3 Images')).toBeTruthy();
+    expect(getByText(/0 containers found/)).toBeTruthy();
+  });
+
+  test('shows the help inside the shell while the wizard is open', () => {
+    creatingContainer = true;
+    showHelp = true;
+    const { getByText, queryByText } = renderShell();
+    expect(getByText(/Help —/)).toBeTruthy();
+    expect(queryByText(/Step 1 of/)).toBeNull();
+    expect(getByText('1 Containers')).toBeTruthy();
+    expect(getByText('2 Projects')).toBeTruthy();
+    expect(getByText('3 Images')).toBeTruthy();
+    expect(getByText(/0 containers found/)).toBeTruthy();
   });
 });
