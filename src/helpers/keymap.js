@@ -257,7 +257,7 @@ export const KEYMAP = {
     },
     {
       id: 'wizard.tab',
-      keys: ['tab'],
+      keys: ['tab', 'shift+tab'],
       label: 'Suggest',
       help: 'Search Hub or insert env var',
       priority: 85,

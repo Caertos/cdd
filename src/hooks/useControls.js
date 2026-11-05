@@ -30,6 +30,7 @@ import { DB_IMAGES } from '../helpers/constants.js';
 import { STRINGS } from '../helpers/strings.js';
 import { useContainerListView } from './useContainerListView.js';
 import { useDiagnostics } from './useDiagnostics.js';
+import { useViewRouter } from './useViewRouter.js';
 import {
   getActiveContext,
   getBindings,
@@ -160,6 +161,9 @@ function resolveOverrides(overrides) {
 export function useControls(containers = [], overrides = {}) {
   const { connection, launcher, updater, health, details } =
     resolveOverrides(overrides);
+  // Called unconditionally: the active top-level view is part of the keymap
+  // context, so every render needs it.
+  const router = useViewRouter();
   const [creatingContainer, setCreatingContainer] = React.useState(false);
   const [showHelp, setShowHelp] = React.useState(false);
   // The failed container a recreation supersedes, pending a yes/no.
@@ -424,8 +428,10 @@ export function useControls(containers = [], overrides = {}) {
       confirmCleanup: pendingCleanup !== null,
       updateStatus: updater.status,
       updateConfirming: updater.status === 'confirming',
+      view: router.view,
     }),
     [
+      router.view,
       eraseConfirmation.confirmErase,
       discardConfirmation.active,
       quitConfirmation.active,
@@ -666,6 +672,12 @@ export function useControls(containers = [], overrides = {}) {
         actions.setMessageColor('yellow');
       },
       'app.help': () => setShowHelp((prev) => !prev),
+      'view.next': () => router.nextView(),
+      'view.prev': () => router.prevView(),
+      'view.goto': (digit) => {
+        const target = router.views[Number(digit) - 1];
+        if (target) router.setView(target.id);
+      },
 
       // Wizard context
       'wizard.next': () => {
@@ -827,6 +839,10 @@ export function useControls(containers = [], overrides = {}) {
       isSearchingHub,
       insertNextSuggestedEnv,
       showBackHintOnce,
+      router.nextView,
+      router.prevView,
+      router.setView,
+      router.views,
     ]
   );
 
@@ -858,9 +874,11 @@ export function useControls(containers = [], overrides = {}) {
    * rule cannot be bypassed by reaching a handler another way.
    *
    * @param {string} bindingId
+   * @param {string} [input] - The typed character, for bindings that read it
+   *   (view.goto takes the digit pressed).
    */
   const dispatch = React.useCallback(
-    (bindingId) => {
+    (bindingId, input) => {
       if (pendingCleanup && !bindingId.startsWith('cleanup.')) {
         setPendingCleanup(null);
         // The question is gone; leaving its text behind would invite the very
@@ -870,7 +888,7 @@ export function useControls(containers = [], overrides = {}) {
         }
       }
       const handler = handlers[bindingId];
-      if (handler) handler();
+      if (handler) handler(input);
     },
     // `actions` is a fresh object every render (useContainerActions returns a
     // new literal), so this callback is recreated too. That is harmless — the
@@ -916,7 +934,7 @@ export function useControls(containers = [], overrides = {}) {
 
     const binding = resolveKey(ctx, input, key, uiState);
     if (binding) {
-      dispatch(binding.id);
+      dispatch(binding.id, input);
     }
   });
 
@@ -968,6 +986,11 @@ export function useControls(containers = [], overrides = {}) {
     showHelp,
     context,
     keymapBindings,
+    // The top-level view (containers, projects, images). `view` above is the
+    // list ordering, so the router's value is exposed under its own names.
+    activeView: router.view,
+    views: router.views,
+    setActiveView: router.setView,
     // Title source for the help panel: the context underneath it.
     helpContext,
     helpBindings,
