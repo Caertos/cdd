@@ -300,6 +300,9 @@ export const STRINGS = {
     back: 'Back',
   },
 
+  // ── Views ──
+  views: { containers: 'Containers', projects: 'Projects', images: 'Images' },
+
   // ── Validation ──
   validation: {
     containerNameTooLong: 'Container name too long (max 128 chars)',
