@@ -23,6 +23,8 @@ import {
   logViewLines,
   helpPanelRows,
   MIN_LIST_ROWS_WITH_DIAGNOSIS,
+  HELP_CHROME_ROWS,
+  BASE_CHROME_ROWS,
 } from './helpers/reservedRows.js';
 import { AppShell } from './components/AppShell.jsx';
 import { ViewTabs } from './components/ViewTabs.jsx';
@@ -140,20 +142,31 @@ export default function App({ rows }) {
     }
   }, [launcher.status, connection.retry, launcher.reset]);
 
-  // The wizard's height is not measured here, so its help still takes the
-  // screen: stacking it under a prompt of unknown height could overflow.
-  if (controls.showHelp && controls.creatingContainer) {
+  // Connection error with no cached data — show the connection screen. The
+  // wizard is checked first: an open wizard stays in the shell.
+  if (
+    !controls.creatingContainer &&
+    connection.status === 'error' &&
+    containers.length === 0
+  ) {
     return (
-      <HelpPanel
-        context={controls.helpContext}
-        bindings={controls.helpBindings}
-        maxRows={terminalRows}
+      <ConnectionNotice
+        error={connection.error}
+        nextRetryIn={connection.nextRetryIn}
+        launcher={launcher}
       />
     );
   }
 
+  let viewContent;
   if (controls.creatingContainer) {
-    return (
+    viewContent = controls.showHelp ? (
+      <HelpPanel
+        context={controls.helpContext}
+        bindings={controls.helpBindings}
+        maxRows={Math.max(HELP_CHROME_ROWS + 1, terminalRows - BASE_CHROME_ROWS)}
+      />
+    ) : (
       <ContainerCreationPrompt
         step={controls.creationStep}
         imageName={controls.imageNameInput}
@@ -177,21 +190,7 @@ export default function App({ rows }) {
         revealSecrets={controls.creation.revealSecrets}
       />
     );
-  }
-
-  // Connection error with no cached data — show the connection screen
-  if (connection.status === 'error' && containers.length === 0) {
-    return (
-      <ConnectionNotice
-        error={connection.error}
-        nextRetryIn={connection.nextRetryIn}
-        launcher={launcher}
-      />
-    );
-  }
-
-  let viewContent;
-  if (controls.activeView === 'projects') {
+  } else if (controls.activeView === 'projects') {
     viewContent = <ProjectsView />;
   } else if (controls.activeView === 'images') {
     viewContent = <ImagesView />;
@@ -228,7 +227,7 @@ export default function App({ rows }) {
       }
       nav={<ViewTabs views={controls.views} active={controls.activeView} />}
       content={viewContent}
-      hud={<KeyHUD bindings={controls.keymapBindings} />}
+      hud={controls.creatingContainer ? null : <KeyHUD bindings={controls.keymapBindings} />}
       footer={<Footer />}
     />
   );
