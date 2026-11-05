@@ -17,17 +17,22 @@ import {
 // are mocked so the test can put a hostile query in the filter field without
 // a Docker daemon behind it, and so the field is the only thing on screen.
 let view = null;
+let activeView = 'containers';
+let showLogs = false;
+const freshConnection = () => ({
+  status: 'ok',
+  error: null,
+  isStale: false,
+  nextRetryIn: 0,
+  retry: jest.fn(),
+});
+let connectionState = freshConnection();
+let containersList = [];
 
 await jest.unstable_mockModule('../src/hooks/useContainers.js', () => ({
   useContainers: () => ({
-    containers: [],
-    connection: {
-      status: 'ok',
-      error: null,
-      isStale: false,
-      nextRetryIn: 0,
-      retry: jest.fn(),
-    },
+    containers: containersList,
+    connection: connectionState,
   }),
 }));
 
@@ -56,9 +61,16 @@ await jest.unstable_mockModule('../src/hooks/useControls.js', () => ({
     selected: 0,
     selectedContainer: null,
     view,
+    activeView,
+    views: [
+      { id: 'containers', title: STRINGS.views.containers, enabled: true, shortcut: 1 },
+      { id: 'projects', title: STRINGS.views.projects, enabled: false, shortcut: 2 },
+      { id: 'images', title: STRINGS.views.images, enabled: false, shortcut: 3 },
+    ],
+    setActiveView: jest.fn(),
     message: '',
     messageColor: 'gray',
-    showLogs: false,
+    showLogs,
     logs: [],
     exitLogs: jest.fn(),
     creatingContainer: false,
@@ -98,7 +110,16 @@ await jest.unstable_mockModule('../src/hooks/useControls.js', () => ({
   }),
 }));
 
+// Imported after the mocks; the mock factories read it only at render time.
+const { STRINGS } = await import('../src/helpers/strings.js');
 const { default: App } = await import('../src/App.jsx');
+
+beforeEach(() => {
+  activeView = 'containers';
+  showLogs = false;
+  connectionState = freshConnection();
+  containersList = [];
+});
 
 /**
  * Render the app with the filter field open on `query`, the caret at
@@ -214,5 +235,80 @@ describe('sanitizedCursorIndex — the position on screen', () => {
 
   test('the caret cannot be negative', () => {
     expect(sanitizedCursorIndex('abc', -1)).toBe(-1);
+  });
+});
+
+/** Render the app with the shell's default state: no filter, list view. */
+function renderShell() {
+  view = {
+    visible: [],
+    totalCount: 0,
+    query: '',
+    cursor: 0,
+    isFiltering: false,
+    sortMode: 'state',
+  };
+  return render(<App />);
+}
+
+// The shell frames every view: the tabs sit next to the list and the logs
+// panel, and only the full-screen connection notice replaces them.
+describe('App — the shell (TASK-12)', () => {
+  test('shows the three tabs next to the list', () => {
+    const { getByText } = renderShell();
+    expect(getByText('1 Containers')).toBeTruthy();
+    expect(getByText('2 Projects')).toBeTruthy();
+    expect(getByText('3 Images')).toBeTruthy();
+    expect(getByText('1 Containers').getAttribute('data-inverse')).toBe('true');
+    expect(getByText('2 Projects').getAttribute('data-inverse')).toBeNull();
+    expect(getByText('3 Images').getAttribute('data-inverse')).toBeNull();
+  });
+
+  test('shows the projects placeholder on the projects view', () => {
+    activeView = 'projects';
+    const { getByText } = renderShell();
+    expect(getByText(STRINGS.views.projectsPlaceholder)).toBeTruthy();
+    expect(getByText('1 Containers')).toBeTruthy();
+    expect(getByText('2 Projects')).toBeTruthy();
+    expect(getByText('3 Images')).toBeTruthy();
+    expect(getByText('2 Projects').getAttribute('data-inverse')).toBe('true');
+  });
+
+  test('shows the images placeholder on the images view', () => {
+    activeView = 'images';
+    const { getByText } = renderShell();
+    expect(getByText(STRINGS.views.imagesPlaceholder)).toBeTruthy();
+    expect(getByText('1 Containers')).toBeTruthy();
+    expect(getByText('2 Projects')).toBeTruthy();
+    expect(getByText('3 Images')).toBeTruthy();
+    expect(getByText('3 Images').getAttribute('data-inverse')).toBe('true');
+  });
+
+  test('keeps the full-screen connection notice and drops the tabs', () => {
+    connectionState = {
+      status: 'error',
+      error: {
+        kind: 'not-running',
+        title: 'Cannot reach Docker',
+        detail: 'The Docker service is not running.',
+        hints: [],
+        technical: 'ENOENT',
+      },
+      isStale: false,
+      nextRetryIn: 5,
+      retry: jest.fn(),
+    };
+    containersList = [];
+    const { getByText, queryByText } = renderShell();
+    expect(getByText('Cannot reach Docker')).toBeTruthy();
+    expect(queryByText('1 Containers')).toBeNull();
+  });
+
+  test('keeps the tabs while the logs panel is open', () => {
+    showLogs = true;
+    const { getByText } = renderShell();
+    expect(getByText('1 Containers')).toBeTruthy();
+    expect(getByText('2 Projects')).toBeTruthy();
+    expect(getByText('3 Images')).toBeTruthy();
   });
 });

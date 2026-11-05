@@ -53,6 +53,10 @@ describe('reservedRows', () => {
     );
   });
 
+  test('reserves a row for the view tabs', () => {
+    expect(BASE_CHROME_ROWS).toBeGreaterThanOrEqual(13);
+  });
+
   test('sums every option when several are present', () => {
     expect(
       reservedRows({
