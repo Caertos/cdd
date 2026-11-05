@@ -2317,6 +2317,54 @@ describe('D9 — closing the viewer actually closes the log stream', () => {
   });
 });
 
+describe('TASK-11 — what the viewer asks for depends on the container', () => {
+  const base = { image: 'nginx', status: '', ports: [] };
+  const running = { ...base, id: 'c-run', name: 'vivo', state: 'running' };
+  const exited = { ...base, id: 'c-exit', name: 'parado', state: 'exited' };
+
+  beforeEach(() => {
+    mockGetLogsStream.mockClear();
+    mockGetLogsStream.mockImplementation(() => ({ stop: jest.fn() }));
+  });
+
+  test('a running container asks for the last 2000 lines', async () => {
+    const expose = { current: null };
+    render(<HookTester containers={[running]} expose={expose} />);
+    await act(async () => {});
+    await act(async () => {
+      expose.current.dispatch('container.logs');
+    });
+
+    expect(mockGetLogsStream).toHaveBeenCalledWith(
+      'c-run',
+      expect.any(Function),
+      expect.any(Function),
+      expect.any(Function),
+      { tail: 2000 }
+    );
+    await act(async () => {
+      mockGetLogsStream.mock.calls[0][1]('first\n');
+    });
+    expect(expose.current.logsViewer.headNotice.kind).toBe('partial');
+  });
+
+  test('a stopped container is read whole and says where the log starts', async () => {
+    const expose = { current: null };
+    render(<HookTester containers={[exited]} expose={expose} />);
+    await act(async () => {});
+    await act(async () => {
+      expose.current.dispatch('container.logs');
+    });
+
+    expect(mockGetLogsStream.mock.calls[0][4]).toEqual({ tail: 'all' });
+    await act(async () => {
+      mockGetLogsStream.mock.calls[0][1]('first\nsecond\n');
+    });
+    expect(expose.current.logsViewer.headNotice.kind).toBe('complete');
+    expect(expose.current.logsHead.kind).toBe('complete');
+  });
+});
+
 describe('useControls — the update key (TASK-20)', () => {
   const NPM_METHOD = {
     kind: 'npm',

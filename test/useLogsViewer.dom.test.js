@@ -280,3 +280,84 @@ describe('useLogsViewer — filter', () => {
     expect(hook.result.current.search.matchCount).toBe(0);
   });
 });
+
+describe('useLogsViewer — retention buffer (TASK-11)', () => {
+  const MB = 1024 * 1024;
+  const bigLine = (n) => `${String(n).padStart(3, '0')}${'x'.repeat(900 * 1024)}`;
+
+  test('an empty viewer has nothing to announce', () => {
+    const hook = renderHook(() => useLogsViewer());
+    act(() => hook.result.current.openLogs());
+    expect(hook.result.current.headNotice).toEqual({ text: '', kind: 'empty' });
+  });
+
+  test('a viewer opened on a whole log says it is the start', () => {
+    const hook = renderHook(() => useLogsViewer());
+    act(() => {
+      hook.result.current.openLogs({ reachedStart: true });
+      hook.result.current.appendLogs(['a', 'b']);
+    });
+    expect(hook.result.current.headNotice.kind).toBe('complete');
+  });
+
+  test('a viewer opened on a tail does not claim the start', () => {
+    const hook = renderHook(() => useLogsViewer());
+    act(() => {
+      hook.result.current.openLogs();
+      hook.result.current.appendLogs(['a', 'b']);
+    });
+    expect(hook.result.current.headNotice.kind).toBe('partial');
+  });
+
+  test('the old 1000-line cut is gone: 5000 short lines are all kept', () => {
+    const hook = renderHook(() => useLogsViewer());
+    act(() => {
+      hook.result.current.openLogs({ reachedStart: true });
+      hook.result.current.appendLogs(lines(5000));
+    });
+    expect(hook.result.current.logs).toHaveLength(5000);
+    expect(hook.result.current.headNotice.kind).toBe('complete');
+  });
+
+  test('past the byte ceiling the oldest lines go and the notice says so', () => {
+    const hook = renderHook(() => useLogsViewer());
+    act(() => {
+      hook.result.current.openLogs({ reachedStart: true });
+      hook.result.current.appendLogs(
+        Array.from({ length: 20 }, (_, i) => bigLine(i))
+      );
+    });
+    const { logs, headNotice } = hook.result.current;
+    expect(logs.length).toBeLessThan(20);
+    expect(logs[logs.length - 1].startsWith('019')).toBe(true);
+    expect(logs[0].startsWith('000')).toBe(false);
+    expect(headNotice.kind).toBe('dropped');
+    expect(headNotice.text).toContain(`${20 - logs.length}`);
+    expect(
+      logs.reduce((n, l) => n + Buffer.byteLength(l), 0)
+    ).toBeLessThanOrEqual(16 * MB);
+  });
+
+  test('closing the viewer empties the buffer and the notice', () => {
+    const hook = renderHook(() => useLogsViewer());
+    act(() => {
+      hook.result.current.openLogs({ reachedStart: true });
+      hook.result.current.appendLogs(['a']);
+    });
+    act(() => hook.result.current.closeLogs());
+    expect(hook.result.current.logs).toEqual([]);
+    expect(hook.result.current.headNotice.kind).toBe('empty');
+  });
+
+  test('reopening starts from a fresh buffer, not the previous notice', () => {
+    const hook = renderHook(() => useLogsViewer());
+    act(() => {
+      hook.result.current.openLogs({ reachedStart: true });
+      hook.result.current.appendLogs(['a']);
+    });
+    act(() => hook.result.current.openLogs());
+    act(() => hook.result.current.appendLogs(['b']));
+    expect(hook.result.current.headNotice.kind).toBe('partial');
+    expect(hook.result.current.logs).toEqual(['b']);
+  });
+});

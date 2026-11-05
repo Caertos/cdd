@@ -9,6 +9,7 @@ import { useEraseConfirmation } from './useEraseConfirmation.js';
 import { useConfirmation } from './useConfirmation.js';
 import { useExitHandler } from './useExitHandler.js';
 import { useShellMode } from './useShellMode.js';
+import { initialLogRequest } from '../helpers/logBuffer.js';
 import { getLogsStream } from '../helpers/dockerService/serviceComponents/containerLogs.js';
 import {
   getContainerDetails,
@@ -358,11 +359,13 @@ export function useControls(containers = [], overrides = {}) {
   }, [creation]);
 
   /**
-   * Pipe container logs into the viewer while applying a hard limit.
+   * Pipe container logs into the viewer. The buffer applies the retention
+   * policy; this only chooses how much to replay first.
    * @param {string} containerId - Container identifier used by Docker.
+   * @param {number|'all'} [tail] - Lines to replay first (default: the running tail).
    */
   const startLogsStream = React.useCallback(
-    (containerId) => {
+    (containerId, tail) => {
       // Re-opening replaces any previous stream, so reopening the viewer
       // ten times leaves zero live streams (D9).
       logsViewer.stopLogsStream();
@@ -370,7 +373,8 @@ export function useControls(containers = [], overrides = {}) {
         containerId,
         (data) => logsViewer.appendLogs(data.split('\n').filter(Boolean)),
         () => {},
-        (err) => logsViewer.appendLogs([`Error: ${err.message}`])
+        (err) => logsViewer.appendLogs([`Error: ${err.message}`]),
+        { tail }
       );
     },
     [logsViewer]
@@ -521,8 +525,9 @@ export function useControls(containers = [], overrides = {}) {
       'container.logs': () => {
         const container = selection.selectedContainer;
         if (!container) return;
-        logsViewer.openLogs();
-        startLogsStream(container.id);
+        const { tail, reachedStart } = initialLogRequest(container.state);
+        logsViewer.openLogs({ reachedStart });
+        startLogsStream(container.id, tail);
       },
       'container.shell': () => {
         const container = selection.selectedContainer;
@@ -922,6 +927,7 @@ export function useControls(containers = [], overrides = {}) {
       : actions.messageColor,
     showLogs: logsViewer.showLogs,
     logs: logsViewer.shownLogs,
+    logsHead: logsViewer.headNotice,
     logsScrollOffset: logsViewer.scrollOffset,
     logsFollowing: logsViewer.following,
     logsPending: logsViewer.pendingCount,

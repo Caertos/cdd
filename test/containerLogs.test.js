@@ -97,17 +97,50 @@ describe('getLogsStream', () => {
     }).not.toThrow();
   });
 
-  test('requests follow, stdout, stderr and tail=100', async () => {
+  test('requests follow, stdout, stderr and the 2000-line running tail by default', async () => {
     const logs = jest.fn((_opts, cb) => cb(null, new EventEmitter()));
     const { getLogsStream } = await loadLogs(logs);
 
     getLogsStream('cid', jest.fn());
 
     expect(logs).toHaveBeenCalledWith(
-      { follow: true, stdout: true, stderr: true, tail: 100 },
+      { follow: true, stdout: true, stderr: true, tail: 2000 },
       expect.any(Function)
     );
   });
+
+  test("options.tail 'all' asks Docker for the whole log", async () => {
+    const logs = jest.fn((_opts, cb) => cb(null, new EventEmitter()));
+    const { getLogsStream } = await loadLogs(logs);
+
+    getLogsStream('cid', jest.fn(), jest.fn(), jest.fn(), { tail: 'all' });
+
+    expect(logs).toHaveBeenCalledWith(
+      { follow: true, stdout: true, stderr: true, tail: 'all' },
+      expect.any(Function)
+    );
+  });
+
+  test('options.tail with a number asks for exactly that many lines', async () => {
+    const logs = jest.fn((_opts, cb) => cb(null, new EventEmitter()));
+    const { getLogsStream } = await loadLogs(logs);
+
+    getLogsStream('cid', jest.fn(), jest.fn(), jest.fn(), { tail: 300 });
+
+    expect(logs.mock.calls[0][0].tail).toBe(300);
+  });
+
+  test.each([0, -1, 1.5, NaN, 'many', null])(
+    'an invalid options.tail (%p) falls back to the default',
+    async (tail) => {
+      const logs = jest.fn((_opts, cb) => cb(null, new EventEmitter()));
+      const { getLogsStream } = await loadLogs(logs);
+
+      getLogsStream('cid', jest.fn(), jest.fn(), jest.fn(), { tail });
+
+      expect(logs.mock.calls[0][0].tail).toBe(2000);
+    }
+  );
 });
 
 describe('getLogsStream — D9: the handle closes the stream', () => {

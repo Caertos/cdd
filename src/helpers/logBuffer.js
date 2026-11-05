@@ -243,3 +243,25 @@ export function isHighVolume(buffer, now) {
     .reduce((sum, d) => sum + d.bytes, 0);
   return dropped > buffer.limits.maxBytes;
 }
+
+/** States in which a container's log is finite: nothing is writing to it. */
+const STOPPED_STATES = new Set(['exited', 'created', 'dead', 'removing']);
+
+/**
+ * What to ask Docker for when the viewer opens, and whether what comes back
+ * starts at the log's first line.
+ *
+ * A stopped container's log is finite and is exactly the one read to
+ * diagnose it, so it is read whole. A live one gets its last lines. An
+ * unknown state is treated as live: asking for less and claiming less is the
+ * safe side. Only the states Docker names as stopped read the whole log.
+ *
+ * @param {string|undefined} state - Docker container state
+ * @returns {{ tail: number|'all', reachedStart: boolean }}
+ */
+export function initialLogRequest(state) {
+  if (STOPPED_STATES.has(state)) {
+    return { tail: LOG_RETENTION.INITIAL_TAIL_STOPPED, reachedStart: true };
+  }
+  return { tail: LOG_RETENTION.INITIAL_TAIL_RUNNING, reachedStart: false };
+}

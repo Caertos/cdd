@@ -10,6 +10,7 @@ import {
   isHighVolume,
   canLoadMore,
   HIGH_VOLUME_WINDOW_MS,
+  initialLogRequest,
 } from '../src/helpers/logBuffer.js';
 import { readLogRetention, LOG_RETENTION } from '../src/helpers/constants.js';
 
@@ -315,5 +316,34 @@ describe('isHighVolume', () => {
       buffer = appendLines(buffer, fill(20), i * 100_000);
     }
     expect(buffer.recentDrops.length).toBeLessThan(5);
+  });
+});
+
+describe('initialLogRequest', () => {
+  test.each(['exited', 'created', 'dead', 'removing'])(
+    'a %s container is read whole, from its first line',
+    (state) => {
+      expect(initialLogRequest(state)).toEqual({
+        tail: 'all',
+        reachedStart: true,
+      });
+    }
+  );
+
+  test.each(['running', 'restarting', 'paused'])(
+    'a %s container gets the last lines only, and its start is not assumed',
+    (state) => {
+      expect(initialLogRequest(state)).toEqual({
+        tail: LOG_RETENTION.INITIAL_TAIL_RUNNING,
+        reachedStart: false,
+      });
+    }
+  );
+
+  test('an unknown state is treated as live: never claim a start we lack', () => {
+    expect(initialLogRequest(undefined).reachedStart).toBe(false);
+    expect(initialLogRequest('weird').tail).toBe(
+      LOG_RETENTION.INITIAL_TAIL_RUNNING
+    );
   });
 });

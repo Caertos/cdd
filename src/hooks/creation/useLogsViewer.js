@@ -4,9 +4,11 @@ import { LOG_VIEW_LINES } from '../../helpers/reservedRows.js';
 import { sanitizeTerminalText } from '../../helpers/sanitizeTerminalText.js';
 import { searchLogLines, lineMatches } from '../../helpers/logSearch.js';
 import { applyKeyToText, textStateOf } from '../../helpers/textEditing.js';
-
-/** Most lines the viewer keeps; older ones fall off the top. */
-const MAX_LOG_LINES = 1000;
+import {
+  createLogBuffer,
+  appendLines,
+  bufferHeadNotice,
+} from '../../helpers/logBuffer.js';
 
 /** Larger than any buffer: scrolling this far lands on the first line. */
 const TO_THE_TOP = Number.MAX_SAFE_INTEGER;
@@ -21,11 +23,11 @@ const TO_THE_TOP = Number.MAX_SAFE_INTEGER;
  * @returns {Object} Logs viewer state and helpers
  * @property {boolean} showLogs - Whether the logs viewer is open
  * @property {function} setShowLogs - Setter for showLogs
- * @property {Array<string>} logs - Every line received
+ * @property {Array<string>} logs - Every line the buffer still holds
  * @property {Array<string>} shownLogs - The lines the viewer draws (filtered or not)
- * @property {function} setLogs - Setter for logs
+ * @property {{text: string, kind: string}} headNotice - What the top of the buffer is: the real start, or what was dropped
  * @property {object} logsStreamRef - Ref to the { stop() } handle returned by getLogsStream
- * @property {function} openLogs - Helper to open logs for a container
+ * @property {function} openLogs - Opens the viewer on an empty buffer ({ reachedStart } says whether what arrives begins at the log's first line)
  * @property {function} stopLogsStream - Stops the stream without touching the UI state
  * @property {function} closeLogs - Helper to close logs and cleanup
  * @property {function} appendLogs - Adds lines, holding the view still when paused
@@ -40,7 +42,8 @@ const TO_THE_TOP = Number.MAX_SAFE_INTEGER;
  */
 export function useLogsViewer() {
   const [showLogs, setShowLogs] = useState(false);
-  const [logs, setLogs] = useState([]);
+  const [buffer, setBuffer] = useState(() => createLogBuffer());
+  const logs = buffer.lines;
   const logsStreamRef = useRef(null);
   const [scrollOffset, setScrollOffset] = useState(0);
   const [following, setFollowing] = useState(true);
@@ -75,6 +78,11 @@ export function useLogsViewer() {
   }, [logs, query, filterMode]);
 
   const shownLogs = searched ? searched.lines : logs;
+  // The notice describes the top of the whole buffer; with the filter on, the
+  // top of what is shown is not that.
+  const headNotice = filterMode
+    ? { text: '', kind: 'empty' }
+    : bufferHeadNotice(buffer);
   const matchIndices = searched ? searched.matchIndices : [];
   const matchCount = searched ? searched.matchCount : 0;
   const currentMatch = Math.min(matchPos, matchCount - 1);
@@ -118,7 +126,7 @@ export function useLogsViewer() {
    */
   function appendLogs(lines) {
     if (lines.length === 0) return;
-    setLogs((prev) => [...prev, ...lines].slice(-MAX_LOG_LINES));
+    setBuffer((prev) => appendLines(prev, lines, Date.now()));
     if (followingRef.current) return;
 
     // With the filter on, a line that does not match is never shown, so it
@@ -255,11 +263,14 @@ export function useLogsViewer() {
   // ── Open / close ──────────────────────────────────────────────────────────
 
   /**
-   * Opens the logs viewer and resets logs.
+   * Opens the logs viewer on an empty buffer.
+   *
+   * @param {Object} [options]
+   * @param {boolean} [options.reachedStart=false] - What arrives begins at the log's first line
    */
-  function openLogs() {
+  function openLogs({ reachedStart = false } = {}) {
     setShowLogs(true);
-    setLogs([]);
+    setBuffer(createLogBuffer({ reachedStart }));
     resetView();
   }
 
@@ -284,7 +295,7 @@ export function useLogsViewer() {
     // on its way (D9).
     stopLogsStream();
     setShowLogs(false);
-    setLogs([]);
+    setBuffer(createLogBuffer());
     resetView();
   }
 
@@ -305,7 +316,7 @@ export function useLogsViewer() {
     setShowLogs,
     logs,
     shownLogs,
-    setLogs,
+    headNotice,
     logsStreamRef,
     openLogs,
     stopLogsStream,

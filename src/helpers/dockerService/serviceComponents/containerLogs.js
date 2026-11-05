@@ -1,9 +1,23 @@
 import { docker } from '../dockerService.js';
 import { safeCall } from '../../safeCall.js';
 import { logger } from '../../logger.js';
+import { LOG_RETENTION } from '../../constants.js';
 
 /** How many lines getLogsTail reads when the caller does not say. */
 export const DEFAULT_TAIL_LINES = 50;
+
+/**
+ * The `tail` Docker is asked for: 'all', a positive whole number, or the
+ * running-container default when the caller says anything else.
+ *
+ * @param {unknown} tail
+ * @returns {number|'all'}
+ */
+function replayTail(tail) {
+  if (tail === 'all') return 'all';
+  if (Number.isInteger(tail) && tail > 0) return tail;
+  return LOG_RETENTION.INITIAL_TAIL_RUNNING;
+}
 
 /**
  * Frame header of a Docker multiplexed stream: one byte for the channel,
@@ -123,9 +137,11 @@ export function createLogFrameReader() {
  * @param {Function} [onData] - Called with chunk string when data arrives
  * @param {Function} [onEnd] - Called when stream ends
  * @param {Function} [onError] - Called on error
+ * @param {Object} [options]
+ * @param {number|'all'} [options.tail] - Lines to replay first; 'all' for the whole log
  * @returns {LogStreamHandle}
  */
-export function getLogsStream(containerId, onData, onEnd, onError) {
+export function getLogsStream(containerId, onData, onEnd, onError, options) {
   let stream = null;
   let stopped = false;
   let detach = null;
@@ -152,7 +168,7 @@ export function getLogsStream(containerId, onData, onEnd, onError) {
         follow: true,
         stdout: true,
         stderr: true,
-        tail: 100,
+        tail: replayTail(options?.tail),
       },
       (err, currentStream) => {
         if (stopped) {
