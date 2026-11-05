@@ -34,6 +34,7 @@ Las notas de versiones anteriores se guardan en [`CHANGELOG.md`](CHANGELOG.md).
 - 🐳 Vista en vivo de todos los contenedores Docker con estadísticas de CPU/memoria
 - 🔄 Auto-refresco cada pocos segundos — siempre actualizado
 - ⌨️ Acciones controladas por teclado: iniciar, detener, reiniciar, ver logs, eliminar
+- 🗂️ Vistas — pestañas Contenedores, Proyectos e Imágenes; la cabecera y las pestañas siempre visibles
 - 🎨 **Veredictos de salud** — running, starting, stopped, crashed, crash-loop, restarting o unhealthy, leídos de los propios datos de Docker
 - ⚪ Detenido vs caído — un contenedor que paraste tú se ve gris; el rojo se reserva para fallos reales
 - 🔍 **Explica por qué falló** — un panel con la causa probable y las últimas líneas del log, sin que tengas que pedirlo
@@ -77,6 +78,18 @@ cdd
 ## Uso
 
 Usa `↑` / `↓` para navegar por los contenedores. El **HUD** en la parte inferior muestra las teclas disponibles para el contexto actual. Presiona `?` para ayuda completa.
+
+### Vistas
+
+Bajo la cabecera hay tres pestañas, siempre visibles: **Contenedores**, **Proyectos** e **Imágenes**. Proyectos e Imágenes son marcadores por ahora y llegarán en próximas versiones. Cada acción conserva su tecla (`C` crear, `L` logs…) y solo actúa en Contenedores.
+
+| Tecla              | Acción                                            |
+| ------------------ | ------------------------------------------------- |
+| `Tab` / `Shift+Tab` | Vista siguiente / anterior                       |
+| `1` `2` `3`        | Ir directo a Contenedores / Proyectos / Imágenes  |
+| `?` `Q`            | Ayuda y salir, en todas las vistas                |
+
+El asistente de creación, la ayuda y los logs se abren dentro de la vista, con la cabecera y las pestañas a la vista (`Tab` dentro del asistente sigue buscando en Docker Hub o insertando una variable de entorno; no cambia de vista). En un terminal de menos de 20 filas se quitan el pie y el margen interior; la cabecera, las pestañas y las teclas se conservan. Al cambiar de vista y volver, la selección, el filtro y el orden siguen como los dejaste.
 
 ### Lista de Contenedores
 
@@ -122,6 +135,8 @@ Después de iniciarlo, CDD espera a que el daemon responda y recarga tus contene
 
 ### Asistente de Creación
 
+Se abre dentro de la vista Contenedores: la cabecera y las pestañas siguen a la vista.
+
 | Tecla     | Acción                                          |
 | --------- | ----------------------------------------------- |
 | `Enter`   | Confirmar y continuar al siguiente paso (o crear en revisión) |
@@ -135,7 +150,7 @@ Después de iniciarlo, CDD espera a que el daemon responda y recarga tus contene
 
 ### Visor de Logs
 
-El log se abre en un panel bajo la lista. Al desplazarse hacia arriba se pausa el seguimiento (la cabecera lo indica y cuenta las líneas que llegan mientras tanto); `End` vuelve a la última línea y reanuda el seguimiento.
+El log se abre en la zona de contenido, en lugar de la lista; la cabecera, las pestañas y las teclas siguen a la vista. Al desplazarse hacia arriba se pausa el seguimiento (la cabecera lo indica y cuenta las líneas que llegan mientras tanto); `End` vuelve a la última línea y reanuda el seguimiento.
 
 | Tecla             | Acción                                              |
 | ----------------- | --------------------------------------------------- |
