@@ -21,6 +21,9 @@ let activeView = 'containers';
 let showLogs = false;
 let creatingContainer = false;
 let showHelp = false;
+let terminalRowsMock = 24;
+let logsLines = [];
+let selectedContainer = null;
 const freshConnection = () => ({
   status: 'ok',
   error: null,
@@ -54,14 +57,19 @@ await jest.unstable_mockModule('../src/hooks/useDockerLauncher.js', () => ({
 }));
 
 await jest.unstable_mockModule('../src/hooks/useTerminalHeight.js', () => ({
-  useTerminalHeight: () => 24,
+  useTerminalHeight: () => terminalRowsMock,
   DEFAULT_TERMINAL_ROWS: 24,
+}));
+
+// The list renders ContainerRow, which reads its stats through this hook.
+await jest.unstable_mockModule('../src/hooks/useSharedContainerStats.js', () => ({
+  useSharedContainerStats: () => ({ stats: new Map(), errors: new Map() }),
 }));
 
 await jest.unstable_mockModule('../src/hooks/useControls.js', () => ({
   useControls: () => ({
     selected: 0,
-    selectedContainer: null,
+    selectedContainer,
     view,
     activeView,
     views: [
@@ -73,7 +81,7 @@ await jest.unstable_mockModule('../src/hooks/useControls.js', () => ({
     message: '',
     messageColor: 'gray',
     showLogs,
-    logs: [],
+    logs: logsLines,
     exitLogs: jest.fn(),
     creatingContainer,
     startCreation: jest.fn(),
@@ -123,6 +131,9 @@ beforeEach(() => {
   showHelp = false;
   connectionState = freshConnection();
   containersList = [];
+  terminalRowsMock = 24;
+  logsLines = [];
+  selectedContainer = null;
 });
 
 /**
@@ -319,6 +330,54 @@ describe('App — the shell (TASK-12)', () => {
     expect(getByText('1 Containers')).toBeTruthy();
     expect(getByText('2 Projects')).toBeTruthy();
     expect(getByText('3 Images')).toBeTruthy();
+  });
+
+  test('shows only the log viewer in the content while the logs are open', () => {
+    const web = { id: 'id-web', name: 'web', image: 'nginx:latest', state: 'running', status: 'Up 1 m', ports: [] };
+    const db = { id: 'id-db', name: 'db', image: 'nginx:latest', state: 'running', status: 'Up 1 m', ports: [] };
+    showLogs = true;
+    logsLines = ['alpha', 'beta'];
+    selectedContainer = web;
+    containersList = [web, db];
+    view = {
+      visible: [web, db],
+      totalCount: 2,
+      query: '',
+      cursor: 0,
+      isFiltering: false,
+      sortMode: 'state',
+    };
+    const { getByText, queryByText } = render(<App />);
+    expect(getByText(/web logs, press ESC to exit/)).toBeTruthy();
+    expect(getByText('alpha')).toBeTruthy();
+    expect(queryByText('db')).toBeNull();
+    expect(getByText('1 Containers')).toBeTruthy();
+    expect(getByText('2 Projects')).toBeTruthy();
+    expect(getByText('3 Images')).toBeTruthy();
+    expect(getByText(/2 containers found/)).toBeTruthy();
+  });
+
+  test('keeps at least one log line on a 15-row terminal', () => {
+    const web = { id: 'id-web', name: 'web', image: 'nginx:latest', state: 'running', status: 'Up 1 m', ports: [] };
+    terminalRowsMock = 15;
+    showLogs = true;
+    logsLines = ['alpha', 'beta', 'gamma'];
+    selectedContainer = web;
+    containersList = [web];
+    view = {
+      visible: [web],
+      totalCount: 1,
+      query: '',
+      cursor: 0,
+      isFiltering: false,
+      sortMode: 'state',
+    };
+    const { getByText, queryByText } = render(<App />);
+    expect(getByText('gamma')).toBeTruthy();
+    expect(getByText('1 Containers')).toBeTruthy();
+    expect(getByText('2 Projects')).toBeTruthy();
+    expect(getByText('3 Images')).toBeTruthy();
+    expect(queryByText(/Crafted by/)).toBeNull();
   });
 
   test('shows the wizard inside the shell, keeping the header and the tabs', () => {

@@ -123,8 +123,10 @@ await jest.unstable_mockModule('../src/hooks/useDockerLauncher.js', () => ({
   }),
 }));
 
+// Mutable so a test can put the shell on a short terminal.
+let rowsMock = 24;
 await jest.unstable_mockModule('../src/hooks/useTerminalHeight.js', () => ({
-  useTerminalHeight: () => 24,
+  useTerminalHeight: () => rowsMock,
   DEFAULT_TERMINAL_ROWS: 24,
 }));
 
@@ -157,19 +159,20 @@ const markedRowText = (getByText) =>
 
 beforeEach(() => {
   _inputHandler = null;
+  rowsMock = 24;
 });
 
 describe('App — views and the persistent shell (TASK-12)', () => {
   test('c opens the wizard and keeps the header and the tabs (D11)', async () => {
     const { getByText } = await setup();
     expect(getByText(/3 containers found/)).toBeTruthy();
-    TABS.forEach((tab) => expect(getByText(tab)).toBeTruthy());
+    for (const tab of TABS) { expect(getByText(tab)).toBeTruthy(); }
 
     press('c');
 
     expect(getByText(/Step 1 of/)).toBeTruthy();
     expect(getByText(/3 containers found/)).toBeTruthy();
-    TABS.forEach((tab) => expect(getByText(tab)).toBeTruthy());
+    for (const tab of TABS) { expect(getByText(tab)).toBeTruthy(); }
   });
 
   test('the selected row survives a trip to Projects', async () => {
@@ -180,7 +183,7 @@ describe('App — views and the persistent shell (TASK-12)', () => {
 
     press('', { tab: true });
     expect(getByText(STRINGS.views.projectsPlaceholder)).toBeTruthy();
-    TABS.forEach((tab) => expect(getByText(tab)).toBeTruthy());
+    for (const tab of TABS) { expect(getByText(tab)).toBeTruthy(); }
 
     press('1');
     expect(markedRowText(getByText)).toContain('db');
@@ -194,6 +197,25 @@ describe('App — views and the persistent shell (TASK-12)', () => {
 
     expect(queryByText(/Step 1 of/)).toBeNull();
     expect(getByText(STRINGS.views.projectsPlaceholder)).toBeTruthy();
-    TABS.forEach((tab) => expect(getByText(tab)).toBeTruthy());
+    for (const tab of TABS) { expect(getByText(tab)).toBeTruthy(); }
+  });
+});
+
+describe('App — the footer on short terminals (TASK-12)', () => {
+  test('a 15-row terminal keeps the tabs, the key hints and a list row, and drops the footer', async () => {
+    rowsMock = 15;
+    const { getByText, getAllByText, queryByText } = await setup();
+    for (const tab of TABS) { expect(getByText(tab)).toBeTruthy(); }
+    // Only some rows fit: the list is sorted by name, so which of them shows
+    // is not the point. One row is enough.
+    expect(getAllByText(/^(web|db|cache)$/).length).toBeGreaterThan(0);
+    expect(getByText('Start')).toBeTruthy();
+    expect(queryByText(/Crafted by/)).toBeNull();
+  });
+
+  test('a 24-row terminal shows the footer', async () => {
+    rowsMock = 24;
+    const { getByText } = await setup();
+    expect(getByText(/Crafted by/)).toBeTruthy();
   });
 });
