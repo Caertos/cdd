@@ -301,7 +301,15 @@ export const STRINGS = {
   },
 
   // ── Views ──
-  views: { containers: 'Containers', projects: 'Projects', images: 'Images' },
+  views: {
+    containers: 'Containers',
+    projects: 'Projects',
+    images: 'Images',
+    projectsPlaceholder:
+      'Your Docker Compose projects will appear here. Coming in the next version.',
+    imagesPlaceholder:
+      'Your Docker images will appear here. Not available yet.',
+  },
 
   // ── Validation ──
   validation: {
