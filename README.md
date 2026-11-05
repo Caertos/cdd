@@ -13,15 +13,15 @@
 
 ---
 
-## 🎉 What's new in v4.13
+## 🎉 What's new in v5.0
 
-**You see a stopped container's whole log, and when something is missing, CDD tells you.**
+**The interface is organised in views, inside a frame that never goes away.**
 
-- **A stopped container is read whole.** Open its logs and `Home` takes you to its very first line: the log of a container that has stopped is finite, and it is the one you read to find out why. A running container opens with its last 2,000 lines (it was 100).
-- **A cut is never silent.** The top of the log always says what it is: `start of log`, or `N earlier lines dropped (memory limit)`. Before, the viewer kept the last 1,000 lines and told you nothing.
-- **`Ctrl+U` loads earlier lines** of a running container, 2,000 at a time, without moving the lines you are reading.
-- **The limit is memory, not lines.** The buffer is capped in bytes (16 MB by default) and one huge line is cut with a mark (`… [line cut: 3.2 MB]`) instead of eating the memory. Both limits can be changed — see [Log viewer limits](#log-viewer-limits).
-- **A noisy container says so.** If a container writes so fast that the buffer is renewed within a minute, the header warns that lines are being dropped: the problem is the container, not the viewer.
+- **Three tabs under the header:** Containers, Projects and Images. `Tab` / `Shift+Tab` move between them and `1`, `2`, `3` jump straight to one. Projects and Images are placeholders for now.
+- **Nothing replaces the screen any more.** The creation wizard and the logs open inside the view, with the header, the tabs and the key hints still on screen.
+- **Each view keeps its state.** Go to another tab and come back: the selection, the filter and the sort order are as you left them.
+- **Your keys are the same.** Every action keeps its key and acts in Containers; see [Views](#views).
+- **Small terminals still work.** Under 20 rows the footer and the margin go away, and the header, tabs and keys stay.
 
 **Requires Node 22 or newer** (`ink` 8 and `chalk` 6 need it).
 

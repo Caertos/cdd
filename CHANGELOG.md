@@ -4,6 +4,24 @@ All notable changes to this project will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [5.0.0] - 2026-11-05
+
+The interface is now organised in views by subject, inside a frame that never goes away. Before, opening something (the creation wizard, the logs) replaced the whole screen and you lost sight of the header and the list. Now the header, the tabs and the key hints stay put and what you open appears inside them. This is the major jump of the roadmap: the shape of the app changes, `Tab` and the digits mean something new, and `App.jsx` is rewritten.
+
+### Added
+- **Three views with tabs under the header**: Containers (the default), Projects and Images. Projects and Images are placeholders that say what is coming. (TASK-12)
+- **`Tab` / `Shift+Tab` switch to the next / previous view, and `1`, `2`, `3` jump straight to one.** `?` and `Q` work in every view. Action keys keep their meaning and only act in Containers.
+- **Each view keeps its state**: going to another view and coming back keeps the selection, the filter and the sort order.
+- **`src/views/`, `AppShell`, `ViewTabs` and `useViewRouter`**: the persistent frame and the view navigation.
+
+### Changed
+- **The creation wizard and its help open inside the content area**, with the header and tabs visible, instead of replacing the screen. (D11)
+- **The log viewer fills the content area** in place of the list, with the header, tabs and key hints on screen. It uses every row the content has left instead of a fixed 10 lines.
+- **A terminal under 20 rows drops the footer and the inner margin**; the header, tabs and key hints stay.
+- **The connection screen still takes the whole terminal**: with no connection to Docker there is nothing to frame.
+- **The debug panel (`D`) now sits above the key hints** instead of below them.
+- **`Tab` is now global** (next view) outside the wizard. Inside the wizard it still searches Docker Hub or inserts an environment variable, and `Shift+Tab` does the same there as before.
+
 ## [4.13.0] - 2026-11-04
 
 You now see a stopped container's whole log, and when CDD had to leave something out, it tells you. The old limit was not wrong, it was silent: the viewer kept the last 1,000 lines, counted in lines rather than memory, and gave no sign that the top had been cut.

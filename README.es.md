@@ -13,15 +13,15 @@
 
 ---
 
-## 🎉 Novedades en v4.13
+## 🎉 Novedades en v5.0
 
-**Ves el log entero de un contenedor parado, y cuando falta algo, CDD te lo dice.**
+**La interfaz se organiza en vistas, dentro de un marco que nunca desaparece.**
 
-- **Un contenedor parado se lee entero.** Abre sus logs y `Home` te lleva a su primera línea: el log de un contenedor que se ha parado es finito, y es el que lees para saber por qué. Uno en marcha se abre con sus últimas 2.000 líneas (antes eran 100).
-- **Un recorte nunca es silencioso.** La parte de arriba del log siempre dice qué es: `start of log`, o `N earlier lines dropped (memory limit)`. Antes el visor guardaba las últimas 1.000 líneas y no decía nada.
-- **`Ctrl+U` carga líneas anteriores** de un contenedor en marcha, de 2.000 en 2.000, sin mover las líneas que estás leyendo.
-- **El límite es de memoria, no de líneas.** El buffer tiene un techo en bytes (16 MB por defecto) y una línea enorme se corta con una marca (`… [line cut: 3.2 MB]`) en vez de comerse la memoria. Ambos límites se pueden cambiar — ver [Límites del visor de logs](#límites-del-visor-de-logs).
-- **Un contenedor ruidoso lo dice.** Si un contenedor escribe tan deprisa que el buffer se renueva en menos de un minuto, la cabecera avisa de que se están descartando líneas: el problema es el contenedor, no el visor.
+- **Tres pestañas bajo la cabecera:** Contenedores, Proyectos e Imágenes. `Tab` / `Shift+Tab` cambian entre ellas y `1`, `2`, `3` van directo a una. Proyectos e Imágenes son marcadores por ahora.
+- **Nada reemplaza ya la pantalla.** El asistente de creación y los logs se abren dentro de la vista, con la cabecera, las pestañas y las teclas a la vista.
+- **Cada vista conserva su estado.** Cambia de pestaña y vuelve: la selección, el filtro y el orden siguen como los dejaste.
+- **Tus teclas son las mismas.** Cada acción conserva su tecla y actúa en Contenedores; ver [Vistas](#vistas).
+- **Los terminales pequeños siguen funcionando.** Con menos de 20 filas desaparecen el pie y el margen, y se conservan la cabecera, las pestañas y las teclas.
 
 **Requiere Node 22 o superior** (`ink` 8 y `chalk` 6 lo necesitan).
 
