@@ -51,9 +51,6 @@ describe('AppShell', () => {
   });
 
   test('renders without a footer prop', () => {
-    expect(() =>
-      renderShell({ footer: undefined })
-    ).not.toThrow();
     const { getByText } = renderShell({ footer: undefined });
     expect(getByText('HEADER')).toBeTruthy();
     expect(getByText('NAV')).toBeTruthy();
