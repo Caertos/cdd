@@ -4,6 +4,22 @@ All notable changes to this project will be documented in this file.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [4.13.0] - 2026-11-04
+
+You now see a stopped container's whole log, and when CDD had to leave something out, it tells you. The old limit was not wrong, it was silent: the viewer kept the last 1,000 lines, counted in lines rather than memory, and gave no sign that the top had been cut.
+
+### Added
+- **A stopped container's log is read whole.** A container that has stopped has a finite log, and it is the one you read to find out why, so the viewer now asks Docker for all of it. A running container opens with its last 2,000 lines instead of 100. (TASK-11)
+- **The top of the log says what it is.** Either `start of log` or `N earlier lines dropped (memory limit)`; a cut is never silent. (D13)
+- **`Ctrl+U` loads earlier lines** of a running container, 2,000 at a time, and keeps the lines you were reading where they were. It only appears when the start of the log is not loaded.
+- **A noisy container is flagged.** When one writes so fast that the buffer is renewed within a minute, the header warns that lines are being dropped.
+- **`CDD_LOG_BUFFER_BYTES` and `CDD_LOG_MAX_LINES`** change the viewer's memory ceiling (16 MB and 100,000 lines by default).
+
+### Changed
+- **The log buffer is capped in bytes, not in lines.** 1,000 lines could be 100 KB or 50 MB; the ceiling now protects the memory it says it protects. A single line over 1 MB is cut and marked `… [line cut: N MB]`.
+- **The diagnosis reads the last 200 log lines** instead of 50, so the start-up output of a failing container is more likely to be inside what the rules see.
+- **The title of the log panel stays on one row** however narrow the terminal is, so it can never grow past the rows reserved for it.
+
 ## [4.12.1] - 2026-10-25
 
 A maintenance release: no change in what CDD does, but a cleaner, audited codebase and patched development dependencies.
