@@ -9,11 +9,11 @@
  */
 
 // Border(2) + padding(2) + Header(3: version, summary, sort) + blank line(1) +
-// KeyHUD(1) + Footer(1) + the list's "N more" row(1), plus one row of slack:
-// Ink repaints the whole terminal, stacking a copy of the frame in the
-// scrollback, as soon as a frame is as tall as the terminal. Staying strictly
-// under it is what keeps the redraw in place.
-export const BASE_CHROME_ROWS = 12;
+// view tabs(1) + KeyHUD(1) + Footer(1) + the list's "N more" row(1), plus one
+// row of slack: Ink repaints the whole terminal, stacking a copy of the frame
+// in the scrollback, as soon as a frame is as tall as the terminal. Staying
+// strictly under it is what keeps the redraw in place.
+export const BASE_CHROME_ROWS = 13;
 
 // Tallest the DiagnosticPanel gets when shown: margin(1) + border(2) + title,
 // blank, what, blank, cause(2), blank, last lines + 5 tail lines, blank and

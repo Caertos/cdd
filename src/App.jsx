@@ -10,7 +10,7 @@
  * <App />
  */
 import React, { useEffect } from 'react';
-import { Box, Text, Spacer, useApp } from 'ink';
+import { Text, useApp } from 'ink';
 import { setSuspendTerminal } from './helpers/appState.js';
 import { useContainers } from './hooks/useContainers.js';
 import { useContainerHealth } from './hooks/useContainerHealth.js';
@@ -24,81 +24,17 @@ import {
   helpPanelRows,
   MIN_LIST_ROWS_WITH_DIAGNOSIS,
 } from './helpers/reservedRows.js';
-import {
-  sanitizeTerminalText,
-  sanitizedCursorIndex,
-} from './helpers/sanitizeTerminalText.js';
-import ContainerSection from './components/ContainerSection.jsx';
-import MessageFeedback from './components/MessageFeedback.jsx';
+import { AppShell } from './components/AppShell.jsx';
+import { ViewTabs } from './components/ViewTabs.jsx';
 import Header from './components/Header.jsx';
-import { PromptField } from './components/PromptField.jsx';
-import LogViewer from './components/LogViewer.jsx';
 import ContainerCreationPrompt from './components/ContainerCreationPrompt.jsx';
-import { DiagnosticPanel } from './components/DiagnosticPanel.jsx';
 import { KeyHUD } from './components/KeyHUD.jsx';
 import { HelpPanel } from './components/HelpPanel.jsx';
 import { ConnectionNotice } from './components/ConnectionNotice.jsx';
 import Footer from './components/Footer.jsx';
-import { STRINGS } from './helpers/strings.js';
-
-/**
- * Pairs each log line with a key built from its content plus how many times
- * the same line appeared before it, so duplicates stay unique and stable.
- *
- * @param {string[]} lines
- * @returns {Array<{line: string, key: string}>}
- */
-function keyedLines(lines) {
-  const seen = new Map();
-  return lines.map((line) => {
-    const count = seen.get(line) ?? 0;
-    seen.set(line, count + 1);
-    return { line, key: `${line}#${count}` };
-  });
-}
-
-/** Filter prompt shown under the header while the user is filtering. */
-function FilterBar({ view }) {
-  if (!view.isFiltering) return null;
-  return (
-    <Box paddingLeft={1}>
-      <PromptField
-        label={STRINGS.filter.label}
-        value={sanitizeTerminalText(view.query)}
-        cursor={sanitizedCursorIndex(view.query, view.cursor)}
-      />
-    </Box>
-  );
-}
-
-/**
- * Live debug log panel: the last 15 lines, or a placeholder when empty.
- *
- * @param {Object} props
- * @param {string[]} props.logs
- */
-function DebugPanel({ logs }) {
-  return (
-    <Box
-      marginTop={1}
-      flexDirection="column"
-      borderStyle="round"
-      borderColor="gray"
-      padding={1}
-    >
-      <Text color="cyan">{STRINGS.debugTitle}</Text>
-      {logs.length === 0 ? (
-        <Text dimColor>{STRINGS.debugEmpty}</Text>
-      ) : (
-        keyedLines(logs.slice(-15)).map(({ line, key }) => (
-          <Text key={key} color="gray">
-            {sanitizeTerminalText(line)}
-          </Text>
-        ))
-      )}
-    </Box>
-  );
-}
+import { ContainersView } from './views/ContainersView.jsx';
+import { ProjectsView } from './views/ProjectsView.jsx';
+import { ImagesView } from './views/ImagesView.jsx';
 
 /**
  * Whether the diagnosis panel fits: it needs a failing container to talk
@@ -144,11 +80,6 @@ export default function App({ rows }) {
     details,
     updater,
   });
-
-  // The highlight and this object come from the same id-anchored selection, so
-  // the panel can never describe a different container than the one marked.
-  // Already null when nothing is selected, hence no fallback here.
-  const selectedContainer = controls.selectedContainer;
 
   // Rows left for the container list once the fixed and variable chrome has
   // been subtracted. Never below 1 so the list always has a row to show.
@@ -259,82 +190,46 @@ export default function App({ rows }) {
     );
   }
 
-  return (
-    <Box
-      flexDirection="column"
-      borderStyle="round"
-      borderColor="cyan"
-      padding={1}
-    >
-      <Header
-        visibleCount={controls.view.visible.length}
-        totalCount={controls.view.totalCount}
-        query={controls.view.query}
-        sortMode={controls.view.sortMode}
-        update={{ status: updater.status, latest: updater.latest }}
-      />
-      <Text> </Text>
-      {connection.isStale && (
-        <Text color="yellow">
-          {'⚠ '}
-          {STRINGS.connection.staleWarning}
-        </Text>
-      )}
-      <FilterBar view={controls.view} />
-      <ContainerSection
-        containers={controls.view.visible}
-        // Still a position: ContainerList highlights with `i === selected`,
-        // so this prop cannot become the id until those components change.
-        // Derived from the same selection as the rest of the panel, not a
-        // second source of truth.
-        selected={controls.selected}
+  let viewContent;
+  if (controls.activeView === 'projects') {
+    viewContent = <ProjectsView />;
+  } else if (controls.activeView === 'images') {
+    viewContent = <ImagesView />;
+  } else {
+    viewContent = (
+      <ContainersView
+        controls={controls}
         health={health}
-        connectionStatus={connection.status}
-        isStale={connection.isStale}
-        query={controls.view.query}
-        totalCount={controls.view.totalCount}
+        connection={connection}
         availableRows={availableRows}
-        onCreate={() => controls.startCreation()}
+        showDiagnosis={showDiagnosis}
+        showHelpPanel={showHelpPanel}
+        showLogsPanel={showLogsPanel}
+        helpRows={helpRows}
+        logLines={logLines}
       />
-      {/* The panel takes room only when a container is failing and we have
-            something to say about it — a deliberate stop gets nothing. */}
-      {showDiagnosis && (
-        <DiagnosticPanel
-          diagnosis={controls.diagnosis}
-          containerName={selectedContainer?.name ?? ''}
-          isLoading={controls.isDiagnosing}
-          fixLabel={controls.diagnosis?.fix?.label ?? null}
-        />
-      )}
-      {showHelpPanel && (
-        <HelpPanel
-          context={controls.helpContext}
-          bindings={controls.helpBindings}
-          maxRows={helpRows}
-        />
-      )}
-      {showLogsPanel && (
-        <LogViewer
-          logs={controls.logs}
-          headNotice={controls.logsHead}
-          highVolume={controls.logsHighVolume}
-          onExit={controls.exitLogs}
-          container={controls.selectedContainer}
-          height={logLines}
-          scrollOffset={controls.logsScrollOffset}
-          following={controls.logsFollowing}
-          pending={controls.logsPending}
-          search={controls.logsSearch}
-        />
-      )}
-      <Spacer />
-      <MessageFeedback
-        message={controls.message}
-        color={controls.messageColor}
-      />
-      <KeyHUD bindings={controls.keymapBindings} />
-      {controls.showDebugLogs && <DebugPanel logs={controls.debugLogs} />}
-      <Footer />
-    </Box>
+    );
+  }
+
+  return (
+    <AppShell
+      terminalRows={terminalRows}
+      header={
+        <>
+          <Header
+            visibleCount={controls.view.visible.length}
+            totalCount={controls.view.totalCount}
+            query={controls.view.query}
+            sortMode={controls.view.sortMode}
+            update={{ status: updater.status, latest: updater.latest }}
+          />
+          <Text> </Text>
+        </>
+      }
+      nav={<ViewTabs views={controls.views} active={controls.activeView} />}
+      content={viewContent}
+      hud={<KeyHUD bindings={controls.keymapBindings} />}
+      footer={<Footer />}
+    />
   );
 }
