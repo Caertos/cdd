@@ -231,6 +231,8 @@ export const STRINGS = {
   helpClose: 'Press ? or Esc to close',
   contextLabels: {
     list: 'Container List',
+    projects: 'Projects',
+    images: 'Images',
     filter: 'Search',
     wizard: 'Creation Wizard',
     'wizard-list': 'Suggestion List',

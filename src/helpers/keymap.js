@@ -7,7 +7,7 @@
 
 /**
  * Context identifiers. In each instant CDD is in exactly one context.
- * @typedef {'list'|'filter'|'wizard'|'wizard-list'|'wizard-discard'|'wizard-review'|'logs'|'logs-search'|'confirm'|'help'|'debug'|'confirm-quit'|'confirm-update'|'disconnected'} ContextId
+ * @typedef {'list'|'projects'|'images'|'filter'|'wizard'|'wizard-list'|'wizard-discard'|'wizard-review'|'logs'|'logs-search'|'confirm'|'help'|'debug'|'confirm-quit'|'confirm-update'|'disconnected'} ContextId
  */
 
 /**
@@ -19,6 +19,51 @@
  * @property {number} [priority=50] - HUD order; higher = further left
  * @property {(state: any) => boolean} [when] - If false, key is inactive
  */
+
+/** @type {Binding} Shared by every view, so it is one object referenced from each context. */
+const APP_QUIT_BINDING = {
+  id: 'app.quit',
+  keys: ['q'],
+  label: 'Exit',
+  help: 'Quit CDD',
+  priority: 60,
+};
+
+/** @type {Binding} */
+const APP_HELP_BINDING = {
+  id: 'app.help',
+  keys: ['?'],
+  label: 'Help',
+  help: 'Show this help',
+  priority: 5,
+};
+
+/** @type {Binding} Low priority so the global view keys do not push existing HUD entries. */
+const VIEW_NEXT_BINDING = {
+  id: 'view.next',
+  keys: ['tab'],
+  label: 'Next view',
+  help: 'Switch to the next view',
+  priority: 3,
+};
+
+/** @type {Binding} */
+const VIEW_PREV_BINDING = {
+  id: 'view.prev',
+  keys: ['shift+tab'],
+  label: 'Prev view',
+  help: 'Switch to the previous view',
+  priority: 3,
+};
+
+/** @type {Binding} */
+const VIEW_GOTO_BINDING = {
+  id: 'view.goto',
+  keys: ['1', '2', '3'],
+  label: 'View',
+  help: 'Jump to a view (1 Containers, 2 Projects, 3 Images)',
+  priority: 3,
+};
 
 /** @type {Record<ContextId, Binding[]>} */
 export const KEYMAP = {
@@ -135,20 +180,8 @@ export const KEYMAP = {
       help: 'Cycle the sort order',
       priority: 24,
     },
-    {
-      id: 'app.quit',
-      keys: ['q'],
-      label: 'Exit',
-      help: 'Quit CDD',
-      priority: 60,
-    },
-    {
-      id: 'app.help',
-      keys: ['?'],
-      label: 'Help',
-      help: 'Show this help',
-      priority: 5,
-    },
+    APP_QUIT_BINDING,
+    APP_HELP_BINDING,
     {
       // Asked once, right after the replacement exists. The failed container
       // may hold something nobody has looked at yet, so it is never deleted
@@ -180,7 +213,14 @@ export const KEYMAP = {
       when: (s) =>
         s.updateStatus === 'available' || s.updateStatus === 'failed',
     },
+    VIEW_NEXT_BINDING,
+    VIEW_PREV_BINDING,
+    VIEW_GOTO_BINDING,
   ],
+  // The projects and images views have no list keys yet: only the global
+  // view-switching, quit and help bindings apply there.
+  projects: [VIEW_NEXT_BINDING, VIEW_PREV_BINDING, VIEW_GOTO_BINDING, APP_QUIT_BINDING, APP_HELP_BINDING],
+  images: [VIEW_NEXT_BINDING, VIEW_PREV_BINDING, VIEW_GOTO_BINDING, APP_QUIT_BINDING, APP_HELP_BINDING],
   // The filter field. Almost every character is text and is resolved before
   // the keymap (see useControls' handleFilterKey), so only the two control keys
   // — and Help — live here. Enter keeps the query, Esc clears it (§3.1, §5.6).
@@ -675,6 +715,7 @@ export const KEYMAP = {
  * @param {boolean} [state.canLaunch] - A Docker launch method was detected
  * @param {string} [state.launchStatus] - Launcher state: 'idle'|'confirming'|'launching'|'waiting'|'ready'|'failed'|'timeout'
  * @param {boolean} [state.updateConfirming] - The "update CDD" yes/no is on screen
+ * @param {string} [state.view] - The active view: 'containers' (default), 'projects' or 'images'
  * @returns {ContextId}
  */
 export function getActiveContext(state) {
@@ -708,6 +749,8 @@ function getBaseContext(state) {
   if (state.confirmQuit) return 'confirm-quit';
   if (state.updateConfirming) return 'confirm-update';
   if (state.disconnected) return 'disconnected';
+  if (state.view === 'projects') return 'projects';
+  if (state.view === 'images') return 'images';
   return 'list';
 }
 
@@ -766,6 +809,7 @@ const KEY_FLAG_NAMES = [
  * @returns {string}
  */
 export function keyNameOf(input, key) {
+  if (key.tab && key.shift) return 'shift+tab';
   for (const [flag, name] of KEY_FLAG_NAMES) {
     if (key[flag]) return name;
   }
