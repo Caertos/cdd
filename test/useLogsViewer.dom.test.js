@@ -548,3 +548,63 @@ describe('useLogsViewer — loading earlier lines (TASK-11)', () => {
   });
 });
 
+describe('useLogsViewer — noisy container warning (TASK-11)', () => {
+  const bigLine = (n) => `${String(n).padStart(3, '0')}${'x'.repeat(900 * 1024)}`;
+  const flood = (count) => Array.from({ length: count }, (_, i) => bigLine(i));
+
+  afterEach(() => jest.useRealTimers());
+
+  test('a quiet viewer has no warning', () => {
+    const hook = renderHook(() => useLogsViewer());
+    act(() => {
+      hook.result.current.openLogs({ reachedStart: true });
+      hook.result.current.appendLogs(['a', 'b']);
+    });
+    expect(hook.result.current.highVolume).toBe(false);
+  });
+
+  test('renewing the whole buffer inside a minute raises it', () => {
+    const hook = renderHook(() => useLogsViewer());
+    act(() => {
+      hook.result.current.openLogs({ reachedStart: true });
+      hook.result.current.appendLogs(flood(40));
+    });
+    expect(hook.result.current.headNotice.kind).toBe('dropped');
+    expect(hook.result.current.highVolume).toBe(true);
+  });
+
+  test('a single small overflow does not', () => {
+    const hook = renderHook(() => useLogsViewer());
+    act(() => {
+      hook.result.current.openLogs({ reachedStart: true });
+      hook.result.current.appendLogs(flood(20));
+    });
+    expect(hook.result.current.headNotice.kind).toBe('dropped');
+    expect(hook.result.current.highVolume).toBe(false);
+  });
+
+  test('it clears by itself once the container goes quiet', () => {
+    jest.useFakeTimers();
+    const hook = renderHook(() => useLogsViewer());
+    act(() => {
+      hook.result.current.openLogs({ reachedStart: true });
+      hook.result.current.appendLogs(flood(40));
+    });
+    expect(hook.result.current.highVolume).toBe(true);
+    act(() => {
+      jest.advanceTimersByTime(80_000);
+    });
+    expect(hook.result.current.highVolume).toBe(false);
+  });
+
+  test('closing and reopening starts without the warning', () => {
+    const hook = renderHook(() => useLogsViewer());
+    act(() => {
+      hook.result.current.openLogs({ reachedStart: true });
+      hook.result.current.appendLogs(flood(40));
+    });
+    act(() => hook.result.current.closeLogs());
+    expect(hook.result.current.highVolume).toBe(false);
+  });
+});
+

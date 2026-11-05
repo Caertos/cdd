@@ -171,7 +171,7 @@ describe('useDiagnostics — when it explains', () => {
     );
     await act(async () => {});
 
-    expect(mockGetLogsTail).toHaveBeenCalledWith('c1', 50);
+    expect(mockGetLogsTail).toHaveBeenCalledWith('c1', 200);
     expect(expose.current.diagnosis.ruleId).toBe('postgres-missing-password');
     expect(expose.current.diagnosis.why).toContain('POSTGRES_PASSWORD');
     expect(expose.current.isLoading).toBe(false);

@@ -334,4 +334,27 @@ describe('LogViewer — terminal control sequences', () => {
       expectNoControlBytes(container.textContent);
     });
   });
+
+  describe('noisy container warning (TASK-11)', () => {
+    test('the header says lines are being dropped', () => {
+      const { container } = render(
+        <LogViewer logs={lines(3)} height={10} highVolume />
+      );
+      expect(container.textContent).toContain(STRINGS.logsHighVolume);
+      expect(STRINGS.logsHighVolume).toMatch(/writes very fast/);
+    });
+
+    test('no warning by default', () => {
+      const { container } = render(<LogViewer logs={lines(3)} height={10} />);
+      expect(container.textContent).not.toContain('writes very fast');
+    });
+
+    test('the title row is still the title row', () => {
+      const { getByText } = render(
+        <LogViewer logs={['a']} container={{ name: 'web' }} highVolume />
+      );
+      expect(getByText('web logs, press ESC to exit')).toBeTruthy();
+    });
+  });
 });
+

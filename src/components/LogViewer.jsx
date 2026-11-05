@@ -14,6 +14,7 @@ import { PromptField } from './PromptField.jsx';
  *
  * @param {Object} props
  * @param {Array<string>} props.logs - The lines to draw (already filtered when the filter is on)
+ * @param {boolean} [props.highVolume=false] - Warn in the title that the container writes so fast that lines are being dropped
  * @param {{text: string, kind: string}} [props.headNotice] - What the top of the buffer is; drawn as the first row when the window reaches the top
  * @param {Function} [props.onExit] - Optional callback when the viewer closes
  * @param {Object} [props.container] - Optional container metadata (used for title)
@@ -27,6 +28,7 @@ import { PromptField } from './PromptField.jsx';
 export default function LogViewer({
   logs,
   headNotice,
+  highVolume = false,
   onExit: _onExit,
   container,
   height = 15,
@@ -57,9 +59,14 @@ export default function LogViewer({
       borderColor="green"
       paddingX={1}
     >
-      <Text color="green">
+      {/* One row, however narrow the terminal: a title that wraps would grow
+          the panel past the rows reserved for it. */}
+      <Text color="green" wrap="truncate">
         {STRINGS.logsTitle(sanitizeTerminalText(container?.name))}
         {following ? '' : STRINGS.logsPaused(pending)}
+        {highVolume ? (
+          <Text color="yellow"> {STRINGS.logsHighVolume}</Text>
+        ) : null}
       </Text>
       {notice ? (
         <Text dimColor wrap="truncate">
@@ -144,6 +151,7 @@ Footer.propTypes = {
 
 LogViewer.propTypes = {
   logs: PropTypes.arrayOf(PropTypes.string).isRequired,
+  highVolume: PropTypes.bool,
   headNotice: PropTypes.shape({
     text: PropTypes.string,
     kind: PropTypes.string,

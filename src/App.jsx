@@ -317,6 +317,7 @@ export default function App({ rows }) {
         <LogViewer
           logs={controls.logs}
           headNotice={controls.logsHead}
+          highVolume={controls.logsHighVolume}
           onExit={controls.exitLogs}
           container={controls.selectedContainer}
           height={logLines}

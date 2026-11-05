@@ -13,17 +13,17 @@
 
 ---
 
-## 🎉 Novedades en v4.12
+## 🎉 Novedades en v4.13
 
-**El visor de logs se convierte en una herramienta de verdad, y CDD se mantiene al día solo.**
+**Ves el log entero de un contenedor parado, y cuando falta algo, CDD te lo dice.**
 
-- **El visor se desplaza y se pausa.** `↑`/`↓` y `PgUp`/`PgDn` recorren el buffer; al desplazarse hacia arriba se pausa el seguimiento, la cabecera cuenta las líneas que llegan en ese tiempo, y `End` (o `f`) vuelve a la última. Estas teclas estaban en la ayuda pero no hacían nada (D21).
-- **`/` busca en los logs.** Las coincidencias se resaltan y se cuentan (`3 de 27`), `n`/`N` saltan entre ellas con vuelta al inicio, y `Ctrl+F` muestra solo las líneas coincidentes. La búsqueda es literal e ignora mayúsculas.
-- **CDD te avisa cuando hay una versión nueva en npm** — y puede actualizarse solo. Al arrancar comprueba el registro en silencio (como mucho una vez al día, en segundo plano); si hay versión nueva la cabecera muestra `↑ vX.Y.Z [U]`, y `U` ejecuta el comando de instalación adecuado para npm, pnpm, yarn o bun tras preguntar. Se desactiva con `CDD_NO_UPDATE_CHECK=1`.
+- **Un contenedor parado se lee entero.** Abre sus logs y `Home` te lleva a su primera línea: el log de un contenedor que se ha parado es finito, y es el que lees para saber por qué. Uno en marcha se abre con sus últimas 2.000 líneas (antes eran 100).
+- **Un recorte nunca es silencioso.** La parte de arriba del log siempre dice qué es: `start of log`, o `N earlier lines dropped (memory limit)`. Antes el visor guardaba las últimas 1.000 líneas y no decía nada.
+- **`Ctrl+U` carga líneas anteriores** de un contenedor en marcha, de 2.000 en 2.000, sin mover las líneas que estás leyendo.
+- **El límite es de memoria, no de líneas.** El buffer tiene un techo en bytes (16 MB por defecto) y una línea enorme se corta con una marca (`… [line cut: 3.2 MB]`) en vez de comerse la memoria. Ambos límites se pueden cambiar — ver [Límites del visor de logs](#límites-del-visor-de-logs).
+- **Un contenedor ruidoso lo dice.** Si un contenedor escribe tan deprisa que el buffer se renueva en menos de un minuto, la cabecera avisa de que se están descartando líneas: el problema es el contenedor, no el visor.
 
-De paso quedan arreglados cuatro fallos de renderizado y de salud: las barras de stats ya no tocan las filas de al lado, un contenedor parado ya no se muestra como unhealthy solo porque Docker conservó su último estado de salud, las líneas de log ya no empiezan con bytes sueltos del stream de Docker, y abrir los logs, la ayuda o el diagnóstico ya no apila copias de la pantalla en el scrollback.
-
-**Requiere Node 22 o superior** — el rango admitido ya coincide con lo que el árbol de dependencias necesitaba (`ink` 8, `chalk` 6).
+**Requiere Node 22 o superior** (`ink` 8 y `chalk` 6 lo necesitan).
 
 Las notas de versiones anteriores se guardan en [`CHANGELOG.md`](CHANGELOG.md).
 
@@ -326,6 +326,21 @@ Para capturar los logs en un archivo:
 ```bash
 CDD_LOG_LEVEL=debug cdd > cdd-debug.log 2>&1
 ```
+
+### Límites del visor de logs
+
+El visor guarda lo que recibe en un buffer con un techo de memoria, y siempre dice cuándo ha tenido que tirar líneas. Dos variables cambian el techo:
+
+| Variable | Por defecto | Significado |
+| --- | --- | --- |
+| `CDD_LOG_BUFFER_BYTES` | `16777216` (16 MB) | Memoria que puede usar el buffer, en bytes |
+| `CDD_LOG_MAX_LINES` | `100000` | Segunda red de seguridad, en líneas |
+
+```bash
+CDD_LOG_BUFFER_BYTES=1048576 cdd
+```
+
+Un valor que no sea un entero positivo se ignora. Al llegar al techo se descartan las líneas más antiguas y la parte de arriba del visor dice cuántas. Una sola línea de más de 1 MB se corta y se marca.
 
 ---
 

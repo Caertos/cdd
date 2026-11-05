@@ -934,6 +934,7 @@ export function useControls(containers = [], overrides = {}) {
     showLogs: logsViewer.showLogs,
     logs: logsViewer.shownLogs,
     logsHead: logsViewer.headNotice,
+    logsHighVolume: logsViewer.highVolume,
     logsScrollOffset: logsViewer.scrollOffset,
     logsFollowing: logsViewer.following,
     logsPending: logsViewer.pendingCount,

@@ -11,6 +11,7 @@ import {
   newerThanHeld,
   canLoadMore,
   bufferHeadNotice,
+  isHighVolume,
 } from '../../helpers/logBuffer.js';
 import { LOG_RETENTION } from '../../helpers/constants.js';
 
@@ -28,6 +29,9 @@ function earlierNotice(state) {
   return null;
 }
 
+/** How often an active noisy-container warning is checked against the clock. */
+const RECHECK_MS = 10_000;
+
 /** Larger than any buffer: scrolling this far lands on the first line. */
 const TO_THE_TOP = Number.MAX_SAFE_INTEGER;
 
@@ -44,6 +48,7 @@ const TO_THE_TOP = Number.MAX_SAFE_INTEGER;
  * @property {Array<string>} logs - Every line the buffer still holds
  * @property {Array<string>} shownLogs - The lines the viewer draws (filtered or not)
  * @property {{text: string, kind: string}} headNotice - What the top of the buffer is: the real start, what was dropped, or the state of a load
+ * @property {boolean} highVolume - The container writes so fast that the buffer is being renewed within a minute
  * @property {boolean} canLoadEarlier - The start of the log is not loaded and loading more can help
  * @property {function} loadEarlier - Reads an older chunk with the fetcher it is given and puts it in front
  * @property {object} logsStreamRef - Ref to the { stop() } handle returned by getLogsStream
@@ -116,6 +121,17 @@ export function useLogsViewer() {
     ? { text: '', kind: 'empty' }
     : (earlierNotice(earlier) ?? bufferHeadNotice(buffer));
   const canLoadEarlier = canLoadMore(buffer) && earlier !== 'loading';
+  const highVolume = isHighVolume(buffer, Date.now());
+
+  // The warning is a function of the clock, and a quiet container causes no
+  // render: while it is on, re-evaluate it every few seconds, so it goes away
+  // by itself once the minute has passed.
+  const [, setClockTick] = useState(0);
+  useEffect(() => {
+    if (!highVolume) return undefined;
+    const timer = setInterval(() => setClockTick((n) => n + 1), RECHECK_MS);
+    return () => clearInterval(timer);
+  }, [highVolume]);
   const matchIndices = searched ? searched.matchIndices : [];
   const matchCount = searched ? searched.matchCount : 0;
   const currentMatch = Math.min(matchPos, matchCount - 1);
@@ -419,6 +435,7 @@ export function useLogsViewer() {
     logs,
     shownLogs,
     headNotice,
+    highVolume,
     canLoadEarlier,
     loadEarlier,
     logsStreamRef,

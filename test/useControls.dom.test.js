@@ -2421,6 +2421,20 @@ describe('TASK-11 — Ctrl+U loads earlier lines', () => {
   });
 });
 
+describe('TASK-11 — the viewer reports a noisy container', () => {
+  test('logsHighVolume is off until the buffer is being renewed', async () => {
+    const expose = { current: null };
+    render(
+      <HookTester
+        containers={[{ id: 'c-n', name: 'n', image: 'x', state: 'running', status: '', ports: [] }]}
+        expose={expose}
+      />
+    );
+    await act(async () => {});
+    expect(expose.current.logsHighVolume).toBe(false);
+  });
+});
+
 describe('useControls — the update key (TASK-20)', () => {
   const NPM_METHOD = {
     kind: 'npm',
