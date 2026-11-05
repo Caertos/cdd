@@ -247,8 +247,7 @@ describe('keymap ↔ useControls handlers', () => {
           .map((b) => b.id)
       ),
     ];
-    // view.* handlers arrive with the view-switching iteration
-    expect(ids.filter((id) => !id.startsWith('view.') && !hasHandler(id))).toEqual([]);
+    expect(ids.filter((id) => !hasHandler(id))).toEqual([]);
   });
 });
 

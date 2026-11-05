@@ -2540,3 +2540,175 @@ describe('useControls — the update key (TASK-20)', () => {
     expect(expose.current.messageColor).toBe('green');
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TASK-12 — switching views (Tab, Shift+Tab, 1/2/3)
+// ─────────────────────────────────────────────────────────────────────────────
+describe('useControls — switching views (TASK-12)', () => {
+  const containers = [
+    { id: 'c1', name: 'web', state: 'running', status: 'Up 1 m' },
+    { id: 'c2', name: 'db', state: 'running', status: 'Up 1 m' },
+    { id: 'c3', name: 'cache', state: 'running', status: 'Up 1 m' },
+  ];
+
+  beforeEach(() => {
+    _inputHandler = null;
+  });
+
+  async function mount(overrides = {}) {
+    const expose = { current: null };
+    render(
+      <HookTester
+        containers={containers}
+        expose={expose}
+        overrides={overrides}
+      />
+    );
+    await act(async () => {});
+    return expose;
+  }
+
+  test('starts on the containers view', async () => {
+    const expose = await mount();
+    expect(expose.current.activeView).toBe('containers');
+    expect(expose.current.views.map((v) => v.id)).toEqual([
+      'containers',
+      'projects',
+      'images',
+    ]);
+  });
+
+  test('Tab, Shift+Tab and the digit keys switch the view', async () => {
+    const expose = await mount();
+
+    act(() => {
+      triggerInput('', { tab: true });
+    });
+    expect(expose.current.activeView).toBe('projects');
+
+    act(() => {
+      triggerInput('', { tab: true });
+    });
+    expect(expose.current.activeView).toBe('images');
+
+    act(() => {
+      triggerInput('', { tab: true, shift: true });
+    });
+    expect(expose.current.activeView).toBe('projects');
+
+    act(() => {
+      triggerInput('1', {});
+    });
+    expect(expose.current.activeView).toBe('containers');
+
+    act(() => {
+      triggerInput('3', {});
+    });
+    expect(expose.current.activeView).toBe('images');
+  });
+
+  test('the selection survives a trip to another view', async () => {
+    const expose = await mount();
+
+    act(() => {
+      expose.current.dispatch('nav.down');
+    });
+    expect(expose.current.selected).toBe(1);
+
+    act(() => {
+      triggerInput('', { tab: true });
+    });
+    act(() => {
+      triggerInput('1', {});
+    });
+    expect(expose.current.selected).toBe(1);
+  });
+
+  test('list keys do nothing on the projects view', async () => {
+    const expose = await mount();
+
+    act(() => {
+      triggerInput('', { tab: true });
+    });
+    expect(expose.current.context).toBe('projects');
+
+    act(() => {
+      triggerInput('c', {});
+    });
+    expect(expose.current.creatingContainer).toBe(false);
+
+    act(() => {
+      triggerInput('l', {});
+    });
+    expect(expose.current.showLogs).toBe(false);
+  });
+
+  test('help is global', async () => {
+    const expose = await mount();
+
+    act(() => {
+      triggerInput('', { tab: true });
+    });
+
+    act(() => {
+      triggerInput('?', {});
+    });
+    expect(expose.current.showHelp).toBe(true);
+  });
+
+  test('a modal keeps the digits: typing in the filter does not switch views', async () => {
+    const expose = await mount();
+
+    act(() => {
+      triggerInput('/', {});
+    });
+    expect(expose.current.view.isFiltering).toBe(true);
+
+    act(() => {
+      triggerInput('2', {});
+    });
+    expect(expose.current.activeView).toBe('containers');
+  });
+
+  test('Tab in the wizard does not switch the view', async () => {
+    const expose = await mount();
+
+    act(() => {
+      triggerInput('c', {});
+    });
+    act(() => {
+      triggerInput('', { tab: true });
+    });
+    expect(expose.current.activeView).toBe('containers');
+  });
+
+  test('Shift+Tab in the wizard inserts the next env like Tab (pre-TASK-12 behaviour)', async () => {
+    const mockInsertNextSuggestedEnv = jest.fn();
+    const expose = await mount({
+      insertNextSuggestedEnv: mockInsertNextSuggestedEnv,
+    });
+
+    act(() => {
+      triggerInput('c', {});
+    });
+    act(() => {
+      expose.current.creation.setImageName('postgres');
+    });
+    act(() => {
+      triggerInput('\r', {});
+    }); // step 0 → 1
+    act(() => {
+      triggerInput('\r', {});
+    }); // step 1 → 2
+    act(() => {
+      triggerInput('\r', {});
+    }); // step 2 → 3
+    expect(expose.current.creation.step).toBe(3);
+
+    act(() => {
+      triggerInput('', { tab: true, shift: true });
+    });
+
+    expect(mockInsertNextSuggestedEnv).toHaveBeenCalledTimes(1);
+  });
+});
