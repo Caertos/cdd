@@ -4,9 +4,33 @@ import { LOG_VIEW_LINES } from '../../helpers/reservedRows.js';
 import { sanitizeTerminalText } from '../../helpers/sanitizeTerminalText.js';
 import { searchLogLines, lineMatches } from '../../helpers/logSearch.js';
 import { applyKeyToText, textStateOf } from '../../helpers/textEditing.js';
+import {
+  createLogBuffer,
+  appendLines,
+  prependLines,
+  newerThanHeld,
+  canLoadMore,
+  bufferHeadNotice,
+  isHighVolume,
+} from '../../helpers/logBuffer.js';
+import { LOG_RETENTION } from '../../helpers/constants.js';
 
-/** Most lines the viewer keeps; older ones fall off the top. */
-const MAX_LOG_LINES = 1000;
+/** What the head of the buffer says while an older chunk is loading or failed. */
+function earlierNotice(state) {
+  if (state === 'loading') {
+    return { text: '⋯ loading earlier lines…', kind: 'loading' };
+  }
+  if (state === 'failed') {
+    return {
+      text: '⋯ could not load earlier lines — [Ctrl+U] to retry',
+      kind: 'failed',
+    };
+  }
+  return null;
+}
+
+/** How often an active noisy-container warning is checked against the clock. */
+const RECHECK_MS = 10_000;
 
 /** Larger than any buffer: scrolling this far lands on the first line. */
 const TO_THE_TOP = Number.MAX_SAFE_INTEGER;
@@ -21,11 +45,14 @@ const TO_THE_TOP = Number.MAX_SAFE_INTEGER;
  * @returns {Object} Logs viewer state and helpers
  * @property {boolean} showLogs - Whether the logs viewer is open
  * @property {function} setShowLogs - Setter for showLogs
- * @property {Array<string>} logs - Every line received
+ * @property {Array<string>} logs - Every line the buffer still holds
  * @property {Array<string>} shownLogs - The lines the viewer draws (filtered or not)
- * @property {function} setLogs - Setter for logs
+ * @property {{text: string, kind: string}} headNotice - What the top of the buffer is: the real start, what was dropped, or the state of a load
+ * @property {boolean} highVolume - The container writes so fast that the buffer is being renewed within a minute
+ * @property {boolean} canLoadEarlier - The start of the log is not loaded and loading more can help
+ * @property {function} loadEarlier - Reads an older chunk with the fetcher it is given and puts it in front
  * @property {object} logsStreamRef - Ref to the { stop() } handle returned by getLogsStream
- * @property {function} openLogs - Helper to open logs for a container
+ * @property {function} openLogs - Opens the viewer on an empty buffer ({ reachedStart } says whether what arrives begins at the log's first line)
  * @property {function} stopLogsStream - Stops the stream without touching the UI state
  * @property {function} closeLogs - Helper to close logs and cleanup
  * @property {function} appendLogs - Adds lines, holding the view still when paused
@@ -40,7 +67,20 @@ const TO_THE_TOP = Number.MAX_SAFE_INTEGER;
  */
 export function useLogsViewer() {
   const [showLogs, setShowLogs] = useState(false);
-  const [logs, setLogs] = useState([]);
+  const [buffer, setBuffer] = useState(() => createLogBuffer());
+  const logs = buffer.lines;
+  // "Load earlier lines": 'idle' | 'loading' | 'failed'.
+  const [earlier, setEarlier] = useState('idle');
+  // The buffer as the stream callbacks and the loader see it: they outlive the
+  // render that made them, and the loader needs the length at response time.
+  const bufferRef = useRef(buffer);
+  const containerIdRef = useRef(null);
+  // Bumped on open and close, so a read that outlives its viewer is ignored.
+  const generationRef = useRef(0);
+  const loadingRef = useRef(false);
+  // Extra lines asked for after a read that brought nothing new (blank lines
+  // are not held but Docker counts them).
+  const extraRef = useRef(0);
   const logsStreamRef = useRef(null);
   const [scrollOffset, setScrollOffset] = useState(0);
   const [following, setFollowing] = useState(true);
@@ -75,12 +115,36 @@ export function useLogsViewer() {
   }, [logs, query, filterMode]);
 
   const shownLogs = searched ? searched.lines : logs;
+  // The notice describes the top of the whole buffer; with the filter on, the
+  // top of what is shown is not that.
+  const headNotice = filterMode
+    ? { text: '', kind: 'empty' }
+    : (earlierNotice(earlier) ?? bufferHeadNotice(buffer));
+  const canLoadEarlier = canLoadMore(buffer) && earlier !== 'loading';
+  const highVolume = isHighVolume(buffer, Date.now());
+
+  // The warning is a function of the clock, and a quiet container causes no
+  // render: while it is on, re-evaluate it every few seconds, so it goes away
+  // by itself once the minute has passed.
+  const [, setClockTick] = useState(0);
+  useEffect(() => {
+    if (!highVolume) return undefined;
+    const timer = setInterval(() => setClockTick((n) => n + 1), RECHECK_MS);
+    return () => clearInterval(timer);
+  }, [highVolume]);
   const matchIndices = searched ? searched.matchIndices : [];
   const matchCount = searched ? searched.matchCount : 0;
   const currentMatch = Math.min(matchPos, matchCount - 1);
 
   shownLengthRef.current = shownLogs.length;
   matchIndicesRef.current = matchIndices;
+
+  /** The one way the buffer changes, so the ref never lags the state. */
+  function updateBuffer(update) {
+    const next = update(bufferRef.current);
+    bufferRef.current = next;
+    setBuffer(next);
+  }
 
   function moveTo(offset) {
     offsetRef.current = offset;
@@ -118,7 +182,7 @@ export function useLogsViewer() {
    */
   function appendLogs(lines) {
     if (lines.length === 0) return;
-    setLogs((prev) => [...prev, ...lines].slice(-MAX_LOG_LINES));
+    updateBuffer((prev) => appendLines(prev, lines, Date.now()));
     if (followingRef.current) return;
 
     // With the filter on, a line that does not match is never shown, so it
@@ -252,14 +316,78 @@ export function useLogsViewer() {
     revealLine(hits[next]);
   }
 
+  // ── Earlier lines ─────────────────────────────────────────────────────────
+
+  /** A new or closed viewer forgets any load in flight. */
+  function resetEarlier() {
+    generationRef.current += 1;
+    loadingRef.current = false;
+    extraRef.current = 0;
+    setEarlier('idle');
+  }
+
+  /**
+   * Loads an older chunk and puts it in front of the buffer. Docker cannot
+   * page backwards, so it asks for what the buffer holds plus one chunk and
+   * keeps the part it does not have. The scroll offset counts from the newest
+   * line, so the lines being read do not move.
+   *
+   * Never rejects: a failed read is shown in the head notice and can be
+   * retried.
+   *
+   * @param {(containerId: string, tail: number) => Promise<{lines: string[], reachedStart: boolean, failed: boolean}>} fetchChunk
+   */
+  async function loadEarlier(fetchChunk) {
+    if (loadingRef.current || !canLoadMore(bufferRef.current)) return;
+    const generation = generationRef.current;
+    const chunk = LOG_RETENTION.LOAD_MORE_CHUNK;
+    loadingRef.current = true;
+    setEarlier('loading');
+
+    let result = null;
+    try {
+      result = await fetchChunk(
+        containerIdRef.current,
+        bufferRef.current.lines.length + chunk + extraRef.current
+      );
+    } catch {
+      result = null;
+    }
+    // The viewer was closed or reopened meanwhile: this read is not its own.
+    if (generation !== generationRef.current) return;
+
+    loadingRef.current = false;
+    if (!result || result.failed) {
+      setEarlier('failed');
+      return;
+    }
+
+    const { older, reachedStart } = newerThanHeld(
+      result,
+      bufferRef.current.lines.length,
+      chunk
+    );
+
+    extraRef.current =
+      older.length === 0 && !reachedStart ? extraRef.current * 2 || chunk : 0;
+    updateBuffer((prev) => prependLines(prev, older, reachedStart, Date.now()));
+    setEarlier('idle');
+  }
+
   // ── Open / close ──────────────────────────────────────────────────────────
 
   /**
-   * Opens the logs viewer and resets logs.
+   * Opens the logs viewer on an empty buffer.
+   *
+   * @param {Object} [options]
+   * @param {boolean} [options.reachedStart=false] - What arrives begins at the log's first line
+   * @param {string} [options.containerId] - Whose log "load earlier lines" reads
    */
-  function openLogs() {
+  function openLogs({ reachedStart = false, containerId = null } = {}) {
     setShowLogs(true);
-    setLogs([]);
+    updateBuffer(() => createLogBuffer({ reachedStart }));
+    containerIdRef.current = containerId;
+    resetEarlier();
     resetView();
   }
 
@@ -284,7 +412,8 @@ export function useLogsViewer() {
     // on its way (D9).
     stopLogsStream();
     setShowLogs(false);
-    setLogs([]);
+    updateBuffer(() => createLogBuffer());
+    resetEarlier();
     resetView();
   }
 
@@ -305,7 +434,10 @@ export function useLogsViewer() {
     setShowLogs,
     logs,
     shownLogs,
-    setLogs,
+    headNotice,
+    highVolume,
+    canLoadEarlier,
+    loadEarlier,
     logsStreamRef,
     openLogs,
     stopLogsStream,

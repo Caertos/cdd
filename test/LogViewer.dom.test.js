@@ -266,4 +266,95 @@ describe('LogViewer — terminal control sequences', () => {
       `Container logs, press ESC to exit${line}${STRINGS.logsHint}`
     );
   });
+
+  describe('head notice (TASK-11)', () => {
+    const notice = { text: '─── start of log ───', kind: 'complete' };
+
+    test('shows the notice above the first line when the window is at the top', () => {
+      const { getByText } = render(
+        <LogViewer
+          logs={lines(5)}
+          height={10}
+          headNotice={notice}
+        />
+      );
+      expect(getByText('─── start of log ───')).toBeTruthy();
+    });
+
+    test('hides it while the window is further down', () => {
+      const { queryByText } = render(
+        <LogViewer logs={lines(50)} height={10} headNotice={notice} />
+      );
+      expect(queryByText('─── start of log ───')).toBeNull();
+    });
+
+    test('shows it when scrolled all the way up, without growing the panel', () => {
+      const { getByText, container } = render(
+        <LogViewer
+          logs={lines(50)}
+          height={10}
+          scrollOffset={40}
+          following={false}
+          headNotice={notice}
+        />
+      );
+      expect(getByText('─── start of log ───')).toBeTruthy();
+      expect(getByText('line-0')).toBeTruthy();
+      // notice + 9 lines = the 10 rows the window was given
+      expect(container.textContent).not.toContain('line-9');
+      expect(container.textContent).toContain('line-8');
+    });
+
+    test('no notice prop, no extra row: the old layout is untouched', () => {
+      const { container } = render(
+        <LogViewer logs={lines(50)} height={10} scrollOffset={40} following={false} />
+      );
+      expect(container.textContent).toContain('line-9');
+    });
+
+    test('an empty notice draws nothing', () => {
+      const { container } = render(
+        <LogViewer
+          logs={lines(3)}
+          height={10}
+          headNotice={{ text: '', kind: 'empty' }}
+        />
+      );
+      expect(container.textContent).not.toContain('⋯');
+    });
+
+    test('the notice text is sanitised like any other text', () => {
+      const { container } = render(
+        <LogViewer
+          logs={lines(3)}
+          height={10}
+          headNotice={{ text: `x${ESC}[31my`, kind: 'dropped' }}
+        />
+      );
+      expectNoControlBytes(container.textContent);
+    });
+  });
+
+  describe('noisy container warning (TASK-11)', () => {
+    test('the header says lines are being dropped', () => {
+      const { container } = render(
+        <LogViewer logs={lines(3)} height={10} highVolume />
+      );
+      expect(container.textContent).toContain(STRINGS.logsHighVolume);
+      expect(STRINGS.logsHighVolume).toMatch(/writes very fast/);
+    });
+
+    test('no warning by default', () => {
+      const { container } = render(<LogViewer logs={lines(3)} height={10} />);
+      expect(container.textContent).not.toContain('writes very fast');
+    });
+
+    test('the title row is still the title row', () => {
+      const { getByText } = render(
+        <LogViewer logs={['a']} container={{ name: 'web' }} highVolume />
+      );
+      expect(getByText('web logs, press ESC to exit')).toBeTruthy();
+    });
+  });
 });
+

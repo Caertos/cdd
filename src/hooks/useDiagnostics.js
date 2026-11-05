@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { getLogsTail } from '../helpers/dockerService/serviceComponents/containerLogs.js';
 import { diagnose, shouldDiagnose } from '../helpers/diagnostics/diagnose.js';
-import { IMAGE_PROFILES } from '../helpers/constants.js';
+import { IMAGE_PROFILES, LOG_RETENTION } from '../helpers/constants.js';
 import { normalizeImageName } from '../helpers/imageNameUtils.js';
 import { logger } from '../helpers/logger.js';
 
 /** How many log lines the rules get to read. */
-const DIAGNOSTIC_LOG_LINES = 50;
+const DIAGNOSTIC_LOG_LINES = LOG_RETENTION.DIAGNOSTIC_TAIL;
 
 /**
  * Cache key for one failure.

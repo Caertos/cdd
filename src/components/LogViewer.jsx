@@ -14,6 +14,8 @@ import { PromptField } from './PromptField.jsx';
  *
  * @param {Object} props
  * @param {Array<string>} props.logs - The lines to draw (already filtered when the filter is on)
+ * @param {boolean} [props.highVolume=false] - Warn in the title that the container writes so fast that lines are being dropped
+ * @param {{text: string, kind: string}} [props.headNotice] - What the top of the buffer is; drawn as the first row when the window reaches the top
  * @param {Function} [props.onExit] - Optional callback when the viewer closes
  * @param {Object} [props.container] - Optional container metadata (used for title)
  * @param {number} [props.height=15] - Lines shown at once
@@ -25,6 +27,8 @@ import { PromptField } from './PromptField.jsx';
  */
 export default function LogViewer({
   logs,
+  headNotice,
+  highVolume = false,
   onExit: _onExit,
   container,
   height = 15,
@@ -39,7 +43,13 @@ export default function LogViewer({
   const offset = Math.min(Math.max(0, scrollOffset), maxOffset);
   const end = logs.length - offset;
   const start = Math.max(0, end - height);
-  const visibleLogs = logs.slice(start, end);
+  // At the very top the notice takes one of the window's rows, so the panel
+  // never grows past the rows reserved for it.
+  const notice = start === 0 && headNotice?.text ? headNotice.text : '';
+  const visibleLogs = logs.slice(
+    start,
+    notice ? Math.min(end, height - 1) : end
+  );
   const query = search?.query ?? '';
 
   return (
@@ -49,10 +59,20 @@ export default function LogViewer({
       borderColor="green"
       paddingX={1}
     >
-      <Text color="green">
+      {/* One row, however narrow the terminal: a title that wraps would grow
+          the panel past the rows reserved for it. */}
+      <Text color="green" wrap="truncate">
         {STRINGS.logsTitle(sanitizeTerminalText(container?.name))}
         {following ? '' : STRINGS.logsPaused(pending)}
+        {highVolume ? (
+          <Text color="yellow"> {STRINGS.logsHighVolume}</Text>
+        ) : null}
       </Text>
+      {notice ? (
+        <Text dimColor wrap="truncate">
+          {sanitizeTerminalText(notice)}
+        </Text>
+      ) : null}
       {visibleLogs.length === 0 ? (
         <Text dimColor>
           {query ? STRINGS.logsMatches(0, -1) : STRINGS.noLogs}
@@ -131,6 +151,11 @@ Footer.propTypes = {
 
 LogViewer.propTypes = {
   logs: PropTypes.arrayOf(PropTypes.string).isRequired,
+  highVolume: PropTypes.bool,
+  headNotice: PropTypes.shape({
+    text: PropTypes.string,
+    kind: PropTypes.string,
+  }),
   onExit: PropTypes.func,
   container: PropTypes.object,
   height: PropTypes.number,

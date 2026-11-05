@@ -13,17 +13,17 @@
 
 ---
 
-## 🎉 What's new in v4.12
+## 🎉 What's new in v4.13
 
-**The log viewer is now a proper tool, and CDD keeps itself up to date.**
+**You see a stopped container's whole log, and when something is missing, CDD tells you.**
 
-- **The viewer scrolls and pauses.** `↑`/`↓` and `PgUp`/`PgDn` move through the buffer; scrolling up pauses following, the header counts the lines that arrive meanwhile, and `End` (or `f`) catches up. These keys were listed in the help but did nothing (D21).
-- **`/` searches the logs.** Matches are highlighted and counted (`3 of 27`), `n`/`N` jump between them with wrap-around, and `Ctrl+F` keeps only the matching lines. The search is literal and ignores case.
-- **CDD tells you when a newer version is on npm** — and can update itself. On start it checks the registry quietly (at most once a day, in the background); when there is a newer release the header shows `↑ vX.Y.Z [U]`, and `U` runs the right install command for npm, pnpm, yarn or bun after asking. Opt out with `CDD_NO_UPDATE_CHECK=1`.
+- **A stopped container is read whole.** Open its logs and `Home` takes you to its very first line: the log of a container that has stopped is finite, and it is the one you read to find out why. A running container opens with its last 2,000 lines (it was 100).
+- **A cut is never silent.** The top of the log always says what it is: `start of log`, or `N earlier lines dropped (memory limit)`. Before, the viewer kept the last 1,000 lines and told you nothing.
+- **`Ctrl+U` loads earlier lines** of a running container, 2,000 at a time, without moving the lines you are reading.
+- **The limit is memory, not lines.** The buffer is capped in bytes (16 MB by default) and one huge line is cut with a mark (`… [line cut: 3.2 MB]`) instead of eating the memory. Both limits can be changed — see [Log viewer limits](#log-viewer-limits).
+- **A noisy container says so.** If a container writes so fast that the buffer is renewed within a minute, the header warns that lines are being dropped: the problem is the container, not the viewer.
 
-Along the way, four rendering and health bugs were fixed: the stats bars no longer touch the rows around them, a stopped container is no longer shown as unhealthy just because Docker kept its last health status, log lines no longer start with stray bytes from Docker's stream framing, and opening the logs, help or diagnosis no longer stacks copies of the screen on scrollback.
-
-**Requires Node 22 or newer** — the supported range now matches what the dependency tree already needed (`ink` 8, `chalk` 6).
+**Requires Node 22 or newer** (`ink` 8 and `chalk` 6 need it).
 
 Older release notes are kept in [`CHANGELOG.md`](CHANGELOG.md).
 
@@ -142,6 +142,7 @@ The log opens in a panel under the list. Scrolling up pauses following (the head
 | `↑` / `↓`       | Scroll one line                                     |
 | `PgUp` / `PgDn` | Scroll one page                                     |
 | `Home` / `End`  | First line / newest line (and follow again)         |
+| `Ctrl+U`        | Load earlier lines (when the log's start is not loaded) |
 | `f`             | Toggle auto-follow                                  |
 | `/`             | Search: matches are highlighted and counted         |
 | `n` / `N`       | Next / previous match                               |
@@ -324,6 +325,21 @@ To capture logs to a file:
 ```bash
 CDD_LOG_LEVEL=debug cdd > cdd-debug.log 2>&1
 ```
+
+### Log viewer limits
+
+The log viewer keeps what it receives in a buffer with a memory ceiling, and always says when it had to throw lines away. Two variables change the ceiling:
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `CDD_LOG_BUFFER_BYTES` | `16777216` (16 MB) | Memory the buffer may use, in bytes |
+| `CDD_LOG_MAX_LINES` | `100000` | Second safety net, in lines |
+
+```bash
+CDD_LOG_BUFFER_BYTES=1048576 cdd
+```
+
+A value that is not a positive whole number is ignored. When the ceiling is reached the oldest lines are dropped and the top of the viewer says how many. A single line over 1 MB is cut and marked.
 
 ---
 

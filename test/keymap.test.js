@@ -564,3 +564,31 @@ describe('update bindings', () => {
     );
   });
 });
+
+describe('logs.earlier — Ctrl+U loads earlier lines (TASK-11)', () => {
+  test('Ctrl+U resolves to logs.earlier while there is something to load', () => {
+    expect(
+      resolveKey('logs', 'u', { ctrl: true }, { logsCanLoadEarlier: true }).id
+    ).toBe('logs.earlier');
+  });
+
+  test('without anything to load the key is not bound', () => {
+    expect(
+      resolveKey('logs', 'u', { ctrl: true }, { logsCanLoadEarlier: false })
+    ).toBeNull();
+  });
+
+  test('the HUD and the help list it only when it applies', () => {
+    const on = getBindings('logs', { logsCanLoadEarlier: true }).map((b) => b.id);
+    const off = getBindings('logs', { logsCanLoadEarlier: false }).map((b) => b.id);
+    expect(on).toContain('logs.earlier');
+    expect(off).not.toContain('logs.earlier');
+  });
+
+  test('in the search field Ctrl+U stays a text key', () => {
+    expect(
+      resolveKey('logs-search', 'u', { ctrl: true }, { logsCanLoadEarlier: true })
+    ).toBeNull();
+  });
+});
+

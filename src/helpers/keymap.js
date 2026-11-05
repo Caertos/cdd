@@ -425,6 +425,14 @@ export const KEYMAP = {
       priority: 78,
     },
     {
+      id: 'logs.earlier',
+      keys: ['ctrl+u'],
+      label: 'Earlier',
+      help: 'Load earlier lines (when the start of the log is not loaded)',
+      priority: 77,
+      when: (s) => Boolean(s.logsCanLoadEarlier),
+    },
+    {
       id: 'logs.search',
       keys: ['/'],
       label: 'Search',
@@ -658,6 +666,7 @@ export const KEYMAP = {
  * @param {boolean} [state.showHelp]
  * @param {boolean} [state.showLogs]
  * @param {boolean} [state.logSearchOpen] - The log search field is open
+ * @param {boolean} [state.logsCanLoadEarlier] - The start of the log is not loaded, so Ctrl+U can load more
  * @param {boolean} [state.isFiltering] - The list filter field is open
  * @param {boolean} [state.creatingContainer]
  * @param {boolean} [state.hasActiveList]

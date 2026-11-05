@@ -13,6 +13,8 @@ export const KEY = {
   pageUp: '\u001b[5~',
   pageDown: '\u001b[6~',
   ctrlG: '\u0007',
+  ctrlU: '\u0015',
+  home: '\u001b[H',
   ctrlR: '\u0012',
 };
 

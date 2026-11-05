@@ -250,6 +250,7 @@ export const STRINGS = {
   logsTitle: (name) => `${name ?? 'Container'} logs, press ESC to exit`,
   logsPaused: (pending) =>
     ` ⏸ paused${pending > 0 ? ` · ${pending} new` : ''} · [End] latest`,
+  logsHighVolume: '⚠ This container writes very fast — lines are being dropped',
   logsHint: '[/] search  [Home] top  [End] latest  [F] follow  [?] more',
   logsSearchLabel: '/',
   logsMatches: (count, pos) =>

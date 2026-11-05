@@ -1,6 +1,7 @@
 /**
  * @jest-environment jsdom
  */
+import { jest } from '@jest/globals';
 import { renderHook, act } from '@testing-library/react';
 import { useLogsViewer } from '../src/hooks/creation/useLogsViewer.js';
 
@@ -280,3 +281,330 @@ describe('useLogsViewer — filter', () => {
     expect(hook.result.current.search.matchCount).toBe(0);
   });
 });
+
+describe('useLogsViewer — retention buffer (TASK-11)', () => {
+  const MB = 1024 * 1024;
+  const bigLine = (n) => `${String(n).padStart(3, '0')}${'x'.repeat(900 * 1024)}`;
+
+  test('an empty viewer has nothing to announce', () => {
+    const hook = renderHook(() => useLogsViewer());
+    act(() => hook.result.current.openLogs());
+    expect(hook.result.current.headNotice).toEqual({ text: '', kind: 'empty' });
+  });
+
+  test('a viewer opened on a whole log says it is the start', () => {
+    const hook = renderHook(() => useLogsViewer());
+    act(() => {
+      hook.result.current.openLogs({ reachedStart: true });
+      hook.result.current.appendLogs(['a', 'b']);
+    });
+    expect(hook.result.current.headNotice.kind).toBe('complete');
+  });
+
+  test('a viewer opened on a tail does not claim the start', () => {
+    const hook = renderHook(() => useLogsViewer());
+    act(() => {
+      hook.result.current.openLogs();
+      hook.result.current.appendLogs(['a', 'b']);
+    });
+    expect(hook.result.current.headNotice.kind).toBe('partial');
+  });
+
+  test('the old 1000-line cut is gone: 5000 short lines are all kept', () => {
+    const hook = renderHook(() => useLogsViewer());
+    act(() => {
+      hook.result.current.openLogs({ reachedStart: true });
+      hook.result.current.appendLogs(lines(5000));
+    });
+    expect(hook.result.current.logs).toHaveLength(5000);
+    expect(hook.result.current.headNotice.kind).toBe('complete');
+  });
+
+  test('past the byte ceiling the oldest lines go and the notice says so', () => {
+    const hook = renderHook(() => useLogsViewer());
+    act(() => {
+      hook.result.current.openLogs({ reachedStart: true });
+      hook.result.current.appendLogs(
+        Array.from({ length: 20 }, (_, i) => bigLine(i))
+      );
+    });
+    const { logs, headNotice } = hook.result.current;
+    expect(logs.length).toBeLessThan(20);
+    expect(logs[logs.length - 1].startsWith('019')).toBe(true);
+    expect(logs[0].startsWith('000')).toBe(false);
+    expect(headNotice.kind).toBe('dropped');
+    expect(headNotice.text).toContain(`${20 - logs.length}`);
+    expect(
+      logs.reduce((n, l) => n + Buffer.byteLength(l), 0)
+    ).toBeLessThanOrEqual(16 * MB);
+  });
+
+  test('closing the viewer empties the buffer and the notice', () => {
+    const hook = renderHook(() => useLogsViewer());
+    act(() => {
+      hook.result.current.openLogs({ reachedStart: true });
+      hook.result.current.appendLogs(['a']);
+    });
+    act(() => hook.result.current.closeLogs());
+    expect(hook.result.current.logs).toEqual([]);
+    expect(hook.result.current.headNotice.kind).toBe('empty');
+  });
+
+  test('reopening starts from a fresh buffer, not the previous notice', () => {
+    const hook = renderHook(() => useLogsViewer());
+    act(() => {
+      hook.result.current.openLogs({ reachedStart: true });
+      hook.result.current.appendLogs(['a']);
+    });
+    act(() => hook.result.current.openLogs());
+    act(() => hook.result.current.appendLogs(['b']));
+    expect(hook.result.current.headNotice.kind).toBe('partial');
+    expect(hook.result.current.logs).toEqual(['b']);
+  });
+});
+
+describe('useLogsViewer — loading earlier lines (TASK-11)', () => {
+  const CHUNK = 2000;
+  const range = (from, to) =>
+    Array.from({ length: to - from }, (_, i) => `l${from + i}`);
+
+  /** A viewer on a live container: only the last 5 lines were loaded. */
+  function liveViewer() {
+    const hook = renderHook(() => useLogsViewer());
+    act(() => {
+      hook.result.current.openLogs({ containerId: 'c1' });
+      hook.result.current.setViewHeight(HEIGHT);
+      hook.result.current.appendLogs(range(5, 10));
+    });
+    return hook;
+  }
+
+  const answer = (lines, reachedStart = false) =>
+    jest.fn().mockResolvedValue({ lines, reachedStart, failed: false });
+
+  test('asks for what it holds plus one chunk, and puts the older lines in front', async () => {
+    const hook = liveViewer();
+    const fetchChunk = answer(range(0, 10), true);
+    await act(async () => {
+      await hook.result.current.loadEarlier(fetchChunk);
+    });
+    expect(fetchChunk).toHaveBeenCalledWith('c1', 5 + CHUNK);
+    expect(hook.result.current.logs).toEqual(range(0, 10));
+    expect(hook.result.current.headNotice.kind).toBe('complete');
+  });
+
+  test('is only on offer while the start is not loaded', () => {
+    const hook = liveViewer();
+    expect(hook.result.current.canLoadEarlier).toBe(true);
+    const whole = renderHook(() => useLogsViewer());
+    act(() => {
+      whole.result.current.openLogs({ reachedStart: true, containerId: 'c1' });
+      whole.result.current.appendLogs(['a']);
+    });
+    expect(whole.result.current.canLoadEarlier).toBe(false);
+  });
+
+  test('does nothing when the start is already loaded', async () => {
+    const whole = renderHook(() => useLogsViewer());
+    act(() => {
+      whole.result.current.openLogs({ reachedStart: true, containerId: 'c1' });
+      whole.result.current.appendLogs(['a']);
+    });
+    const fetchChunk = answer([]);
+    await act(async () => {
+      await whole.result.current.loadEarlier(fetchChunk);
+    });
+    expect(fetchChunk).not.toHaveBeenCalled();
+  });
+
+  test('keeps the reading position: the same lines stay on screen', async () => {
+    const hook = renderHook(() => useLogsViewer());
+    act(() => {
+      hook.result.current.openLogs({ containerId: 'c1' });
+      hook.result.current.setViewHeight(HEIGHT);
+      hook.result.current.appendLogs(range(10, 20));
+    });
+    act(() => hook.result.current.scrollLogs(3));
+    const onScreen = (r) => {
+      const { logs, scrollOffset } = r.current;
+      return logs.slice(logs.length - scrollOffset - HEIGHT, logs.length - scrollOffset);
+    };
+    const before = onScreen(hook.result);
+    expect(before).toEqual(range(12, 17));
+
+    await act(async () => {
+      await hook.result.current.loadEarlier(answer(range(0, 20), true));
+    });
+
+    expect(hook.result.current.scrollOffset).toBe(3);
+    expect(onScreen(hook.result)).toEqual(before);
+    expect(hook.result.current.following).toBe(false);
+  });
+
+  test('lines that arrive during the load are not duplicated', async () => {
+    const hook = liveViewer();
+    const fetchChunk = jest.fn(async () => {
+      act(() => hook.result.current.appendLogs(['l10']));
+      return { lines: range(0, 11), reachedStart: true, failed: false };
+    });
+    await act(async () => {
+      await hook.result.current.loadEarlier(fetchChunk);
+    });
+    expect(hook.result.current.logs).toEqual(range(0, 11));
+  });
+
+  test('more older lines than one chunk: only a chunk is taken and the start is not claimed', async () => {
+    const hook = liveViewer();
+    await act(async () => {
+      await hook.result.current.loadEarlier(
+        answer(range(-2500, 10), true)
+      );
+    });
+    expect(hook.result.current.logs).toHaveLength(5 + CHUNK);
+    expect(hook.result.current.logs[hook.result.current.logs.length - 1]).toBe('l9');
+    expect(hook.result.current.headNotice.kind).toBe('partial');
+    expect(hook.result.current.canLoadEarlier).toBe(true);
+  });
+
+  test('says it is loading, and ignores a second press meanwhile', async () => {
+    const hook = liveViewer();
+    let release;
+    const fetchChunk = jest.fn(
+      () =>
+        new Promise((resolve) => {
+          release = () =>
+            resolve({ lines: range(0, 10), reachedStart: true, failed: false });
+        })
+    );
+    let first;
+    act(() => {
+      first = hook.result.current.loadEarlier(fetchChunk);
+    });
+    expect(hook.result.current.headNotice.kind).toBe('loading');
+    expect(hook.result.current.canLoadEarlier).toBe(false);
+    await act(async () => {
+      await hook.result.current.loadEarlier(fetchChunk);
+    });
+    expect(fetchChunk).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      release();
+      await first;
+    });
+    expect(hook.result.current.headNotice.kind).toBe('complete');
+  });
+
+  test.each([
+    ['a failed read', () => jest.fn().mockResolvedValue({ lines: [], reachedStart: false, failed: true })],
+    ['a rejected read', () => jest.fn().mockRejectedValue(new Error('boom'))],
+  ])('%s leaves the buffer alone, says so, and can be retried', async (_n, make) => {
+    const hook = liveViewer();
+    await act(async () => {
+      await hook.result.current.loadEarlier(make());
+    });
+    expect(hook.result.current.logs).toEqual(range(5, 10));
+    expect(hook.result.current.headNotice.kind).toBe('failed');
+    expect(hook.result.current.canLoadEarlier).toBe(true);
+    await act(async () => {
+      await hook.result.current.loadEarlier(answer(range(0, 10), true));
+    });
+    expect(hook.result.current.logs).toEqual(range(0, 10));
+  });
+
+  test('a read that brings nothing new asks for more next time', async () => {
+    const hook = liveViewer();
+    await act(async () => {
+      await hook.result.current.loadEarlier(answer(range(5, 10)));
+    });
+    expect(hook.result.current.logs).toEqual(range(5, 10));
+    const second = answer(range(5, 10));
+    await act(async () => {
+      await hook.result.current.loadEarlier(second);
+    });
+    expect(second).toHaveBeenCalledWith('c1', 5 + CHUNK + CHUNK);
+  });
+
+  test('a read that outlives the viewer does not touch the next one', async () => {
+    const hook = liveViewer();
+    let release;
+    const fetchChunk = jest.fn(
+      () =>
+        new Promise((resolve) => {
+          release = () =>
+            resolve({ lines: range(0, 10), reachedStart: true, failed: false });
+        })
+    );
+    let pending;
+    act(() => {
+      pending = hook.result.current.loadEarlier(fetchChunk);
+    });
+    act(() => hook.result.current.closeLogs());
+    act(() => hook.result.current.openLogs({ containerId: 'c2' }));
+    await act(async () => {
+      release();
+      await pending;
+    });
+    expect(hook.result.current.logs).toEqual([]);
+    expect(hook.result.current.canLoadEarlier).toBe(true);
+  });
+});
+
+describe('useLogsViewer — noisy container warning (TASK-11)', () => {
+  const bigLine = (n) => `${String(n).padStart(3, '0')}${'x'.repeat(900 * 1024)}`;
+  const flood = (count) => Array.from({ length: count }, (_, i) => bigLine(i));
+
+  afterEach(() => jest.useRealTimers());
+
+  test('a quiet viewer has no warning', () => {
+    const hook = renderHook(() => useLogsViewer());
+    act(() => {
+      hook.result.current.openLogs({ reachedStart: true });
+      hook.result.current.appendLogs(['a', 'b']);
+    });
+    expect(hook.result.current.highVolume).toBe(false);
+  });
+
+  test('renewing the whole buffer inside a minute raises it', () => {
+    const hook = renderHook(() => useLogsViewer());
+    act(() => {
+      hook.result.current.openLogs({ reachedStart: true });
+      hook.result.current.appendLogs(flood(40));
+    });
+    expect(hook.result.current.headNotice.kind).toBe('dropped');
+    expect(hook.result.current.highVolume).toBe(true);
+  });
+
+  test('a single small overflow does not', () => {
+    const hook = renderHook(() => useLogsViewer());
+    act(() => {
+      hook.result.current.openLogs({ reachedStart: true });
+      hook.result.current.appendLogs(flood(20));
+    });
+    expect(hook.result.current.headNotice.kind).toBe('dropped');
+    expect(hook.result.current.highVolume).toBe(false);
+  });
+
+  test('it clears by itself once the container goes quiet', () => {
+    jest.useFakeTimers();
+    const hook = renderHook(() => useLogsViewer());
+    act(() => {
+      hook.result.current.openLogs({ reachedStart: true });
+      hook.result.current.appendLogs(flood(40));
+    });
+    expect(hook.result.current.highVolume).toBe(true);
+    act(() => {
+      jest.advanceTimersByTime(80_000);
+    });
+    expect(hook.result.current.highVolume).toBe(false);
+  });
+
+  test('closing and reopening starts without the warning', () => {
+    const hook = renderHook(() => useLogsViewer());
+    act(() => {
+      hook.result.current.openLogs({ reachedStart: true });
+      hook.result.current.appendLogs(flood(40));
+    });
+    act(() => hook.result.current.closeLogs());
+    expect(hook.result.current.highVolume).toBe(false);
+  });
+});
+

@@ -26,6 +26,47 @@ export const HEALTH_THRESHOLDS = {
   FAST_EXIT_MS: 2000,
 };
 
+/**
+ * Reads a positive integer from the environment, or the fallback when the
+ * value is missing or is anything else (zero, negative, decimal, text).
+ *
+ * @param {string|undefined} raw
+ * @param {number} fallback
+ * @returns {number}
+ */
+function positiveIntOr(raw, fallback) {
+  if (typeof raw !== 'string' || !/^\d+$/.test(raw.trim())) return fallback;
+  const value = Number(raw.trim());
+  return Number.isSafeInteger(value) && value > 0 ? value : fallback;
+}
+
+/**
+ * Log retention policy (TASK-11). The two ceilings can be overridden from the
+ * environment, the same way CDD_LOG_LEVEL is:
+ * - BUFFER_BYTES (CDD_LOG_BUFFER_BYTES): memory ceiling of the log buffer
+ * - MAX_LINES (CDD_LOG_MAX_LINES): second safety net, in lines
+ * - INITIAL_TAIL_RUNNING: lines asked for when opening a running container
+ * - INITIAL_TAIL_STOPPED: 'all' = the whole log of a stopped container
+ * - DIAGNOSTIC_TAIL: lines the diagnosis reads without opening the viewer
+ * - LOAD_MORE_CHUNK: lines added by each "load earlier lines"
+ * - MAX_LINE_BYTES: one line over this is cut, with a visible mark
+ *
+ * @param {Record<string, string|undefined>} [env]
+ */
+export function readLogRetention(env = process.env) {
+  return {
+    BUFFER_BYTES: positiveIntOr(env.CDD_LOG_BUFFER_BYTES, 16 * 1024 * 1024),
+    MAX_LINES: positiveIntOr(env.CDD_LOG_MAX_LINES, 100_000),
+    INITIAL_TAIL_RUNNING: 2_000,
+    INITIAL_TAIL_STOPPED: 'all',
+    DIAGNOSTIC_TAIL: 200,
+    LOAD_MORE_CHUNK: 2_000,
+    MAX_LINE_BYTES: 1024 * 1024,
+  };
+}
+
+export const LOG_RETENTION = readLogRetention();
+
 /** Number of steps in the container creation wizard. 5 since TASK-4 (review step). */
 export const WIZARD_STEP_COUNT = 5;
 
