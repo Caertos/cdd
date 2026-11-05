@@ -101,12 +101,7 @@ export default function ContainerCreationPrompt(props) {
   const maskRanges =
     step === 3 && !revealSecrets ? secretRanges(safeEnvInput) : [];
   return (
-    <Box
-      flexDirection="column"
-      borderStyle="round"
-      borderColor="yellow"
-      padding={1}
-    >
+    <Box flexDirection="column">
       <Box justifyContent="center">
         <Text dimColor>
           Step {step + 1} of {WIZARD_STEP_COUNT}

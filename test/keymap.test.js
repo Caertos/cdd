@@ -247,7 +247,7 @@ describe('keymap ↔ useControls handlers', () => {
           .map((b) => b.id)
       ),
     ];
-    expect(ids.filter((id) => !hasHandler(id))).toEqual([]); // today: logs.up/down/pageup/pagedown/follow
+    expect(ids.filter((id) => !hasHandler(id))).toEqual([]);
   });
 });
 

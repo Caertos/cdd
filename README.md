@@ -34,6 +34,7 @@ Older release notes are kept in [`CHANGELOG.md`](CHANGELOG.md).
 - 🐳 Live view of all Docker containers with CPU/memory stats
 - 🔄 Auto-refresh every few seconds — always up to date
 - ⌨️ Keyboard-driven actions: start, stop, restart, log streaming, removal
+- 🗂️ Views — Containers, Projects and Images tabs; the header and tabs stay visible whatever you open
 - 🎨 **Health verdicts** — running, starting, stopped, crashed, crash-loop, restarting or unhealthy, read from Docker's own data
 - ⚪ Stopped vs crashed — a container you stopped is grey; red is reserved for real failures
 - 🔍 **Explains why it failed** — a panel with the probable cause and the last log lines, unprompted, for every failing container
@@ -77,6 +78,18 @@ cdd
 ## Usage
 
 Use `↑` / `↓` to navigate containers. The **HUD** at the bottom shows available keys for the current context. Press `?` for full help.
+
+### Views
+
+Under the header there are three tabs, always visible: **Containers**, **Projects** and **Images**. Projects and Images are placeholders for now and arrive in upcoming versions. Every action keeps its key (`C` create, `L` logs…) and only acts in Containers.
+
+| Key                | Action                                            |
+| ------------------ | ------------------------------------------------- |
+| `Tab` / `Shift+Tab` | Next / previous view                             |
+| `1` `2` `3`        | Jump to Containers / Projects / Images            |
+| `?` `Q`            | Help and quit, in every view                      |
+
+The creation wizard, the help and the logs open inside the view, with the header and tabs still on screen (`Tab` inside the wizard still searches Docker Hub or inserts an env var; it does not switch views). On a terminal under 20 rows the footer and inner margin are dropped; the header, tabs and key hints stay. Going to another view and coming back keeps the selection, the filter and the sort order as you left them.
 
 ### Container List
 
@@ -122,6 +135,8 @@ After starting, CDD waits for the daemon to respond, then reloads your container
 
 ### Creation Wizard
 
+It opens inside the Containers view: header and tabs stay visible.
+
 | Key       | Action                                    |
 | --------- | ----------------------------------------- |
 | `Enter`   | Confirm and continue to next step (or create on review) |
@@ -135,7 +150,7 @@ After starting, CDD waits for the daemon to respond, then reloads your container
 
 ### Logs Viewer
 
-The log opens in a panel under the list. Scrolling up pauses following (the header says so and counts the lines that arrive meanwhile); `End` goes back to the newest line and follows again.
+The log opens in the content area, in place of the list; the header, tabs and key hints stay on screen. Scrolling up pauses following (the header says so and counts the lines that arrive meanwhile); `End` goes back to the newest line and follows again.
 
 | Key             | Action                                              |
 | --------------- | --------------------------------------------------- |

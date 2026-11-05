@@ -231,6 +231,8 @@ export const STRINGS = {
   helpClose: 'Press ? or Esc to close',
   contextLabels: {
     list: 'Container List',
+    projects: 'Projects',
+    images: 'Images',
     filter: 'Search',
     wizard: 'Creation Wizard',
     'wizard-list': 'Suggestion List',
@@ -298,6 +300,17 @@ export const STRINGS = {
     insertNextEnv: 'Insert next env',
     continue: 'Continue',
     back: 'Back',
+  },
+
+  // ── Views ──
+  views: {
+    containers: 'Containers',
+    projects: 'Projects',
+    images: 'Images',
+    projectsPlaceholder:
+      'Your Docker Compose projects will appear here. Coming in the next version.',
+    imagesPlaceholder:
+      'Your Docker images will appear here. Not available yet.',
   },
 
   // ── Validation ──

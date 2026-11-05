@@ -9,11 +9,32 @@
  */
 
 // Border(2) + padding(2) + Header(3: version, summary, sort) + blank line(1) +
-// KeyHUD(1) + Footer(1) + the list's "N more" row(1), plus one row of slack:
-// Ink repaints the whole terminal, stacking a copy of the frame in the
-// scrollback, as soon as a frame is as tall as the terminal. Staying strictly
-// under it is what keeps the redraw in place.
-export const BASE_CHROME_ROWS = 12;
+// view tabs(1) + KeyHUD(1) + Footer(1) + the list's "N more" row(1), plus one
+// row of slack: Ink repaints the whole terminal, stacking a copy of the frame
+// in the scrollback, as soon as a frame is as tall as the terminal. Staying
+// strictly under it is what keeps the redraw in place.
+export const BASE_CHROME_ROWS = 13;
+
+// Terminal height (rows) below which the shell goes compact: no footer, no
+// outer padding. Same threshold AppShell uses to drop the footer.
+export const COMPACT_ROWS = 20;
+
+// Rows the compact shell gives back: padding(2) + footer(1), which it does not paint.
+export const COMPACT_SAVED_ROWS = 3;
+
+/**
+ * Chrome rows for a terminal of this height: the base, minus the savings when
+ * the shell is compact. Unmeasured heights keep the base.
+ *
+ * @param {number} terminalRows - Terminal height
+ * @returns {number}
+ */
+export function chromeRows(terminalRows) {
+  if (Number.isFinite(terminalRows) && terminalRows < COMPACT_ROWS) {
+    return BASE_CHROME_ROWS - COMPACT_SAVED_ROWS;
+  }
+  return BASE_CHROME_ROWS;
+}
 
 // Tallest the DiagnosticPanel gets when shown: margin(1) + border(2) + title,
 // blank, what, blank, cause(2), blank, last lines + 5 tail lines, blank and
@@ -32,21 +53,18 @@ export const LOG_VIEW_LINES = 10;
 // Border(2) + title(1) + the visible log lines + the hint/search row(1).
 export const LOG_PANEL_ROWS = 4 + LOG_VIEW_LINES;
 
-// Fewest log lines worth a panel, and list rows kept next to it.
-const MIN_LOG_LINES = 3;
-const MIN_LIST_ROWS_WITH_LOGS = 2;
-
 /**
- * Log lines the panel can show without making the frame as tall as the
- * terminal. The usual LOG_VIEW_LINES, fewer on a short terminal.
+ * Log lines the panel can show: every row the content has left once the
+ * chrome is subtracted, minus the panel's own border, title and footer (4).
+ * Uncapped, so a tall terminal gets a tall panel. LOG_VIEW_LINES when the
+ * height is not measurable. Never below one line.
  *
  * @param {number} terminalRows - Terminal height
- * @returns {number} Between MIN_LOG_LINES and LOG_VIEW_LINES
+ * @returns {number} At least 1
  */
 export function logViewLines(terminalRows) {
   if (!Number.isFinite(terminalRows)) return LOG_VIEW_LINES;
-  const room = terminalRows - BASE_CHROME_ROWS - 4 - MIN_LIST_ROWS_WITH_LOGS;
-  return Math.min(LOG_VIEW_LINES, Math.max(MIN_LOG_LINES, room));
+  return Math.max(1, terminalRows - chromeRows(terminalRows) - 4);
 }
 
 // Border(2) + title(1) + hint(1) + blank(1): the help panel without its keys.
@@ -85,6 +103,7 @@ export function helpPanelRows(terminalRows, bindingCount, otherRows) {
  * @param {boolean} [options.showLogs=false] - Logs panel is visible
  * @param {number} [options.logLines] - Log lines the panel shows
  * @param {number} [options.helpRows] - Height of the help panel, 0 when closed
+ * @param {boolean} [options.compact=false] - Compact shell: drops COMPACT_SAVED_ROWS
  * @returns {number} Reserved rows
  */
 export function reservedRows({
@@ -96,9 +115,11 @@ export function reservedRows({
   showLogs = false,
   logLines = LOG_VIEW_LINES,
   helpRows = 0,
+  compact = false,
 } = {}) {
   return (
-    BASE_CHROME_ROWS +
+    BASE_CHROME_ROWS -
+    (compact ? COMPACT_SAVED_ROWS : 0) +
     (isStale ? 1 : 0) +
     (isFiltering ? 2 : 0) +
     (hasMessage ? 1 : 0) +

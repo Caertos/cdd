@@ -17,17 +17,27 @@ import {
 // are mocked so the test can put a hostile query in the filter field without
 // a Docker daemon behind it, and so the field is the only thing on screen.
 let view = null;
+let activeView = 'containers';
+let showLogs = false;
+let creatingContainer = false;
+let showHelp = false;
+let terminalRowsMock = 24;
+let logsLines = [];
+let selectedContainer = null;
+const freshConnection = () => ({
+  status: 'ok',
+  error: null,
+  isStale: false,
+  nextRetryIn: 0,
+  retry: jest.fn(),
+});
+let connectionState = freshConnection();
+let containersList = [];
 
 await jest.unstable_mockModule('../src/hooks/useContainers.js', () => ({
   useContainers: () => ({
-    containers: [],
-    connection: {
-      status: 'ok',
-      error: null,
-      isStale: false,
-      nextRetryIn: 0,
-      retry: jest.fn(),
-    },
+    containers: containersList,
+    connection: connectionState,
   }),
 }));
 
@@ -47,21 +57,33 @@ await jest.unstable_mockModule('../src/hooks/useDockerLauncher.js', () => ({
 }));
 
 await jest.unstable_mockModule('../src/hooks/useTerminalHeight.js', () => ({
-  useTerminalHeight: () => 24,
+  useTerminalHeight: () => terminalRowsMock,
   DEFAULT_TERMINAL_ROWS: 24,
+}));
+
+// The list renders ContainerRow, which reads its stats through this hook.
+await jest.unstable_mockModule('../src/hooks/useSharedContainerStats.js', () => ({
+  useSharedContainerStats: () => ({ stats: new Map(), errors: new Map() }),
 }));
 
 await jest.unstable_mockModule('../src/hooks/useControls.js', () => ({
   useControls: () => ({
     selected: 0,
-    selectedContainer: null,
+    selectedContainer,
     view,
+    activeView,
+    views: [
+      { id: 'containers', title: STRINGS.views.containers, enabled: true, shortcut: 1 },
+      { id: 'projects', title: STRINGS.views.projects, enabled: false, shortcut: 2 },
+      { id: 'images', title: STRINGS.views.images, enabled: false, shortcut: 3 },
+    ],
+    setActiveView: jest.fn(),
     message: '',
     messageColor: 'gray',
-    showLogs: false,
-    logs: [],
+    showLogs,
+    logs: logsLines,
     exitLogs: jest.fn(),
-    creatingContainer: false,
+    creatingContainer,
     startCreation: jest.fn(),
     diagnosis: null,
     isDiagnosing: false,
@@ -88,17 +110,31 @@ await jest.unstable_mockModule('../src/hooks/useControls.js', () => ({
     confirmQuit: false,
     showDebugLogs: false,
     debugLogs: [],
-    showHelp: false,
+    showHelp,
     context: 'list',
     keymapBindings: [],
-    helpContext: 'list',
+    helpContext: creatingContainer ? 'wizard' : 'list',
     helpBindings: [],
     handlers: {},
     dispatch: jest.fn(),
   }),
 }));
 
+// Imported after the mocks; the mock factories read it only at render time.
+const { STRINGS } = await import('../src/helpers/strings.js');
 const { default: App } = await import('../src/App.jsx');
+
+beforeEach(() => {
+  activeView = 'containers';
+  showLogs = false;
+  creatingContainer = false;
+  showHelp = false;
+  connectionState = freshConnection();
+  containersList = [];
+  terminalRowsMock = 24;
+  logsLines = [];
+  selectedContainer = null;
+});
 
 /**
  * Render the app with the filter field open on `query`, the caret at
@@ -121,15 +157,20 @@ function renderApp(query, cursor) {
   return render(<App />);
 }
 
+/**
+ * The character the caret of the filter field sits on. The active tab is also
+ * an inverse span, so the tabs are skipped.
+ */
+const caretNode = (container) =>
+  Array.from(container.querySelectorAll('span[data-inverse="true"]')).find(
+    (n) => !/^\d (Containers|Projects|Images)$/.test(n.textContent),
+  ) ?? null;
+
 /** The node that holds the value of the filter field (the caret is inside). */
 const fieldNode = (container) => {
-  const caret = container.querySelector('span[data-inverse="true"]');
+  const caret = caretNode(container);
   return caret ? caret.parentElement : null;
 };
-
-/** The character the caret of the filter field sits on. */
-const caretNode = (container) =>
-  container.querySelector('span[data-inverse="true"]');
 
 // The query of the filter is what the user typed, but it can also be a
 // paste. A terminal executes part of what it is given, so the field has to
@@ -214,5 +255,151 @@ describe('sanitizedCursorIndex — the position on screen', () => {
 
   test('the caret cannot be negative', () => {
     expect(sanitizedCursorIndex('abc', -1)).toBe(-1);
+  });
+});
+
+/** Render the app with the shell's default state: no filter, list view. */
+function renderShell() {
+  view = {
+    visible: [],
+    totalCount: 0,
+    query: '',
+    cursor: 0,
+    isFiltering: false,
+    sortMode: 'state',
+  };
+  return render(<App />);
+}
+
+// The shell frames every view: the tabs sit next to the list and the logs
+// panel, and only the full-screen connection notice replaces them.
+describe('App — the shell (TASK-12)', () => {
+  test('shows the three tabs next to the list', () => {
+    const { getByText } = renderShell();
+    expect(getByText('1 Containers')).toBeTruthy();
+    expect(getByText('2 Projects')).toBeTruthy();
+    expect(getByText('3 Images')).toBeTruthy();
+    expect(getByText('1 Containers').getAttribute('data-inverse')).toBe('true');
+    expect(getByText('2 Projects').getAttribute('data-inverse')).toBeNull();
+    expect(getByText('3 Images').getAttribute('data-inverse')).toBeNull();
+  });
+
+  test('shows the projects placeholder on the projects view', () => {
+    activeView = 'projects';
+    const { getByText } = renderShell();
+    expect(getByText(STRINGS.views.projectsPlaceholder)).toBeTruthy();
+    expect(getByText('1 Containers')).toBeTruthy();
+    expect(getByText('2 Projects')).toBeTruthy();
+    expect(getByText('3 Images')).toBeTruthy();
+    expect(getByText('2 Projects').getAttribute('data-inverse')).toBe('true');
+  });
+
+  test('shows the images placeholder on the images view', () => {
+    activeView = 'images';
+    const { getByText } = renderShell();
+    expect(getByText(STRINGS.views.imagesPlaceholder)).toBeTruthy();
+    expect(getByText('1 Containers')).toBeTruthy();
+    expect(getByText('2 Projects')).toBeTruthy();
+    expect(getByText('3 Images')).toBeTruthy();
+    expect(getByText('3 Images').getAttribute('data-inverse')).toBe('true');
+  });
+
+  test('keeps the full-screen connection notice and drops the tabs', () => {
+    connectionState = {
+      status: 'error',
+      error: {
+        kind: 'not-running',
+        title: 'Cannot reach Docker',
+        detail: 'The Docker service is not running.',
+        hints: [],
+        technical: 'ENOENT',
+      },
+      isStale: false,
+      nextRetryIn: 5,
+      retry: jest.fn(),
+    };
+    containersList = [];
+    const { getByText, queryByText } = renderShell();
+    expect(getByText('Cannot reach Docker')).toBeTruthy();
+    expect(queryByText('1 Containers')).toBeNull();
+  });
+
+  test('keeps the tabs while the logs panel is open', () => {
+    showLogs = true;
+    const { getByText } = renderShell();
+    expect(getByText('1 Containers')).toBeTruthy();
+    expect(getByText('2 Projects')).toBeTruthy();
+    expect(getByText('3 Images')).toBeTruthy();
+  });
+
+  test('shows only the log viewer in the content while the logs are open', () => {
+    const web = { id: 'id-web', name: 'web', image: 'nginx:latest', state: 'running', status: 'Up 1 m', ports: [] };
+    const db = { id: 'id-db', name: 'db', image: 'nginx:latest', state: 'running', status: 'Up 1 m', ports: [] };
+    showLogs = true;
+    logsLines = ['alpha', 'beta'];
+    selectedContainer = web;
+    containersList = [web, db];
+    view = {
+      visible: [web, db],
+      totalCount: 2,
+      query: '',
+      cursor: 0,
+      isFiltering: false,
+      sortMode: 'state',
+    };
+    const { getByText, queryByText } = render(<App />);
+    expect(getByText(/web logs, press ESC to exit/)).toBeTruthy();
+    expect(getByText('alpha')).toBeTruthy();
+    expect(queryByText('db')).toBeNull();
+    expect(getByText('1 Containers')).toBeTruthy();
+    expect(getByText('2 Projects')).toBeTruthy();
+    expect(getByText('3 Images')).toBeTruthy();
+    expect(getByText(/2 containers found/)).toBeTruthy();
+  });
+
+  test('keeps at least one log line on a 15-row terminal', () => {
+    const web = { id: 'id-web', name: 'web', image: 'nginx:latest', state: 'running', status: 'Up 1 m', ports: [] };
+    terminalRowsMock = 15;
+    showLogs = true;
+    logsLines = ['alpha', 'beta', 'gamma'];
+    selectedContainer = web;
+    containersList = [web];
+    view = {
+      visible: [web],
+      totalCount: 1,
+      query: '',
+      cursor: 0,
+      isFiltering: false,
+      sortMode: 'state',
+    };
+    const { getByText, queryByText } = render(<App />);
+    expect(getByText('gamma')).toBeTruthy();
+    expect(getByText('1 Containers')).toBeTruthy();
+    expect(getByText('2 Projects')).toBeTruthy();
+    expect(getByText('3 Images')).toBeTruthy();
+    expect(queryByText(/Crafted by/)).toBeNull();
+  });
+
+  test('shows the wizard inside the shell, keeping the header and the tabs', () => {
+    creatingContainer = true;
+    showHelp = false;
+    const { getByText } = renderShell();
+    expect(getByText(/Step 1 of/)).toBeTruthy();
+    expect(getByText('1 Containers')).toBeTruthy();
+    expect(getByText('2 Projects')).toBeTruthy();
+    expect(getByText('3 Images')).toBeTruthy();
+    expect(getByText(/0 containers found/)).toBeTruthy();
+  });
+
+  test('shows the help inside the shell while the wizard is open', () => {
+    creatingContainer = true;
+    showHelp = true;
+    const { getByText, queryByText } = renderShell();
+    expect(getByText(/Help —/)).toBeTruthy();
+    expect(queryByText(/Step 1 of/)).toBeNull();
+    expect(getByText('1 Containers')).toBeTruthy();
+    expect(getByText('2 Projects')).toBeTruthy();
+    expect(getByText('3 Images')).toBeTruthy();
+    expect(getByText(/0 containers found/)).toBeTruthy();
   });
 });

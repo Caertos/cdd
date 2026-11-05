@@ -12,6 +12,12 @@ import {
   helpPanelRows,
   HELP_CHROME_ROWS,
 } from '../src/helpers/reservedRows.js';
+// The contract adds these exports. A named import of a missing export fails
+// the whole file at link time; through the namespace each missing symbol is
+// just undefined, so every test fails on its own assertion or TypeError.
+import * as reservedRowsModule from '../src/helpers/reservedRows.js';
+
+const { chromeRows, COMPACT_ROWS, COMPACT_SAVED_ROWS } = reservedRowsModule;
 
 describe('reservedRows', () => {
   test('returns the base chrome with no optional blocks', () => {
@@ -53,6 +59,16 @@ describe('reservedRows', () => {
     );
   });
 
+  test('reserves a row for the view tabs', () => {
+    expect(BASE_CHROME_ROWS).toBeGreaterThanOrEqual(13);
+  });
+
+  test('drops the compact savings', () => {
+    expect(reservedRows({ compact: true })).toBe(
+      BASE_CHROME_ROWS - COMPACT_SAVED_ROWS
+    );
+  });
+
   test('sums every option when several are present', () => {
     expect(
       reservedRows({
@@ -69,13 +85,23 @@ describe('reservedRows', () => {
 });
 
 describe('logViewLines', () => {
-  test('keeps the full panel on a tall terminal', () => {
-    expect(logViewLines(60)).toBe(LOG_VIEW_LINES);
+  test('uses every row the content has left, with no cap', () => {
+    expect(logViewLines(60)).toBe(60 - BASE_CHROME_ROWS - 4);
   });
 
-  test('shrinks on a short terminal, never below three lines', () => {
-    expect(logViewLines(24)).toBeLessThan(LOG_VIEW_LINES);
-    expect(logViewLines(10)).toBe(3);
+  test('matches the chrome on a 24-row terminal', () => {
+    expect(logViewLines(24)).toBe(24 - BASE_CHROME_ROWS - 4);
+  });
+
+  test('stays usable on a 15-row terminal', () => {
+    expect(logViewLines(15)).toBe(
+      15 - (BASE_CHROME_ROWS - COMPACT_SAVED_ROWS) - 4
+    );
+    expect(logViewLines(15)).toBeGreaterThanOrEqual(1);
+  });
+
+  test('never goes below one line', () => {
+    expect(logViewLines(5)).toBe(1);
   });
 
   test('falls back to the full panel without a measurable height', () => {
@@ -86,6 +112,22 @@ describe('logViewLines', () => {
     expect(reservedRows({ showLogs: true, logLines: 5 })).toBe(
       BASE_CHROME_ROWS + 4 + 5
     );
+  });
+});
+
+describe('chromeRows', () => {
+  test('drops the compact savings below COMPACT_ROWS', () => {
+    expect(chromeRows(COMPACT_ROWS - 1)).toBe(
+      BASE_CHROME_ROWS - COMPACT_SAVED_ROWS
+    );
+  });
+
+  test('keeps the base chrome at COMPACT_ROWS', () => {
+    expect(chromeRows(COMPACT_ROWS)).toBe(BASE_CHROME_ROWS);
+  });
+
+  test('keeps the base chrome without a measurable height', () => {
+    expect(chromeRows(undefined)).toBe(BASE_CHROME_ROWS);
   });
 });
 
