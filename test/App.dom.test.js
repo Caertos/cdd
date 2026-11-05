@@ -142,15 +142,20 @@ function renderApp(query, cursor) {
   return render(<App />);
 }
 
+/**
+ * The character the caret of the filter field sits on. The active tab is also
+ * an inverse span, so the tabs are skipped.
+ */
+const caretNode = (container) =>
+  Array.from(container.querySelectorAll('span[data-inverse="true"]')).find(
+    (n) => !/^\d (Containers|Projects|Images)$/.test(n.textContent),
+  ) ?? null;
+
 /** The node that holds the value of the filter field (the caret is inside). */
 const fieldNode = (container) => {
-  const caret = container.querySelector('span[data-inverse="true"]');
+  const caret = caretNode(container);
   return caret ? caret.parentElement : null;
 };
-
-/** The character the caret of the filter field sits on. */
-const caretNode = (container) =>
-  container.querySelector('span[data-inverse="true"]');
 
 // The query of the filter is what the user typed, but it can also be a
 // paste. A terminal executes part of what it is given, so the field has to
