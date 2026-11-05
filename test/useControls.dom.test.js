@@ -43,10 +43,12 @@ await jest.unstable_mockModule(
 // diagnosis panel and the F key read through useDiagnostics. getLogsStream
 // returns a fresh { stop() } handle per call so the D9 tests can spy on it.
 const mockGetLogsStream = jest.fn(() => ({ stop: jest.fn() }));
+const mockGetLogsChunk = jest.fn();
 await jest.unstable_mockModule(
   '../src/helpers/dockerService/serviceComponents/containerLogs.js',
   () => ({
     getLogsStream: mockGetLogsStream,
+    getLogsChunk: mockGetLogsChunk,
     getLogsTail: jest.fn().mockResolvedValue([]),
   })
 );
@@ -2362,6 +2364,60 @@ describe('TASK-11 — what the viewer asks for depends on the container', () => 
     });
     expect(expose.current.logsViewer.headNotice.kind).toBe('complete');
     expect(expose.current.logsHead.kind).toBe('complete');
+  });
+});
+
+describe('TASK-11 — Ctrl+U loads earlier lines', () => {
+  const live = { id: 'c-live', name: 'vivo', image: 'nginx', state: 'running', status: '', ports: [] };
+
+  beforeEach(() => {
+    mockGetLogsStream.mockClear();
+    mockGetLogsStream.mockImplementation(() => ({ stop: jest.fn() }));
+    mockGetLogsChunk.mockReset();
+  });
+
+  test('the key reads the chunk for the open container and prepends it', async () => {
+    mockGetLogsChunk.mockResolvedValue({
+      lines: ['old-1', 'old-2', 'new-1'],
+      reachedStart: true,
+      failed: false,
+    });
+    const expose = { current: null };
+    render(<HookTester containers={[live]} expose={expose} />);
+    await act(async () => {});
+    await act(async () => {
+      expose.current.dispatch('container.logs');
+    });
+    await act(async () => {
+      mockGetLogsStream.mock.calls[0][1]('new-1\n');
+    });
+    expect(expose.current.logsViewer.canLoadEarlier).toBe(true);
+
+    await act(async () => {
+      expose.current.dispatch('logs.earlier');
+    });
+
+    expect(mockGetLogsChunk).toHaveBeenCalledWith('c-live', 1 + 2000);
+    expect(expose.current.logs).toEqual(['old-1', 'old-2', 'new-1']);
+    expect(expose.current.logsHead.kind).toBe('complete');
+  });
+
+  test('it does nothing on a stopped container, which is already whole', async () => {
+    const expose = { current: null };
+    render(
+      <HookTester
+        containers={[{ ...live, id: 'c-off', state: 'exited' }]}
+        expose={expose}
+      />
+    );
+    await act(async () => {});
+    await act(async () => {
+      expose.current.dispatch('container.logs');
+    });
+    await act(async () => {
+      expose.current.dispatch('logs.earlier');
+    });
+    expect(mockGetLogsChunk).not.toHaveBeenCalled();
   });
 });
 

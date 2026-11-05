@@ -142,6 +142,7 @@ El log se abre en un panel bajo la lista. Al desplazarse hacia arriba se pausa e
 | `↑` / `↓`         | Desplazar una línea                                |
 | `PgUp` / `PgDn`   | Desplazar una página                               |
 | `Home` / `End`    | Primera línea / última línea (y reanudar seguimiento) |
+| `Ctrl+U`          | Cargar líneas anteriores (si el inicio del log no está cargado) |
 | `f`               | Activar/desactivar auto-follow                     |
 | `/`               | Buscar: las coincidencias se resaltan y se cuentan  |
 | `n` / `N`         | Siguiente / coincidencia anterior                   |

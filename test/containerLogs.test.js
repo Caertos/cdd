@@ -543,3 +543,135 @@ describe('getLogsTail', () => {
     expect(seen.tail).toBe(50);
   });
 });
+
+describe('getLogsChunk', () => {
+  /** Load containerLogs with a container whose one-shot logs() yields `payload`. */
+  async function withChunk(payload, onRequested) {
+    const logs = jest.fn((opts, cb) => {
+      if (onRequested) onRequested(opts);
+      cb(null, payload);
+    });
+    return loadLogs(logs);
+  }
+
+  test('reads without following and asks for exactly the tail it was given', async () => {
+    let seen = null;
+    const { getLogsChunk } = await withChunk(Buffer.from('a\n'), (opts) => {
+      seen = opts;
+    });
+    await getLogsChunk('cid', 4000);
+    expect(seen).toEqual({
+      follow: false,
+      stdout: true,
+      stderr: true,
+      tail: 4000,
+    });
+  });
+
+  test('keeps stdout and stderr in the order they were written', async () => {
+    const payload = Buffer.concat([
+      frame(OUT, 'one\n'),
+      frame(ERR, 'two\n'),
+      frame(OUT, 'three\n'),
+    ]);
+    const { getLogsChunk } = await withChunk(payload);
+    const { lines } = await getLogsChunk('cid', 10);
+    expect(lines).toEqual(['one', 'two', 'three']);
+  });
+
+  test('reads a TTY container (plain text) too', async () => {
+    const { getLogsChunk } = await withChunk(Buffer.from('x\r\ny\r\n'));
+    const { lines } = await getLogsChunk('cid', 10);
+    expect(lines).toEqual(['x', 'y']);
+  });
+
+  test('skips blank lines, the same way the live stream does', async () => {
+    const { getLogsChunk } = await withChunk(Buffer.from('a\n\nb\n'));
+    const { lines } = await getLogsChunk('cid', 10);
+    expect(lines).toEqual(['a', 'b']);
+  });
+
+  test('fewer lines than asked means the start of the log was reached', async () => {
+    const { getLogsChunk } = await withChunk(Buffer.from('a\nb\nc\n'));
+    expect(await getLogsChunk('cid', 10)).toEqual({
+      lines: ['a', 'b', 'c'],
+      reachedStart: true,
+      failed: false,
+    });
+  });
+
+  test('exactly as many lines as asked does not claim the start', async () => {
+    const { getLogsChunk } = await withChunk(Buffer.from('a\nb\nc\n'));
+    const result = await getLogsChunk('cid', 3);
+    expect(result.reachedStart).toBe(false);
+    expect(result.lines).toEqual(['a', 'b', 'c']);
+  });
+
+  test('blank lines count towards what Docker returned: a full tail is not the start', async () => {
+    const { getLogsChunk } = await withChunk(Buffer.from('a\n\nb\n'));
+    const result = await getLogsChunk('cid', 3);
+    expect(result.lines).toEqual(['a', 'b']);
+    expect(result.reachedStart).toBe(false);
+  });
+
+  test('a payload that docker-modem parsed as JSON still reads as a line', async () => {
+    const { getLogsChunk } = await withChunk({ level: 'info' });
+    const { lines } = await getLogsChunk('cid', 10);
+    expect(lines).toEqual(['{"level":"info"}']);
+  });
+
+  test('a daemon error resolves as failed, never as an empty start', async () => {
+    const { getLogsChunk } = await loadLogs((_opts, cb) =>
+      cb(new Error('no such container'))
+    );
+    expect(await getLogsChunk('cid', 10)).toEqual({
+      lines: [],
+      reachedStart: false,
+      failed: true,
+    });
+  });
+
+  test('a throwing client resolves as failed instead of rejecting', async () => {
+    await jest.unstable_mockModule(
+      '../src/helpers/dockerService/dockerService.js',
+      () => ({
+        docker: {
+          getContainer: jest.fn(() => {
+            throw new Error('socket closed');
+          }),
+        },
+      })
+    );
+    const { getLogsChunk } =
+      await import('../src/helpers/dockerService/serviceComponents/containerLogs.js');
+    const result = await getLogsChunk('cid', 10);
+    expect(result.failed).toBe(true);
+    expect(result.reachedStart).toBe(false);
+  });
+
+  test.each([0, -3, 1.5, NaN, 'all', undefined])(
+    'an invalid tail (%p) is refused as failed without asking Docker',
+    async (tail) => {
+      const logs = jest.fn();
+      const { getLogsChunk } = await loadLogs(logs);
+      const result = await getLogsChunk('cid', tail);
+      expect(result.failed).toBe(true);
+      expect(logs).not.toHaveBeenCalled();
+    }
+  );
+
+  test('a stream that breaks keeps what arrived before the break', async () => {
+    const stream = new EventEmitter();
+    const { getLogsChunk } = await loadLogs((_opts, cb) => {
+      cb(null, stream);
+      setImmediate(() => {
+        stream.emit('data', Buffer.from('a\nb\n'));
+        stream.emit('error', new Error('reset'));
+      });
+    });
+    const result = await getLogsChunk('cid', 10);
+    expect(result.lines).toEqual(['a', 'b']);
+    expect(result.failed).toBe(false);
+  });
+});
+

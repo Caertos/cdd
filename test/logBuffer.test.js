@@ -11,6 +11,7 @@ import {
   canLoadMore,
   HIGH_VOLUME_WINDOW_MS,
   initialLogRequest,
+  newerThanHeld,
 } from '../src/helpers/logBuffer.js';
 import { readLogRetention, LOG_RETENTION } from '../src/helpers/constants.js';
 
@@ -235,6 +236,7 @@ describe('bufferHeadNotice', () => {
     const buffer = appendLines(createLogBuffer(SMALL), ['a'], 0);
     const notice = bufferHeadNotice(buffer);
     expect(notice.kind).toBe('partial');
+    expect(notice.text).toMatch(/\[Ctrl\+U\] load earlier lines/);
   });
 
   test('an empty buffer has nothing to say', () => {
@@ -347,3 +349,40 @@ describe('initialLogRequest', () => {
     );
   });
 });
+
+describe('newerThanHeld', () => {
+  const ls = (from, to) =>
+    Array.from({ length: to - from }, (_, i) => `l${from + i}`);
+
+  test('keeps what comes before the lines already held', () => {
+    expect(
+      newerThanHeld({ lines: ls(0, 10), reachedStart: true }, 5, 2000)
+    ).toEqual({ older: ls(0, 5), reachedStart: true });
+  });
+
+  test('lines that streamed in meanwhile are part of what is held', () => {
+    expect(
+      newerThanHeld({ lines: ls(0, 11), reachedStart: false }, 6, 2000)
+    ).toEqual({ older: ls(0, 5), reachedStart: false });
+  });
+
+  test('nothing new when the chunk is no bigger than the buffer', () => {
+    expect(
+      newerThanHeld({ lines: ls(5, 10), reachedStart: false }, 5, 2000)
+    ).toEqual({ older: [], reachedStart: false });
+    expect(
+      newerThanHeld({ lines: ls(8, 10), reachedStart: false }, 5, 2000)
+    ).toEqual({ older: [], reachedStart: false });
+  });
+
+  test('more than a chunk is cut to the newest, and the start is not claimed', () => {
+    const result = newerThanHeld(
+      { lines: ls(0, 15), reachedStart: true },
+      5,
+      4
+    );
+    expect(result.older).toEqual(ls(6, 10));
+    expect(result.reachedStart).toBe(false);
+  });
+});
+

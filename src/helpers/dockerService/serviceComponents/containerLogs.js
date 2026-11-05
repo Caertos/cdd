@@ -283,33 +283,31 @@ function toBuffer(payload) {
   return Buffer.from(JSON.stringify(payload) ?? '', 'utf8');
 }
 
-export function getLogsTail(containerId, lines = DEFAULT_TAIL_LINES) {
+/**
+ * One-shot read of the last `tail` lines of a container's log, as the bytes
+ * Docker sent. Shared by getLogsTail and getLogsChunk, which differ only in
+ * how they turn those bytes into lines.
+ *
+ * `follow: false` is what keeps this bounded. Never rejects: resolves to null
+ * when the read failed (daemon error, vanished container, broken socket), so
+ * the callers can tell a failure from an empty log. A stream that breaks
+ * half-way keeps whatever arrived before the break.
+ *
+ * @param {string} containerId
+ * @param {number} tail
+ * @returns {Promise<Buffer|null>}
+ */
+function readRawLog(containerId, tail) {
   return new Promise((resolve) => {
-    const wanted =
-      Number.isFinite(lines) && lines > 0
-        ? Math.floor(lines)
-        : DEFAULT_TAIL_LINES;
-
-    function finish(combined) {
-      const demuxed = demultiplexLogStream(combined);
-      const text = demuxed
-        ? `${demuxed.stdout}${demuxed.stderr}`
-        : combined.toString('utf8');
-      const all = text.split('\n').map((l) => l.replace(/\r$/, ''));
-      // A trailing newline yields a final empty element; it is not a line.
-      if (all.length > 0 && all[all.length - 1] === '') all.pop();
-      resolve(all.slice(-wanted));
-    }
-
     try {
       const container = docker.getContainer(containerId);
       logger.debug(
         'Reading last %d log line(s) for container %s',
-        wanted,
+        tail,
         containerId
       );
       container.logs(
-        { follow: false, stdout: true, stderr: true, tail: wanted },
+        { follow: false, stdout: true, stderr: true, tail },
         (err, payload) => {
           if (err) {
             logger.error(
@@ -317,12 +315,12 @@ export function getLogsTail(containerId, lines = DEFAULT_TAIL_LINES) {
               containerId,
               err
             );
-            resolve([]);
+            resolve(null);
             return;
           }
           if (payload && typeof payload.on === 'function') {
             const chunks = [];
-            const collect = () => finish(Buffer.concat(chunks));
+            const collect = () => resolve(Buffer.concat(chunks));
             payload.on('data', (chunk) => chunks.push(toBuffer(chunk)));
             payload.on('end', collect);
             payload.on('error', (streamErr) => {
@@ -336,12 +334,76 @@ export function getLogsTail(containerId, lines = DEFAULT_TAIL_LINES) {
             });
             return;
           }
-          finish(toBuffer(payload));
+          resolve(toBuffer(payload));
         }
       );
     } catch (err) {
       logger.error('Unexpected error reading logs for %s', containerId, err);
-      resolve([]);
+      resolve(null);
     }
   });
+}
+
+/** Text to lines: no carriage returns, and the trailing newline is not a line. */
+function splitLines(text) {
+  const all = text.split('\n').map((l) => l.replace(/\r$/, ''));
+  if (all.length > 0 && all[all.length - 1] === '') all.pop();
+  return all;
+}
+
+export function getLogsTail(containerId, lines = DEFAULT_TAIL_LINES) {
+  const wanted =
+    Number.isFinite(lines) && lines > 0
+      ? Math.floor(lines)
+      : DEFAULT_TAIL_LINES;
+
+  return readRawLog(containerId, wanted).then((combined) => {
+    if (combined === null) return [];
+    const demuxed = demultiplexLogStream(combined);
+    const text = demuxed
+      ? `${demuxed.stdout}${demuxed.stderr}`
+      : combined.toString('utf8');
+    return splitLines(text).slice(-wanted);
+  });
+}
+
+/**
+ * @typedef {Object} LogChunk
+ * @property {string[]} lines - The last lines, oldest first, in the order they were written
+ * @property {boolean} reachedStart - Docker had fewer lines than asked: the first one is the log's first
+ * @property {boolean} failed - The read did not happen; `lines` says nothing about the log
+ */
+
+/**
+ * Reads the last `tail` lines of a log without following it, for "load
+ * earlier lines". Docker cannot page backwards, so the caller asks for a
+ * bigger tail than it holds and keeps the part it does not have yet.
+ *
+ * Unlike getLogsTail, stdout and stderr stay interleaved as they were
+ * written: the lines are placed in front of lines that arrived through the
+ * live stream, which is in that order. Blank lines are skipped, the same way
+ * the live stream skips them, so both count lines alike.
+ *
+ * Never rejects. A failure resolves as `failed: true` and never claims the
+ * start, so an error cannot be mistaken for "nothing earlier".
+ *
+ * @param {string} containerId
+ * @param {number} tail - Total lines to read from the end
+ * @returns {Promise<LogChunk>}
+ */
+export async function getLogsChunk(containerId, tail) {
+  const failed = { lines: [], reachedStart: false, failed: true };
+  if (!Number.isInteger(tail) || tail <= 0) return failed;
+
+  const raw = await readRawLog(containerId, tail);
+  if (raw === null) return failed;
+
+  const text = createLogFrameReader()(raw);
+  // Docker counts blank lines, so the start is judged on the physical count.
+  const physical = splitLines(text);
+  return {
+    lines: physical.filter(Boolean).slice(-tail),
+    reachedStart: physical.length < tail,
+    failed: false,
+  };
 }

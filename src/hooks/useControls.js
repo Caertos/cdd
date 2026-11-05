@@ -10,7 +10,10 @@ import { useConfirmation } from './useConfirmation.js';
 import { useExitHandler } from './useExitHandler.js';
 import { useShellMode } from './useShellMode.js';
 import { initialLogRequest } from '../helpers/logBuffer.js';
-import { getLogsStream } from '../helpers/dockerService/serviceComponents/containerLogs.js';
+import {
+  getLogsStream,
+  getLogsChunk,
+} from '../helpers/dockerService/serviceComponents/containerLogs.js';
 import {
   getContainerDetails,
   getImageEnv,
@@ -404,6 +407,7 @@ export function useControls(containers = [], overrides = {}) {
       showHelp,
       showLogs: logsViewer.showLogs,
       logSearchOpen: logsViewer.search.open,
+      logsCanLoadEarlier: logsViewer.canLoadEarlier,
       isFiltering: view.isFiltering,
       creatingContainer,
       hasActiveList,
@@ -428,6 +432,7 @@ export function useControls(containers = [], overrides = {}) {
       showHelp,
       logsViewer.showLogs,
       logsViewer.search.open,
+      logsViewer.canLoadEarlier,
       view.isFiltering,
       creatingContainer,
       hasActiveList,
@@ -526,7 +531,7 @@ export function useControls(containers = [], overrides = {}) {
         const container = selection.selectedContainer;
         if (!container) return;
         const { tail, reachedStart } = initialLogRequest(container.state);
-        logsViewer.openLogs({ reachedStart });
+        logsViewer.openLogs({ reachedStart, containerId: container.id });
         startLogsStream(container.id, tail);
       },
       'container.shell': () => {
@@ -737,6 +742,7 @@ export function useControls(containers = [], overrides = {}) {
       'logs.follow': () => logsViewer.toggleFollow(),
       'logs.top': () => logsViewer.scrollToTop(),
       'logs.bottom': () => logsViewer.scrollToBottom(),
+      'logs.earlier': () => logsViewer.loadEarlier(getLogsChunk),
       'logs.search': () => logsViewer.openSearch(),
       'logs.next': () => logsViewer.jumpToMatch(1),
       'logs.prev': () => logsViewer.jumpToMatch(-1),

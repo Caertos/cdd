@@ -142,6 +142,7 @@ The log opens in a panel under the list. Scrolling up pauses following (the head
 | `↑` / `↓`       | Scroll one line                                     |
 | `PgUp` / `PgDn` | Scroll one page                                     |
 | `Home` / `End`  | First line / newest line (and follow again)         |
+| `Ctrl+U`        | Load earlier lines (when the log's start is not loaded) |
 | `f`             | Toggle auto-follow                                  |
 | `/`             | Search: matches are highlighted and counted         |
 | `n` / `N`       | Next / previous match                               |

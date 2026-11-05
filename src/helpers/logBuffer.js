@@ -225,7 +225,7 @@ export function bufferHeadNotice(buffer) {
   if (buffer.isComplete) {
     return { text: '─── start of log ───', kind: 'complete' };
   }
-  return { text: '⋯ earlier lines not loaded', kind: 'partial' };
+  return { text: '↑ [Ctrl+U] load earlier lines', kind: 'partial' };
 }
 
 /**
@@ -242,6 +242,28 @@ export function isHighVolume(buffer, now) {
     .filter((d) => now - d.at <= HIGH_VOLUME_WINDOW_MS)
     .reduce((sum, d) => sum + d.bytes, 0);
   return dropped > buffer.limits.maxBytes;
+}
+
+/**
+ * From a chunk read with a bigger tail, the lines the buffer does not have.
+ *
+ * Lines streamed in during the read are already held and also sit at the end
+ * of the chunk, so what comes before them is what is new. More than one
+ * chunk of new lines is cut to the newest `chunkSize`; the cut lines are not
+ * loaded, so the start cannot be claimed.
+ *
+ * @param {{ lines: string[], reachedStart: boolean }} result
+ * @param {number} held - Lines the buffer holds now
+ * @param {number} chunkSize
+ * @returns {{ older: string[], reachedStart: boolean }}
+ */
+export function newerThanHeld(result, held, chunkSize) {
+  const older = result.lines.slice(0, Math.max(0, result.lines.length - held));
+  const trimmed = older.length > chunkSize;
+  return {
+    older: trimmed ? older.slice(-chunkSize) : older,
+    reachedStart: result.reachedStart && !trimmed,
+  };
 }
 
 /** States in which a container's log is finite: nothing is writing to it. */
