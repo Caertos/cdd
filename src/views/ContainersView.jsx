@@ -85,9 +85,11 @@ DebugPanel.propTypes = {
 };
 
 /**
- * The containers view: the list with its filter, the optional diagnosis,
- * help and logs panels, the message line and the debug panel. The layout
- * decisions (which panels show, how many rows are left) come from the App.
+ * The containers view: the list with its filter, the optional diagnosis and
+ * help panels, the message line and the debug panel. While the logs panel is
+ * open it takes the whole content area: the logs replace the list, so only the
+ * log viewer and the message line render. The layout decisions (which panels
+ * show, how many rows are left) come from the App.
  *
  * @param {Object} props
  * @param {Object} props.controls - Output of useControls
@@ -116,6 +118,33 @@ export function ContainersView({
   // the panel can never describe a different container than the one marked.
   // Already null when nothing is selected, hence no fallback here.
   const selectedContainer = controls.selectedContainer;
+
+  const messageLine = (
+    <MessageFeedback
+      message={controls.message}
+      color={controls.messageColor}
+    />
+  );
+
+  if (showLogsPanel) {
+    return (
+      <>
+        <LogViewer
+          logs={controls.logs}
+          headNotice={controls.logsHead}
+          highVolume={controls.logsHighVolume}
+          onExit={controls.exitLogs}
+          container={controls.selectedContainer}
+          height={logLines}
+          scrollOffset={controls.logsScrollOffset}
+          following={controls.logsFollowing}
+          pending={controls.logsPending}
+          search={controls.logsSearch}
+        />
+        {messageLine}
+      </>
+    );
+  }
 
   return (
     <>
@@ -158,24 +187,7 @@ export function ContainersView({
           maxRows={helpRows}
         />
       )}
-      {showLogsPanel && (
-        <LogViewer
-          logs={controls.logs}
-          headNotice={controls.logsHead}
-          highVolume={controls.logsHighVolume}
-          onExit={controls.exitLogs}
-          container={controls.selectedContainer}
-          height={logLines}
-          scrollOffset={controls.logsScrollOffset}
-          following={controls.logsFollowing}
-          pending={controls.logsPending}
-          search={controls.logsSearch}
-        />
-      )}
-      <MessageFeedback
-        message={controls.message}
-        color={controls.messageColor}
-      />
+      {messageLine}
       {controls.showDebugLogs && <DebugPanel logs={controls.debugLogs} />}
     </>
   );

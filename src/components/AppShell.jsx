@@ -1,9 +1,10 @@
 import React from 'react';
 import { Box } from 'ink';
 import PropTypes from 'prop-types';
+import { COMPACT_ROWS } from '../helpers/reservedRows.js';
 
-/** Terminal height (rows) below which the footer is dropped. */
-export const COMPACT_ROWS = 20;
+// Re-exported: AppShell.dom.test.js imports the threshold from here.
+export { COMPACT_ROWS };
 
 /**
  * Armazón persistente. Sólo estructura: no conoce ninguna vista concreta.

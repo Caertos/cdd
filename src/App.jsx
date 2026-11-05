@@ -22,9 +22,10 @@ import {
   reservedRows,
   logViewLines,
   helpPanelRows,
+  chromeRows,
   MIN_LIST_ROWS_WITH_DIAGNOSIS,
   HELP_CHROME_ROWS,
-  BASE_CHROME_ROWS,
+  COMPACT_ROWS,
 } from './helpers/reservedRows.js';
 import { AppShell } from './components/AppShell.jsx';
 import { ViewTabs } from './components/ViewTabs.jsx';
@@ -42,7 +43,7 @@ import { ImagesView } from './views/ImagesView.jsx';
  * Whether the diagnosis panel fits: it needs a failing container to talk
  * about, gives way to the logs and help panels, and leaves the list a few rows.
  */
-function shouldShowDiagnosis(controls, connection, terminalRows) {
+function shouldShowDiagnosis(controls, connection, terminalRows, compact) {
   const wantsDiagnosis = Boolean(controls.diagnosis || controls.isDiagnosing);
   if (!wantsDiagnosis || controls.showLogs || controls.showHelp) return false;
   return (
@@ -53,6 +54,7 @@ function shouldShowDiagnosis(controls, connection, terminalRows) {
         isFiltering: controls.view.isFiltering,
         isStale: connection.isStale,
         hasMessage: Boolean(controls.message),
+        compact,
       }) >=
     MIN_LIST_ROWS_WITH_DIAGNOSIS
   );
@@ -83,8 +85,11 @@ export default function App({ rows }) {
     updater,
   });
 
-  // Rows left for the container list once the fixed and variable chrome has
-  // been subtracted. Never below 1 so the list always has a row to show.
+  // The shell drops its footer and padding on a short terminal; every row
+  // count below has to know it.
+  const compact = Number.isFinite(terminalRows) && terminalRows < COMPACT_ROWS;
+
+  // Log lines the logs panel shows; the viewer is sized to the rows left.
   const logLines = logViewLines(terminalRows);
   const setLogsViewHeight = controls.setLogsViewHeight;
   useEffect(() => {
@@ -95,7 +100,12 @@ export default function App({ rows }) {
   // "why is this container failing", and together they would not fit. It also
   // stays out when the terminal is too short to leave the list a few rows:
   // a frame as tall as the terminal makes Ink stack a copy of it per redraw.
-  const showDiagnosis = shouldShowDiagnosis(controls, connection, terminalRows);
+  const showDiagnosis = shouldShowDiagnosis(
+    controls,
+    connection,
+    terminalRows,
+    compact
+  );
 
   // Help opens under the list, like the logs panel, and takes the logs
   // panel's place while it is open: both cannot fit, and the list is what the
@@ -107,6 +117,7 @@ export default function App({ rows }) {
     isFiltering: controls.view.isFiltering,
     isStale: connection.isStale,
     hasMessage: Boolean(controls.message),
+    compact,
   };
   const helpRows = showHelpPanel
     ? helpPanelRows(
@@ -116,14 +127,13 @@ export default function App({ rows }) {
       )
     : 0;
 
+  // The logs panel replaces the list, so the list's rows do not count it.
   const availableRows = Math.max(
     1,
     terminalRows -
       reservedRows({
         ...layout,
         hasDiagnosis: showDiagnosis,
-        showLogs: showLogsPanel,
-        logLines,
         helpRows,
       })
   );
@@ -164,7 +174,7 @@ export default function App({ rows }) {
       <HelpPanel
         context={controls.helpContext}
         bindings={controls.helpBindings}
-        maxRows={Math.max(HELP_CHROME_ROWS + 1, terminalRows - BASE_CHROME_ROWS)}
+        maxRows={Math.max(HELP_CHROME_ROWS + 1, terminalRows - chromeRows(terminalRows))}
       />
     ) : (
       <ContainerCreationPrompt
