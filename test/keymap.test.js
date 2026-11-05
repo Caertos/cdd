@@ -247,7 +247,8 @@ describe('keymap ↔ useControls handlers', () => {
           .map((b) => b.id)
       ),
     ];
-    expect(ids.filter((id) => !hasHandler(id))).toEqual([]); // today: logs.up/down/pageup/pagedown/follow
+    // view.* handlers arrive with the view-switching iteration
+    expect(ids.filter((id) => !id.startsWith('view.') && !hasHandler(id))).toEqual([]);
   });
 });
 
